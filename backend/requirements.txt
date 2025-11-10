@@ -1,0 +1,22 @@
+# Core Framework
+Django==5.2.8
+djangorestframework==3.16.1
+djangorestframework-simplejwt==5.4.0
+
+# Database & Storage
+psycopg2-binary==2.9.10
+Pillow==11.0.0
+
+# API Features
+django-cors-headers==4.6.0
+django-filter==24.3
+
+# Configuration
+python-decouple==3.8
+
+# Development Tools (optionnel mais recommandé)
+django-debug-toolbar==4.4.0
+black==24.10.0
+flake8==7.1.1
+pytest==8.3.3
+pytest-django==4.9.0
