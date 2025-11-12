@@ -32,6 +32,9 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
+## permet de dire à Django d'utiliser notre modèle User personnalisé
+AUTH_USER_MODEL = 'users.User'
+
 
 # Application definition
 
@@ -43,11 +46,16 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-        ## Third party apps
+    ## Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
+
+    ## Local apps 
+    'apps.users',
+    'apps.projects',
+    'apps.tasks',
 ]
 
 MIDDLEWARE = [
