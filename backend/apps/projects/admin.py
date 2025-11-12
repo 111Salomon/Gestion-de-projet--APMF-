@@ -1,36 +1,34 @@
 from django.contrib import admin
 from .models import Project, ProjectMember
+from apps.tasks.models import Task
 
 
 class ProjectMemberInline(admin.TabularInline):
-    """
-    Affichage inline des membres d'un projet.
-    Permet d'ajouter/modifier les membres directement depuis la page du projet.
-    
-    TabularInline affiche les membres sous forme de tableau compact.
-    """
+    """Affichage inline des membres d'un projet."""
     model = ProjectMember
-    extra = 1  # Nombre de formulaires vides à afficher
-    autocomplete_fields = ['user']  # Autocomplétion pour choisir un user
+    extra = 1
+    autocomplete_fields = ['user']
     fields = ['user', 'role', 'joined_at']
-    readonly_fields = ['joined_at']  # Date d'ajout en lecture seule
+    readonly_fields = ['joined_at']
 
-    
+
+class TaskInline(admin.TabularInline):
+    """
+    Affichage inline des tâches d'un projet.
+    Permet de voir et modifier les tâches directement depuis la page du projet.
+    """
+    model = Task
+    extra = 0
+    fields = ['title', 'assigned_to', 'status', 'priority', 'due_date']
+    autocomplete_fields = ['assigned_to']
+    max_num = 10
+    can_delete = False
 
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    """
-    Configuration de l'interface admin pour le modèle Project.
+    """Configuration de l'interface admin pour le modèle Project."""
     
-    Fonctionnalités:
-        - Liste des projets avec filtres et recherche
-        - Affichage des membres inline
-        - Calcul automatique de la progression
-        - Organisation par sections dans le formulaire
-    """
-    
-    # Affichage dans la liste des projets
     list_display = [
         'name',
         'owner',
@@ -42,7 +40,6 @@ class ProjectAdmin(admin.ModelAdmin):
         'created_at'
     ]
     
-    # Filtres dans la barre latérale droite
     list_filter = [
         'status',
         'created_at',
@@ -50,7 +47,6 @@ class ProjectAdmin(admin.ModelAdmin):
         'end_date'
     ]
     
-    # Champs de recherche (barre en haut)
     search_fields = [
         'name',
         'description',
@@ -58,22 +54,16 @@ class ProjectAdmin(admin.ModelAdmin):
         'owner__email'
     ]
     
-    # Ordre d'affichage par défaut
     ordering = ['-created_at']
     
-    # Date hierarchy (navigation par date en haut)
     date_hierarchy = 'created_at'
     
-    # Nombre de projets par page
     list_per_page = 25
     
-    # Affichage inline des membres
-    inlines = [ProjectMemberInline]
+    inlines = [ProjectMemberInline, TaskInline]
     
-    # Autocomplétion pour le champ owner
     autocomplete_fields = ['owner']
     
-    # Organisation du formulaire en sections
     fieldsets = (
         ('Informations Générales', {
             'fields': ('name', 'description', 'owner')
@@ -84,14 +74,11 @@ class ProjectAdmin(admin.ModelAdmin):
         }),
         ('Métadonnées', {
             'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',),  # Section repliée par défaut
+            'classes': ('collapse',),
         }),
     )
     
-    # Champs en lecture seule
     readonly_fields = ['created_at', 'updated_at']
-    
-    # Méthodes personnalisées pour l'affichage
     
     @admin.display(description='Progression', ordering='id')
     def get_progress(self, obj):
@@ -102,8 +89,6 @@ class ProjectAdmin(admin.ModelAdmin):
     def get_tasks_count(self, obj):
         """Affiche le nombre de tâches du projet."""
         return obj.tasks.count()
-    
-    # Actions personnalisées (actions de masse)
     
     def make_active(self, request, queryset):
         """Action pour rendre les projets sélectionnés actifs."""
@@ -122,11 +107,7 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectMember)
 class ProjectMemberAdmin(admin.ModelAdmin):
-    """
-    Configuration de l'interface admin pour ProjectMember.
-    
-    Permet de gérer les membres des projets individuellement.
-    """
+    """Configuration de l'interface admin pour ProjectMember."""
     
     list_display = [
         'get_user_name',
@@ -151,8 +132,6 @@ class ProjectMemberAdmin(admin.ModelAdmin):
     ordering = ['-joined_at']
     
     date_hierarchy = 'joined_at'
-    
-    # Méthodes d'affichage personnalisées
     
     @admin.display(description='Utilisateur', ordering='user__username')
     def get_user_name(self, obj):
