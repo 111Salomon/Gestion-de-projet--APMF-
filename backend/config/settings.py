@@ -35,6 +35,13 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 ## permet de dire à Django d'utiliser notre modèle User personnalisé
 AUTH_USER_MODEL = 'users.User'
 
+# Backend d'authentification EMAIL ONLY
+# Méthode moderne utilisée par Slack, Notion, LinkedIn
+AUTHENTICATION_BACKENDS = [
+    'apps.users.authentication.EmailAuthenticationBackend',  # Email uniquement
+    'django.contrib.auth.backends.ModelBackend',             # Fallback (admin)
+]
+
 
 # Application definition
 
