@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { projectsAPI } from '../api/projects';
+import { tasksAPI } from '../api/tasks';
 
 /**
  * Context pour les statistiques de l'application
@@ -21,34 +22,42 @@ export const StatsProvider = ({ children }) => {
     loadStats();
   }, []);
 
+  
+
   /**
    * Charge toutes les statistiques depuis les APIs
    */
-  const loadStats = async () => {
-    try {
-      // Charge les projets
-      const projectsData = await projectsAPI.getAll();
-      const projectsList = Array.isArray(projectsData) 
-        ? projectsData 
-        : (projectsData.results || []);
+const loadStats = async () => {
+  try {
+    // Charge les projets ET les tâches en parallèle
+    const projectsData = await projectsAPI.getAll();
+    const tasksData = await tasksAPI.getAll();  // ← Charge les tâches
+    
+    // Gère le format paginé
+    const projectsList = Array.isArray(projectsData) 
+      ? projectsData 
+      : (projectsData.results || []);
+    
+    const tasksList = Array.isArray(tasksData) 
+      ? tasksData 
+      : (tasksData.results || []);
 
-      // TODO: Charge les tâches quand l'API sera créée
-      // const tasksData = await tasksAPI.getAll();
+    // Met à jour les stats avec les vraies données
+    setStats({
+      projectsCount: projectsList.length,
+      tasksCount: tasksList.length,  // ← Nombre réel de tâches
+      loading: false,
+    });
+  } catch (error) {
+    console.error('Erreur chargement stats:', error);
+    setStats({
+      projectsCount: 0,
+      tasksCount: 0,
+      loading: false,
+    });
+  }
+};
 
-      setStats({
-        projectsCount: projectsList.length,
-        tasksCount: 8, // Temporaire, à remplacer par l'API
-        loading: false,
-      });
-    } catch (error) {
-      console.error('Erreur chargement stats:', error);
-      setStats({
-        projectsCount: 0,
-        tasksCount: 0,
-        loading: false,
-      });
-    }
-  };
 
   /**
    * Recharge les statistiques (appelé après création/suppression)

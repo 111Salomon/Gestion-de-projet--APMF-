@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/auth/Login';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { Projects } from './pages/projects/Projects';
+import { Tasks } from './pages/tasks/Tasks';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { StatsProvider } from './context/StatsContext';
 
@@ -56,6 +57,16 @@ function App() {
             </PrivateRoute>
             }
           />
+
+          <Route
+  path="/tasks"
+  element={
+    <PrivateRoute>
+      <Tasks />
+    </PrivateRoute>
+  }
+/>
+
 
           
           {/* Redirection par défaut */}
