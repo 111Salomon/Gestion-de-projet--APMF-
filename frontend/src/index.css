@@ -208,28 +208,28 @@
 
 /* Board horizontal contenant toutes les colonnes */
 .kanban-board {
-  @apply flex gap-4  pb-4 px-4;
+  @apply flex gap-4 overflow-x-auto pb-4 px-4;
   /* flex : affichage horizontal des colonnes */
   /* overflow-x-auto : scroll horizontal si beaucoup de colonnes */
   /* gap-4 : espacement de 16px entre colonnes */
 }
 
-/* Une colonne Kanban (largeur fixe 320px) */
+/* Une colonne Kanban */
 .kanban-column {
-  @apply flex-shrink-0 w-80 bg-neutral-50 rounded-lg border border-neutral-200;
-  /* flex-shrink-0 : empêche la colonne de rétrécir */
-  /* w-80 : largeur fixe de 320px (20rem × 16px) */
-  flex: 1; /* Les colonnes se partagent l'espace disponible */
-  min-width: 250px; /* Largeur minimale */
-  max-width: 500px;
-  /* max-height: calc(100vh - 250px); */
+  @apply flex-shrink-0 bg-neutral-50 rounded-lg border border-neutral-200;
+  /* ✅ CORRECTION : Structure flex pour contrôler le header et dropzone */
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 320px; /* Largeur fixe au lieu de w-80 */
+  max-height: calc(100vh - 250px); /* Hauteur max pour forcer le scroll */
 }
 
 /* Header de colonne avec titre + compteur */
 .kanban-column-header {
   @apply px-4 py-3 border-b flex items-center justify-between rounded-t-lg;
-  /* flex : pour aligner titre à gauche, badge à droite */
-   flex-shrink: 0;
+  /* ✅ IMPORTANT : Header ne doit jamais rétrécir */
+  flex-shrink: 0;
 }
 
 /* Variantes de couleurs par statut (comme Trello) */
@@ -251,11 +251,28 @@
 
 /* Zone droppable contenant les cartes */
 .kanban-dropzone {
-  @apply min-h-[200px] space-y-3 p-3 overflow-y-auto;
-  max-height: calc(100vh - 280px); /* Hauteur dynamique */
-  /* min-h : hauteur minimale même si vide */
-  /* space-y-3 : espacement vertical entre cartes */
-  /* max-height : évite que la colonne dépasse l'écran */
+  @apply space-y-3 p-3 overflow-y-auto;
+  /* ✅ FIX CRITIQUE : flex: 1 au lieu de min-height fixe */
+  flex: 1; /* Prend l'espace disponible */
+  min-height: 0; /* Important pour que flex fonctionne */
+  /* overflow-y-auto : scrollbar apparaît automatiquement */
+}
+
+/* Scrollbar personnalisée pour dropzone */
+.kanban-dropzone::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kanban-dropzone::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kanban-dropzone::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full;
+}
+
+.kanban-dropzone::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400;
 }
 
 /* État visuel quand on survole une zone droppable */
@@ -268,7 +285,8 @@
 .kanban-card {
   @apply bg-white rounded-lg shadow-sm border border-neutral-200 p-3
          hover:shadow-md transition-all duration-200 cursor-grab;
-  /* cursor-grab : indique qu'on peut saisir la carte */
+  /* ✅ IMPORTANT : Carte ne doit jamais rétrécir */
+  flex-shrink: 0;
 }
 
 /* État pendant le drag */

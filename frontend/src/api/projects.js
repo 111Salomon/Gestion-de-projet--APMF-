@@ -94,6 +94,9 @@ export const projectsAPI = {
     await axiosInstance.delete(`/projects/${id}/`);
   },
 
+
+
+  
   /**
    * Ajoute un membre à un projet
    * 
@@ -123,4 +126,20 @@ export const projectsAPI = {
     });
     return response.data;
   },
+  // 🆕 NOUVELLES FONCTIONS
+  getStats: async (id) => {
+    const response = await axiosInstance.get(`/projects/${id}/stats/`);
+    return response.data;
+  },
+
+getTasks: async (id) => {
+  const response = await axiosInstance.get('/tasks/', {
+    params: { project: id }
+  });
+  return response.data;
+},
+
+
+  
+  
 };

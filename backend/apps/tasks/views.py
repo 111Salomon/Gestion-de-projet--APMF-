@@ -36,6 +36,31 @@ class TaskViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]
     
+    # def get_queryset(self):
+    #     """
+    #     Retourne les tâches accessibles à l'utilisateur.
+        
+    #     - Admin : voit toutes les tâches
+    #     - Utilisateur normal : voit uniquement les tâches des projets 
+    #       dont il est propriétaire ou membre
+    #     """
+    #     user = self.request.user
+        
+    #     if user.is_admin:
+    #         return Task.objects.all()
+        
+    #     # Tâches des projets dont l'utilisateur est propriétaire ou membre
+    #     return Task.objects.filter(
+    #         Q(project__owner=user) | Q(project__members=user)
+    #     ).distinct()
+
+    #     # Filtre par projet si fourni dans l'URL (?project=14)
+    #     project_id = self.request.query_params.get('project', None)
+    #     if project_id is not None:
+    #         queryset = queryset.filter(project_id=project_id)
+        
+    #     return queryset
+
     def get_queryset(self):
         """
         Retourne les tâches accessibles à l'utilisateur.
@@ -46,13 +71,23 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         
+        # ✅ IMPORTANT : Ne PAS faire return ici !
+        # Détermine le queryset de base selon les permissions
         if user.is_admin:
-            return Task.objects.all()
+            queryset = Task.objects.all()  # ✅ Pas de return !
+        else:
+            # Tâches des projets dont l'utilisateur est propriétaire ou membre
+            queryset = Task.objects.filter(
+                Q(project__owner=user) | Q(project__members=user)
+            ).distinct()
         
-        # Tâches des projets dont l'utilisateur est propriétaire ou membre
-        return Task.objects.filter(
-            Q(project__owner=user) | Q(project__members=user)
-        ).distinct()
+        # 🆕 Filtre par projet (s'applique à TOUS les utilisateurs)
+        project_id = self.request.query_params.get('project', None)
+        if project_id is not None:
+            queryset = queryset.filter(project_id=project_id)
+        
+        return queryset  # ✅ Un seul return à la fin
+
     
     def get_serializer_class(self):
         """

@@ -185,3 +185,25 @@ class ProjectViewSet(viewsets.ModelViewSet):
             {"detail": "Membre retiré avec succès."},
             status=status.HTTP_200_OK
         )
+    
+    @action(detail=True, methods=['get'])  # Décore la fonction pour créer une route custom
+    def stats(self, request, pk=None):
+        """Retourne les stats d'un projet"""
+        project = self.get_object()  # Récupère le projet par son ID
+        tasks = project.tasks.all()  # Toutes les tâches du projet
+        
+        # Compte les tâches par statut
+        total = tasks.count()
+        done_count = tasks.filter(status='DONE').count()
+        
+        # Calcule le %
+        completion = round((done_count / total) * 100, 1) if total > 0 else 0
+        
+        return Response({
+            'total_tasks': total,
+            'todo': tasks.filter(status='TODO').count(),
+            'in_progress': tasks.filter(status='IN_PROGRESS').count(),
+            'in_review': tasks.filter(status='IN_REVIEW').count(),
+            'done': done_count,
+            'completion_percentage': completion,
+        })

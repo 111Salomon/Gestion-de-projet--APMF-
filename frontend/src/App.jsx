@@ -6,6 +6,7 @@ import { Dashboard } from './pages/dashboard/Dashboard';
 import { Projects } from './pages/projects/Projects';
 import { Tasks } from './pages/tasks/Tasks';
 import { Kanban } from './pages/kanban/Kanban';
+import { ProjectDetail } from './pages/projects/ProjectDetail';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { StatsProvider } from './context/StatsContext';
 
@@ -58,6 +59,11 @@ function App() {
             </PrivateRoute>
             }
           />
+
+            <Route 
+    path="/projects/:id" 
+    element={<PrivateRoute><ProjectDetail /></PrivateRoute>} 
+  />
 
           <Route
   path="/tasks"
