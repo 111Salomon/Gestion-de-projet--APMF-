@@ -3,48 +3,15 @@ import { CheckCircle2, Clock, AlertCircle, ListTodo } from 'lucide-react';
 /**
  * Composant qui affiche les stats d'un projet
  * - Barre de progression
- * - 4 cartes de stats
- * - Alerte si tâches en retard
+ * - Alerte si tâches en retard (optionnel)
  */
 export const ProjectStats = ({ stats }) => {
   // Si pas de stats, on n'affiche rien
   if (!stats) return null;
 
-  // Configuration des 4 cartes
-  const statsCards = [
-    {
-      label: 'Total',
-      value: stats.total_tasks,
-      icon: ListTodo,
-      color: 'text-neutral-600',
-      bg: 'bg-neutral-100',
-    },
-    {
-      label: 'À faire',
-      value: stats.todo,
-      icon: Clock,
-      color: 'text-blue-600',
-      bg: 'bg-blue-100',
-    },
-    {
-      label: 'En cours',
-      value: stats.in_progress,
-      icon: AlertCircle,
-      color: 'text-amber-600',
-      bg: 'bg-amber-100',
-    },
-    {
-      label: 'Terminées',
-      value: stats.done,
-      icon: CheckCircle2,
-      color: 'text-green-600',
-      bg: 'bg-green-100',
-    },
-  ];
-
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">📈 Statistiques</h2>
+      <h2 className="text-lg font-semibold">Statistiques</h2>
       
       {/* ─── Barre de progression ─── */}
       <div className="space-y-2">
@@ -62,28 +29,6 @@ export const ProjectStats = ({ stats }) => {
             style={{ width: `${stats.completion_percentage}%` }}
           />
         </div>
-      </div>
-
-      {/* ─── Cartes de stats ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statsCards.map((stat) => (
-          <div
-            key={stat.label}
-            className="p-4 bg-white rounded-lg border border-neutral-200 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center gap-3">
-              {/* Icône */}
-              <div className={`p-2 rounded-lg ${stat.bg}`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-              {/* Chiffres */}
-              <div>
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-sm text-neutral-600">{stat.label}</p>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* ─── Alerte tâches en retard (si > 0) ─── */}

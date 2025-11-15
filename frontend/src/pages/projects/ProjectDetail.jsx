@@ -34,68 +34,35 @@ export const ProjectDetail = () => {
     loadProjectData();
   }, [id]);
 
-//   const loadProjectData = async () => {
-//     try {
-//       setLoading(true);
+  const loadProjectData = async () => {
+    try {
+      setLoading(true);
       
-//       // Charge les 3 API en parallèle
-//       const [projectData, statsData, tasksData] = await Promise.all([
-//         projectsAPI.getById(id),
-//         projectsAPI.getStats(id),
-//         projectsAPI.getTasks(id),
-//       ]);
+      // Charge les 3 API en parallèle
+      const [projectData, statsData, tasksData] = await Promise.all([
+        projectsAPI.getById(id),
+        projectsAPI.getStats(id),
+        projectsAPI.getTasks(id),
+      ]);
 
-//       setProject(projectData);
-//       setStats(statsData);
-//       setTasks(Array.isArray(tasksData) ? tasksData : tasksData.results || []);
+      setProject(projectData);
+      setStats(statsData);
       
-//     } catch (error) {
-//       console.error('❌ Erreur chargement:', error);
-//       toast.error('Impossible de charger le projet');
-//       navigate('/projects');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-const loadProjectData = async () => {
-  try {
-    setLoading(true);
-    
-    // Charge les 3 API en parallèle
-    const [projectData, statsData, tasksData] = await Promise.all([
-      projectsAPI.getById(id),
-      projectsAPI.getStats(id),
-      projectsAPI.getTasks(id),
-    ]);
-
-    // 🔍 DEBUG : Affiche les données brutes
-    console.log('=== DEBUG PROJECT DETAIL ===');
-    console.log('ID projet:', id);
-    console.log('Données tâches brutes:', tasksData);
-    console.log('Type:', Array.isArray(tasksData) ? 'array' : 'object');
-    console.log('Nombre de tâches:', Array.isArray(tasksData) ? tasksData.length : tasksData.results?.length || tasksData.count || 0);
-
-    setProject(projectData);
-    setStats(statsData);
-    
-    // ✅ Gestion correcte des 2 formats possibles
-    const tasksList = Array.isArray(tasksData) 
-      ? tasksData 
-      : (tasksData.results || []);
-    
-    console.log('📋 Tâches finales:', tasksList.length, tasksList);
-    setTasks(tasksList);
-    
-  } catch (error) {
-    console.error('❌ Erreur chargement:', error);
-    toast.error('Impossible de charger le projet');
-    navigate('/projects');
-  } finally {
-    setLoading(false);
-  }
-};
-
+      // ✅ Gestion correcte des 2 formats possibles
+      const tasksList = Array.isArray(tasksData) 
+        ? tasksData 
+        : (tasksData.results || []);
+      
+      setTasks(tasksList);
+      
+    } catch (error) {
+      console.error('❌ Erreur chargement:', error);
+      toast.error('Impossible de charger le projet');
+      navigate('/projects');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async () => {
     try {
@@ -137,7 +104,6 @@ const loadProjectData = async () => {
     );
   }
 
-  // ─── Suite dans la partie 2 ───
   // ─── RENDU DE LA PAGE ───
   return (
     <Layout>
@@ -223,7 +189,7 @@ const loadProjectData = async () => {
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">
-              ✅ Tâches du Projet ({tasks.length})
+              Tâches du Projet ({tasks.length})
             </h2>
             <Button
               variant="primary"

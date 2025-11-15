@@ -186,24 +186,64 @@ class ProjectViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
     
-    @action(detail=True, methods=['get'])  # Décore la fonction pour créer une route custom
+    # @action(detail=True, methods=['get'])  # Décore la fonction pour créer une route custom
+    # def stats(self, request, pk=None):
+    #     """Retourne les stats d'un projet"""
+    #     project = self.get_object()  # Récupère le projet par son ID
+    #     tasks = project.tasks.all()  # Toutes les tâches du projet
+        
+    #     # Compte les tâches par statut
+    #     total = tasks.count()
+    #     done_count = tasks.filter(status='DONE').count()
+        
+    #     # Calcule le %
+    #     completion = round((done_count / total) * 100, 1) if total > 0 else 0
+        
+    #     return Response({
+    #         'total_tasks': total,
+    #         'todo': tasks.filter(status='TODO').count(),
+    #         'in_progress': tasks.filter(status='IN_PROGRESS').count(),
+    #         'in_review': tasks.filter(status='IN_REVIEW').count(),
+    #         'done': done_count,
+    #         'completion_percentage': completion,
+    #     })
+    @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):
-        """Retourne les stats d'un projet"""
-        project = self.get_object()  # Récupère le projet par son ID
-        tasks = project.tasks.all()  # Toutes les tâches du projet
+        """
+        Retourne les statistiques d'un projet.
+        
+        GET /api/projects/{id}/stats/
+        """
+        project = self.get_object()
+        
+        # ✅ IMPORTANT : Importe Task ici
+        from apps.tasks.models import Task
+        
+        # ✅ BON : Filtre les tâches PAR PROJET
+        tasks = Task.objects.filter(project=project)
         
         # Compte les tâches par statut
-        total = tasks.count()
-        done_count = tasks.filter(status='DONE').count()
+        stats = {
+            'total_tasks': tasks.count(),
+            'todo': tasks.filter(status='todo').count(),
+            'in_progress': tasks.filter(status='in_progress').count(),
+            'in_review': tasks.filter(status='in_review').count(),
+            'done': tasks.filter(status='done').count(),
+        }
         
-        # Calcule le %
-        completion = round((done_count / total) * 100, 1) if total > 0 else 0
+        # Calcul du pourcentage de completion
+        total = stats['total_tasks']
+        if total > 0:
+            stats['completion_percentage'] = round((stats['done'] / total) * 100, 1)
+        else:
+            stats['completion_percentage'] = 0.0
         
-        return Response({
-            'total_tasks': total,
-            'todo': tasks.filter(status='TODO').count(),
-            'in_progress': tasks.filter(status='IN_PROGRESS').count(),
-            'in_review': tasks.filter(status='IN_REVIEW').count(),
-            'done': done_count,
-            'completion_percentage': completion,
-        })
+        # Tâches en retard (deadline dépassée et pas terminées)
+        from django.utils import timezone
+        overdue = tasks.filter(
+            due_date__lt=timezone.now().date(),
+            status__in=['todo', 'in_progress', 'in_review']
+        ).count()
+        stats['overdue_tasks'] = overdue
+        
+        return Response(stats)
