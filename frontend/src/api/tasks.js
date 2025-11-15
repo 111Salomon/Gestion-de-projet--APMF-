@@ -252,6 +252,44 @@ export const tasksAPI = {
     });
     return response.data;
   },
+
+
+  // Cherchez l'objet tasksAPI et ajoutez ceci avant le dernier }
+
+/**
+ * 🎯 PATCH /api/tasks/:id/update_status/
+ * 
+ * Fonction spéciale pour le Kanban : met à jour statut + ordre
+ * sans toucher aux autres champs de la tâche.
+ * 
+ * @param {number} taskId - ID de la tâche à modifier
+ * @param {string} status - Nouveau statut ('todo', 'in_progress', 'in_review', 'done')
+ * @param {number} order - Nouvel ordre dans la colonne
+ * @returns {Promise} Tâche mise à jour
+ * 
+ * Exemple d'utilisation :
+ * await tasksAPI.updateStatusKanban(5, 'in_progress', 2);
+ */
+updateStatusKanban: async (taskId, status, order) => {
+  try {
+    // ✅ CORRECTION : Format correct de l'URL
+    const response = await axiosInstance.patch(
+      `/tasks/${taskId}/update_status/`,  // Format: /tasks/10/update_status/
+      { 
+        status,  // Nouveau statut
+        order    // Nouvel ordre
+      }
+    );
+    
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ Erreur update_status Kanban:', error);
+    console.error('❌ Response:', error.response?.data);  // Log de debug
+    throw error;
+  }
+},
+
 };
 
 /**

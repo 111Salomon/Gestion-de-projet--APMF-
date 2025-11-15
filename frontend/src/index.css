@@ -201,3 +201,89 @@
 .react-calendar-wrapper .react-calendar__tile:disabled {
   @apply text-neutral-300 hover:bg-transparent;
 }
+
+/* ========================================
+   🎯 STYLES KANBAN - Inspiré de Trello
+======================================== */
+
+/* Board horizontal contenant toutes les colonnes */
+.kanban-board {
+  @apply flex gap-4  pb-4 px-4;
+  /* flex : affichage horizontal des colonnes */
+  /* overflow-x-auto : scroll horizontal si beaucoup de colonnes */
+  /* gap-4 : espacement de 16px entre colonnes */
+}
+
+/* Une colonne Kanban (largeur fixe 320px) */
+.kanban-column {
+  @apply flex-shrink-0 w-80 bg-neutral-50 rounded-lg border border-neutral-200;
+  /* flex-shrink-0 : empêche la colonne de rétrécir */
+  /* w-80 : largeur fixe de 320px (20rem × 16px) */
+  flex: 1; /* Les colonnes se partagent l'espace disponible */
+  min-width: 250px; /* Largeur minimale */
+  max-width: 500px;
+  /* max-height: calc(100vh - 250px); */
+}
+
+/* Header de colonne avec titre + compteur */
+.kanban-column-header {
+  @apply px-4 py-3 border-b flex items-center justify-between rounded-t-lg;
+  /* flex : pour aligner titre à gauche, badge à droite */
+   flex-shrink: 0;
+}
+
+/* Variantes de couleurs par statut (comme Trello) */
+.kanban-header-todo {
+  @apply bg-neutral-100 border-neutral-300;
+}
+
+.kanban-header-in-progress {
+  @apply bg-primary-100 border-primary-300;
+}
+
+.kanban-header-in-review {
+  @apply bg-amber-100 border-amber-300;
+}
+
+.kanban-header-done {
+  @apply bg-green-100 border-green-300;
+}
+
+/* Zone droppable contenant les cartes */
+.kanban-dropzone {
+  @apply min-h-[200px] space-y-3 p-3 overflow-y-auto;
+  max-height: calc(100vh - 280px); /* Hauteur dynamique */
+  /* min-h : hauteur minimale même si vide */
+  /* space-y-3 : espacement vertical entre cartes */
+  /* max-height : évite que la colonne dépasse l'écran */
+}
+
+/* État visuel quand on survole une zone droppable */
+.kanban-dropzone.drag-over {
+  @apply bg-primary-50 border-2 border-dashed border-primary-400;
+  /* Feedback visuel : on peut lâcher ici */
+}
+
+/* Carte Kanban compacte (plus petite que TaskCard normal) */
+.kanban-card {
+  @apply bg-white rounded-lg shadow-sm border border-neutral-200 p-3
+         hover:shadow-md transition-all duration-200 cursor-grab;
+  /* cursor-grab : indique qu'on peut saisir la carte */
+}
+
+/* État pendant le drag */
+.kanban-card.dragging {
+  @apply opacity-50 shadow-xl border-primary-400;
+  /* opacity-50 : carte semi-transparente */
+  /* shadow-xl : ombre prononcée */
+}
+
+/* Effet hover sur la carte */
+.kanban-card:hover {
+  @apply shadow-md border-primary-200;
+}
+
+/* Curseur pendant qu'on tient la carte */
+.kanban-card:active {
+  @apply cursor-grabbing;
+}

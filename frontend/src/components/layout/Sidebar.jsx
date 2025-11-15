@@ -7,7 +7,8 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Trello
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +43,14 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       path: '/tasks', 
       badge: stats.tasksCount || 0  // ← Dynamique !
     },
+
+    {
+      name: 'Kanban',
+      icon: Trello,  // Icône Trello (style board)
+      path: '/kanban',
+      badge: null  // Pas de badge pour le Kanban
+    },
+
     { 
       name: 'Équipe', 
       icon: Users, 
