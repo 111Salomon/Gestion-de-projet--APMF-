@@ -5,6 +5,7 @@ import { Login } from './pages/auth/Login';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { Projects } from './pages/projects/Projects';
 import { Tasks } from './pages/tasks/Tasks';
+import { TaskDetail } from './pages/tasks/TaskDetail'; 
 import { Kanban } from './pages/kanban/Kanban';
 import { ProjectDetail } from './pages/projects/ProjectDetail';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
@@ -70,6 +71,15 @@ function App() {
   element={
     <PrivateRoute>
       <Tasks />
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/tasks/:id"
+  element={
+    <PrivateRoute>
+      <TaskDetail />
     </PrivateRoute>
   }
 />

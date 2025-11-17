@@ -55,6 +55,10 @@ class TaskSerializer(serializers.ModelSerializer):
     project = ProjectListSerializer(read_only=True)
     assigned_to = UserMinimalSerializer(read_only=True)
     created_by = UserMinimalSerializer(read_only=True)
+
+        # 🆕 Champs supplémentaires pour compatibilité frontend
+    project_name = serializers.CharField(source='project.name', read_only=True)
+    assigned_to_name = serializers.CharField(source='assigned_to.username', read_only=True)
     
     comments = CommentSerializer(many=True, read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
@@ -69,7 +73,9 @@ class TaskSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'project',
+            'project_name', 
             'assigned_to',
+            'assigned_to_name', 
             'created_by',
             'status',
             'priority',

@@ -1,7 +1,9 @@
-import { MoreVertical, Edit2, Trash2, User, Calendar, Flag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MoreVertical, Edit2, Trash2, User, Calendar, Flag, Eye } from 'lucide-react'; // 🆕 Ajout Eye
 import { useState } from 'react';
 
 export const TaskCard = ({ task, onEdit, onDelete }) => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const getPriorityColor = (priority) => {
@@ -69,6 +71,11 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     onDelete(task);
   };
 
+  // 🆕 Handler pour le bouton "Voir détails"
+  const handleViewDetails = () => {
+    navigate(`/tasks/${task.id}`);
+  };
+
   return (
     <div className="card group hover:shadow-lg transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
@@ -133,7 +140,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
+      <div className="flex items-center justify-between pt-3 border-t border-neutral-200 mb-3"> {/* 🆕 Ajout mb-3 */}
         <div className="flex items-center gap-2">
           <User className="w-4 h-4 text-neutral-500" />
           <span className="text-sm text-neutral-600">
@@ -148,6 +155,15 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
           </span>
         </div>
       </div>
+
+      {/* 🆕 BOUTON "VOIR DÉTAILS" */}
+      <button
+        onClick={handleViewDetails}
+        className="w-full py-2 px-4 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+      >
+        <Eye className="w-4 h-4" />
+        Voir détails
+      </button>
     </div>
   );
 };
