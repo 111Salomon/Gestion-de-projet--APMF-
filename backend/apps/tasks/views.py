@@ -246,6 +246,42 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = TaskListSerializer(task, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['get', 'post'], url_path='comments')
+    def task_comments(self, request, pk=None):
+        """
+        🎯 Endpoint pour les commentaires d'une tâche spécifique.
+        
+        GET /api/tasks/{id}/comments/
+        - Liste tous les commentaires de la tâche (ordre anti-chronologique)
+        
+        POST /api/tasks/{id}/comments/
+        - Ajoute un nouveau commentaire
+        - Body JSON attendu : {"content": "Mon commentaire"}
+        
+        Exemples:
+        GET  /api/tasks/17/comments/  → Liste des commentaires de la tâche #17
+        POST /api/tasks/17/comments/  → Ajouter un commentaire à la tâche #17
+        """
+        task = self.get_object()  # Récupère la tâche + vérification permissions
+        
+        if request.method == 'GET':
+            # Liste des commentaires (les plus récents en premier)
+            comments = task.comments.all().order_by('-created_at')
+            serializer = CommentSerializer(comments, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        elif request.method == 'POST':
+            # Création d'un nouveau commentaire
+            serializer = CommentSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save(
+                    task=task,
+                    author=request.user
+                )
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 # ═══════════════════════════════════════════════════════════════
 # VIEWSET COMMENTS
@@ -276,21 +312,74 @@ class CommentViewSet(viewsets.ModelViewSet):
 # VIEWSET ATTACHMENTS
 # ═══════════════════════════════════════════════════════════════
 
-class AttachmentViewSet(viewsets.ModelViewSet):
+# ═══════════════════════════════════════════════════════════════
+# VIEWSET COMMENTS
+# ═══════════════════════════════════════════════════════════════
+
+class CommentViewSet(viewsets.ModelViewSet):
     """
-    ViewSet pour gérer les pièces jointes des tâches.
+    ViewSet pour gérer les commentaires sur les tâches.
     
     Endpoints :
-        - GET    /api/attachments/      Liste des pièces jointes
-        - POST   /api/attachments/      Uploader une pièce jointe
-        - GET    /api/attachments/{id}/ Détails d'une pièce jointe
-        - DELETE /api/attachments/{id}/ Supprimer une pièce jointe
-    """
+    - GET /api/comments/              Liste tous les commentaires (peu utilisé)
+    - POST /api/comments/             Créer un commentaire (peu utilisé)
+    - GET /api/comments/{id}/         Détails d'un commentaire
+    - PUT /api/comments/{id}/         Modifier un commentaire (son propre commentaire)
+    - PATCH /api/comments/{id}/       Modification partielle
+    - DELETE /api/comments/{id}/      Supprimer un commentaire (son propre commentaire)
     
-    queryset = Attachment.objects.all()
-    serializer_class = AttachmentSerializer
+    Note: Pour récupérer les commentaires d'une tâche spécifique,
+          utilisez GET /api/tasks/{task_id}/comments/
+    """
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
     
     def perform_create(self, serializer):
-        """Sauvegarde la pièce jointe avec l'uploader connecté."""
-        serializer.save(uploaded_by=self.request.user)
+        """Sauvegarde le commentaire avec l'auteur connecté."""
+        serializer.save(author=self.request.user)
+    
+    def get_queryset(self):
+        """
+        Filtre les commentaires selon le paramètre ?task={id}
+        Exemple : GET /api/comments/?task=17  →  Tous les commentaires de la tâche #17
+        """
+        queryset = super().get_queryset()
+        task_id = self.request.query_params.get('task', None)
+        if task_id is not None:
+            queryset = queryset.filter(task_id=task_id)
+        return queryset.order_by('-created_at')
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Modifie un commentaire (uniquement si c'est l'auteur).
+        PUT /api/comments/{id}/
+        Body JSON : {"content": "Nouveau contenu"}
+        """
+        comment = self.get_object()
+        
+        # Vérification : seul l'auteur peut modifier son commentaire
+        if comment.author != request.user:
+            return Response(
+                {'error': 'Vous ne pouvez modifier que vos propres commentaires.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Supprime un commentaire (uniquement si c'est l'auteur).
+        DELETE /api/comments/{id}/
+        """
+        comment = self.get_object()
+        
+        # Vérification : seul l'auteur peut supprimer son commentaire
+        if comment.author != request.user:
+            return Response(
+                {'error': 'Vous ne pouvez supprimer que vos propres commentaires.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().destroy(request, *args, **kwargs)
+

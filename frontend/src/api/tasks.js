@@ -290,6 +290,27 @@ updateStatusKanban: async (taskId, status, order) => {
   }
 },
 
+// ✅ BON (utilise "axiosInstance")
+getComments: async (taskId) => {
+  const response = await axiosInstance.get(`/tasks/${taskId}/comments/`);
+  return response.data;
+},
+
+addComment: async (taskId, data) => {
+  const response = await axiosInstance.post(`/tasks/${taskId}/comments/`, data);
+  return response.data;
+},
+
+updateComment: async (commentId, data) => {
+  const response = await axiosInstance.put(`/comments/${commentId}/`, data);
+  return response.data;
+},
+
+deleteComment: async (commentId) => {
+  await axiosInstance.delete(`/comments/${commentId}/`);
+},
+
+
 };
 
 /**

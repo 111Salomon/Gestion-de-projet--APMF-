@@ -13,6 +13,7 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { TaskForm } from '../../components/forms/TaskForm';
+import { CommentSection } from '../../components/tasks/CommentSection';
 
 // Import API
 import { tasksAPI } from '../../api/tasks';
@@ -271,6 +272,11 @@ export const TaskDetail = () => {
           confirmText="Supprimer"
           variant="danger"
         />
+
+
+        {/* Section commentaires - Style réseaux sociaux */}
+<CommentSection taskId={id} />
+
       </div>
     </Layout>
   );
