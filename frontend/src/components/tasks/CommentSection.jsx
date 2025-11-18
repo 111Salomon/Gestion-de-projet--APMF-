@@ -34,37 +34,45 @@ const loadComments = async () => {
 
 
   // Ajouter un commentaire
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!newComment.trim()) return;
+ // Ajouter un commentaire
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!newComment.trim()) return;
 
-    setIsSubmitting(true);
-    try {
-      const response = await tasksAPI.addComment(taskId, { content: newComment });
-      setComments([response.data, ...comments]);
-      setNewComment('');
-      toast.success('Commentaire ajouté');
-    } catch (error) {
-      toast.error('Erreur lors de l\'ajout du commentaire');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  setIsSubmitting(true);
+  try {
+    // ✅ addComment retourne déjà response.data
+    const data = await tasksAPI.addComment(taskId, { content: newComment });
+    setComments([data, ...comments]);  // ✅ data (pas data.data)
+    setNewComment('');
+    toast.success('Commentaire ajouté');
+  } catch (error) {
+    console.error('❌ Erreur:', error.response?.data);
+    toast.error('Erreur lors de l\'ajout du commentaire');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   // Modifier un commentaire
-  const handleEdit = async (commentId) => {
-    if (!editContent.trim()) return;
+// Modifier un commentaire
+const handleEdit = async (commentId) => {
+  if (!editContent.trim()) return;
 
-    try {
-      const response = await tasksAPI.updateComment(commentId, { content: editContent });
-      setComments(comments.map(c => c.id === commentId ? response.data : c));
-      setEditingId(null);
-      setEditContent('');
-      toast.success('Commentaire modifié');
-    } catch (error) {
-      toast.error('Erreur lors de la modification');
-    }
-  };
+  try {
+    // ✅ updateComment retourne déjà response.data
+    const data = await tasksAPI.updateComment(commentId, { content: editContent });
+    setComments(comments.map(c => c.id === commentId ? data : c));  // ✅ data
+    setEditingId(null);
+    setEditContent('');
+    toast.success('Commentaire modifié');
+  } catch (error) {
+    console.error('❌ Erreur:', error.response?.data);
+    toast.error('Erreur lors de la modification');
+  }
+};
+
 
   // Supprimer un commentaire
   const handleDelete = async (commentId) => {

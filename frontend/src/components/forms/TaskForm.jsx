@@ -21,6 +21,8 @@ import { Button } from '../common/Button';
 import { useForm } from '../../hooks/useForm';
 import { required, minLength } from '../../utils/validators';
 import { projectsAPI } from '../../api/projects';
+import AttachmentUploader from '../tasks/AttachmentUploader';
+import AttachmentList from '../tasks/AttachmentList';
 
 /**
  * ───────────────────────────────────────────────────────────
@@ -67,6 +69,9 @@ export const TaskForm = ({
    */
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+
+  // 🆕 AJOUT : État pour forcer le refresh des attachments
+  const [refreshAttachments, setRefreshAttachments] = useState(0);
 
   /**
    * ─────────────────────────────────────────────────────────
@@ -195,6 +200,20 @@ export const TaskForm = ({
     }
   };
 
+    /**
+   * ─────────────────────────────────────────────────────────
+   * CALLBACK : Après Upload Réussi
+   * ─────────────────────────────────────────────────────────
+   * 
+   * PRINCIPE : Forcer le refresh de AttachmentList
+   * 
+   * Quand un fichier est uploadé, on incrémente refreshAttachments
+   * AttachmentList reçoit cette valeur comme prop et se recharge
+   */
+  const handleUploadSuccess = () => {
+    setRefreshAttachments(prev => prev + 1);
+  };
+
   /**
    * ─────────────────────────────────────────────────────────
    * GESTIONNAIRE DE SOUMISSION
@@ -226,7 +245,6 @@ export const TaskForm = ({
     // values contient toutes les données du formulaire
     onSubmit(values);
   };
-
   /**
    * ─────────────────────────────────────────────────────────
    * RENDU JSX (Interface du Formulaire)
@@ -454,21 +472,56 @@ export const TaskForm = ({
       />
 
       {/* ───────────────────────────────────────────────── */}
-      {/* BOUTONS : Soumettre + Annuler                     */}
+      {/* SECTION : PIÈCES JOINTES (Seulement en mode édition) */}
       {/* ───────────────────────────────────────────────── */}
       {/*
-        PRINCIPE : État de chargement (Loading State)
+        PRINCIPE : Conditional Rendering (Rendu Conditionnel)
         
-        Pendant la soumission (isLoading = true) :
-        - Les boutons sont désactivés (disabled)
-        - Le bouton submit affiche un spinner
+        On affiche les pièces jointes SEULEMENT si :
+        - initialData existe (mode édition)
+        - ET initialData.id existe (tâche déjà créée)
         
-        UX : L'utilisateur sait que l'action est en cours
-        et ne peut pas cliquer plusieurs fois.
+        Pourquoi ?
+        - On ne peut pas uploader de fichiers vers une tâche
+          qui n'existe pas encore en base de données
+        - L'API a besoin du taskId pour lier les fichiers
+        
+        FLOW :
+        1. User crée une tâche → formulaire en mode création
+        2. Pas d'initialData.id → section cachée
+        3. User clique "Créer" → tâche créée en DB
+        4. User ouvre la tâche → formulaire en mode édition
+        5. initialData.id existe → section visible
       */}
+      {initialData && initialData.id && (
+        <div className="border-t border-gray-200 pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            📎 Pièces jointes
+          </h3>
+          
+          {/* Uploader */}
+          <div className="mb-6">
+            <AttachmentUploader
+              taskId={initialData.id}
+              onUploadSuccess={handleUploadSuccess}
+            />
+          </div>
+          
+          {/* Liste des fichiers */}
+          <div>
+            <AttachmentList
+              taskId={initialData.id}
+              refresh={refreshAttachments}
+            />
+          </div>
+        </div>
+      )}
+
+
+      {/* ───────────────────────────────────────────────── */}
+      {/* BOUTONS : Soumettre + Annuler                     */}
+      {/* ───────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 pt-4">
-        
-        {/* Bouton Submit */}
         <Button
           type="submit"
           variant="primary"
@@ -476,13 +529,11 @@ export const TaskForm = ({
           loading={isLoading}
           disabled={isLoading}
         >
-          {/* Texte différent selon le mode */}
           {initialData ? 'Mettre à Jour' : 'Créer la Tâche'}
         </Button>
         
-        {/* Bouton Annuler */}
         <Button
-          type="button"  // ← Important : pas "submit" !
+          type="button"
           variant="secondary"
           fullWidth
           onClick={onCancel}
@@ -494,6 +545,7 @@ export const TaskForm = ({
     </form>
   );
 };
+
 
 /**
  * ═══════════════════════════════════════════════════════════

@@ -93,10 +93,23 @@ const loadProjects = async () => {
   /**
    * Ouvre le modal pour modifier un projet
    */
-  const handleEdit = (project) => {
-    setEditingProject(project);
+const handleEdit = async (project) => {
+  try {
+    console.log('🔍 Chargement du projet complet...');
+    
+    // 🆕 Charge les détails complets (avec description)
+    const fullProject = await projectsAPI.getById(project.id);
+    
+    console.log('✅ Projet complet chargé:', fullProject);
+    console.log('✅ Description:', fullProject.description);
+    
+    setEditingProject(fullProject);
     setIsModalOpen(true);
-  };
+  } catch (error) {
+    console.error('❌ Erreur chargement projet:', error);
+    toast.error('Impossible de charger les détails du projet');
+  }
+};
 
   /**
    * Soumet le formulaire de création/modification

@@ -19,7 +19,8 @@ class CommentSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+        # ✅ AJOUT DE 'task' dans read_only_fields
+        read_only_fields = ['id', 'task', 'author', 'created_at', 'updated_at']
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
@@ -27,6 +28,9 @@ class AttachmentSerializer(serializers.ModelSerializer):
     
     uploaded_by = UserMinimalSerializer(read_only=True)
     file_size_mb = serializers.ReadOnlyField()
+    file_extension = serializers.ReadOnlyField()
+    is_image = serializers.ReadOnlyField()
+    file_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Attachment
@@ -34,9 +38,12 @@ class AttachmentSerializer(serializers.ModelSerializer):
             'id',
             'task',
             'file',
+            'file_url',
             'file_name',
             'file_size',
             'file_size_mb',
+            'file_extension',
+            'is_image',
             'uploaded_by',
             'uploaded_at'
         ]
@@ -44,9 +51,21 @@ class AttachmentSerializer(serializers.ModelSerializer):
             'id',
             'file_name',
             'file_size',
+            'file_extension',
+            'is_image',
             'uploaded_by',
             'uploaded_at'
         ]
+    
+    def get_file_url(self, obj):
+        """Retourne l'URL complète du fichier."""
+        request = self.context.get('request')
+        if obj.file and hasattr(obj.file, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
+
 
 
 class TaskSerializer(serializers.ModelSerializer):

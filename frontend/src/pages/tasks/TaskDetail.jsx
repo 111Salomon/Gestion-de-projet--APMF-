@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Edit, Trash2, Calendar, User, 
-  FolderOpen, Flag, Clock 
+  FolderOpen, Flag, Clock,Paperclip
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
 
 // Imports composants
 import { Layout } from '../../components/layout/Layout';
@@ -14,9 +15,12 @@ import { Modal } from '../../components/common/Modal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { TaskForm } from '../../components/forms/TaskForm';
 import { CommentSection } from '../../components/tasks/CommentSection';
+import AttachmentList from '../../components/tasks/AttachmentList';
+
 
 // Import API
 import { tasksAPI } from '../../api/tasks';
+
 
 export const TaskDetail = () => {
   // Récupère l'ID depuis l'URL (ex: /tasks/15)
@@ -28,11 +32,14 @@ export const TaskDetail = () => {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [updating, setUpdating] = useState(false); // 🆕 AJOUTÉ
+
 
   // Chargement de la tâche au montage du composant
   useEffect(() => {
     loadTask();
   }, [id]);
+
 
   // Fonction de chargement des données
   const loadTask = async () => {
@@ -49,6 +56,24 @@ export const TaskDetail = () => {
     }
   };
 
+
+  // 🆕 FONCTION AJOUTÉE : Mise à jour de la tâche
+  const handleUpdate = async (values) => {
+    try {
+      setUpdating(true);
+      await tasksAPI.update(id, values);
+      toast.success('Tâche mise à jour');
+      await loadTask(); // Recharge les données
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour:', error);
+      toast.error('Impossible de mettre à jour la tâche');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+
   // Suppression de la tâche
   const handleDelete = async () => {
     try {
@@ -61,6 +86,7 @@ export const TaskDetail = () => {
     }
   };
 
+
   // Formatage de date
   const formatDate = (dateString) => {
     if (!dateString) return 'Non définie';
@@ -70,6 +96,7 @@ export const TaskDetail = () => {
       year: 'numeric',
     });
   };
+
 
   // Badge de statut avec couleurs
   const getStatusBadge = (status) => {
@@ -92,6 +119,7 @@ export const TaskDetail = () => {
     );
   };
 
+
   // Badge de priorité avec couleurs
   const getPriorityBadge = (priority) => {
     const styles = {
@@ -108,6 +136,7 @@ export const TaskDetail = () => {
     );
   };
 
+
   // Affichage pendant chargement
   if (loading) {
     return (
@@ -116,6 +145,7 @@ export const TaskDetail = () => {
       </Layout>
     );
   }
+
 
   // Si tâche introuvable
   if (!task) {
@@ -127,6 +157,7 @@ export const TaskDetail = () => {
       </Layout>
     );
   }
+
 
   // Rendu principal de la page
   return (
@@ -142,6 +173,7 @@ export const TaskDetail = () => {
             <ArrowLeft className="w-5 h-5" />
             <span>Retour</span>
           </button>
+
 
           {/* Boutons Modifier et Supprimer */}
           <div className="flex gap-2">
@@ -162,6 +194,7 @@ export const TaskDetail = () => {
           </div>
         </div>
 
+
         {/* ═══ CONTENU PRINCIPAL ═══ */}
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 space-y-6">
           
@@ -176,12 +209,25 @@ export const TaskDetail = () => {
             </div>
           </div>
 
+
           {/* Description */}
           <div>
             <h2 className="text-sm font-semibold text-neutral-700 mb-2">Description</h2>
             <p className="text-neutral-600 whitespace-pre-wrap">
               {task.description || 'Aucune description'}
             </p>
+          </div>
+
+
+          {/* 🆕 SECTION PIÈCES JOINTES À AJOUTER ICI */}
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <Paperclip className="w-5 h-5 text-neutral-500" />
+              <h2 className="text-sm font-semibold text-neutral-700">
+                Pièces jointes
+              </h2>
+            </div>
+            <AttachmentList taskId={id} />
           </div>
 
           {/* Métadonnées (Projet, Assigné, Dates) */}
@@ -198,6 +244,7 @@ export const TaskDetail = () => {
               </div>
             </div>
 
+
             {/* Assigné à */}
             <div className="flex items-center gap-3">
               <User className="w-5 h-5 text-neutral-500" />
@@ -208,6 +255,7 @@ export const TaskDetail = () => {
                 </p>
               </div>
             </div>
+
 
             {/* Date de début */}
             {task.start_date && (
@@ -222,6 +270,7 @@ export const TaskDetail = () => {
               </div>
             )}
 
+
             {/* Date limite */}
             <div className="flex items-center gap-3">
               <Clock className="w-5 h-5 text-neutral-500" />
@@ -233,7 +282,9 @@ export const TaskDetail = () => {
               </div>
             </div>
 
+
           </div>
+
 
           {/* Dates de création/modification */}
           <div className="pt-4 border-t text-xs text-neutral-500">
@@ -243,24 +294,26 @@ export const TaskDetail = () => {
             )}
           </div>
 
+
         </div>
+
 
         {/* ═══ MODALS ═══ */}
         
-        {/* Modal d'édition */}
+        {/* 🔧 Modal d'édition CORRIGÉ */}
         <Modal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           title="Modifier la tâche"
         >
           <TaskForm
-            task={task}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              loadTask(); // Recharge les données après modification
-            }}
+            initialData={task}           // ✅ CHANGÉ : task → initialData
+            onSubmit={handleUpdate}      // ✅ AJOUTÉ
+            onCancel={() => setIsEditModalOpen(false)} // ✅ AJOUTÉ
+            isLoading={updating}         // ✅ CHANGÉ
           />
         </Modal>
+
 
         {/* Modal de confirmation suppression */}
         <ConfirmModal
@@ -274,12 +327,15 @@ export const TaskDetail = () => {
         />
 
 
+
         {/* Section commentaires - Style réseaux sociaux */}
-<CommentSection taskId={id} />
+        <CommentSection taskId={id} />
+
 
       </div>
     </Layout>
   );
 };
+
 
 export default TaskDetail;

@@ -20,7 +20,7 @@ export const ProjectDetail = () => {
   // ─── Récupère l'ID depuis l'URL ───
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // ─── État local ───
   const [project, setProject] = useState(null);
   const [stats, setStats] = useState(null);
@@ -28,6 +28,7 @@ export const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [updating, setUpdating] = useState(false); // 🆕 AJOUTÉ
 
   // ─── Chargement au montage ───
   useEffect(() => {
@@ -37,7 +38,7 @@ export const ProjectDetail = () => {
   const loadProjectData = async () => {
     try {
       setLoading(true);
-      
+
       // Charge les 3 API en parallèle
       const [projectData, statsData, tasksData] = await Promise.all([
         projectsAPI.getById(id),
@@ -47,20 +48,35 @@ export const ProjectDetail = () => {
 
       setProject(projectData);
       setStats(statsData);
-      
+
       // ✅ Gestion correcte des 2 formats possibles
-      const tasksList = Array.isArray(tasksData) 
-        ? tasksData 
+      const tasksList = Array.isArray(tasksData)
+        ? tasksData
         : (tasksData.results || []);
       
       setTasks(tasksList);
-      
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
       toast.error('Impossible de charger le projet');
       navigate('/projects');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🆕 FONCTION AJOUTÉE : Mise à jour du projet
+  const handleUpdate = async (values) => {
+    try {
+      setUpdating(true);
+      await projectsAPI.update(id, values);
+      toast.success('Projet mis à jour');
+      await loadProjectData(); // Recharge les données
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('❌ Erreur mise à jour:', error);
+      toast.error('Impossible de mettre à jour le projet');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -83,6 +99,31 @@ export const ProjectDetail = () => {
       year: 'numeric',
     });
   };
+
+  // Badge de statut avec couleurs
+const getStatusBadge = (status) => {
+  const styles = {
+    planning: 'bg-gray-100 text-gray-700',
+    active: 'bg-blue-100 text-blue-700',
+    on_hold: 'bg-yellow-100 text-yellow-700',
+    completed: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-700',
+  };
+
+  const labels = {
+    planning: 'En planification',
+    active: 'Actif',
+    on_hold: 'En pause',
+    completed: 'Terminé',
+    cancelled: 'Annulé',
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
+      {labels[status] || status}
+    </span>
+  );
+};
 
   // ─── Affichage pendant chargement ───
   if (loading) {
@@ -107,7 +148,7 @@ export const ProjectDetail = () => {
   // ─── RENDU DE LA PAGE ───
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
         
         {/* ═══════════════════════════════════════════ */}
         {/* HEADER : Bouton retour + Actions */}
@@ -142,57 +183,52 @@ export const ProjectDetail = () => {
         {/* ═══════════════════════════════════════════ */}
         {/* INFO PROJET : Titre + Description + Dates */}
         {/* ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 space-y-4">
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-900">
-              {project.name}
-            </h1>
-            <p className="text-neutral-600 mt-2">
-              {project.description || 'Aucune description'}
-            </p>
-          </div>
+        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
+          <h1 className="text-3xl font-bold text-neutral-900 mb-4">
+            {project.name}
+          </h1>
+          <p className="text-neutral-600 mb-6">
+            {project.description || 'Aucune description'}
+          </p>
+
+            {/* 🆕 Badge de statut AJOUTÉ */}
+  <div className="mb-4">
+    {getStatusBadge(project.status)}
+  </div>
 
           {/* Infos secondaires (dates + membres) */}
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-neutral-500" />
-              <span className="text-neutral-600">
-                Début : <strong>{formatDate(project.start_date)}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-neutral-500" />
-              <span className="text-neutral-600">
-                Fin : <strong>{formatDate(project.end_date)}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-neutral-500" />
-              <span className="text-neutral-600">
-                Équipe : <strong>{project.members?.length || 0}</strong> membre
-                {project.members?.length > 1 ? 's' : ''}
-              </span>
-            </div>
+          <div className="flex gap-4 text-sm text-neutral-500">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              Début : {formatDate(project.start_date)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              Fin : {formatDate(project.end_date)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              Équipe : {project.members?.length || 0} membre
+              {project.members?.length > 1 ? 's' : ''}
+            </span>
           </div>
         </div>
 
         {/* ═══════════════════════════════════════════ */}
         {/* STATISTIQUES : Composant ProjectStats */}
         {/* ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-          <ProjectStats stats={stats} />
-        </div>
+        <ProjectStats stats={stats} />
 
         {/* ═══════════════════════════════════════════ */}
         {/* TÂCHES DU PROJET : Grille de cartes */}
         {/* ═══════════════════════════════════════════ */}
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold">
               Tâches du Projet ({tasks.length})
             </h2>
             <Button
-              variant="primary"
+              variant="outline"
               onClick={() => navigate(`/tasks?project=${id}`)}
             >
               Voir toutes les tâches
@@ -201,25 +237,26 @@ export const ProjectDetail = () => {
 
           {/* Liste des tâches ou message vide */}
           {tasks.length === 0 ? (
-            <p className="text-center text-neutral-500 py-8">
+            <p className="text-neutral-500 text-center py-8">
               Aucune tâche pour le moment
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Affiche seulement les 6 premières tâches */}
               {tasks.slice(0, 6).map(task => (
-                <TaskCard 
-                  key={task.id} 
+                <TaskCard
+                  key={task.id}
                   task={task}
-                  onClick={() => {/* Optionnel: ouvrir modal détails */}}
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                  // {/* Optionnel: ouvrir modal détails */}
                 />
               ))}
             </div>
           )}
-          
+
           {/* Message si + de 6 tâches */}
           {tasks.length > 6 && (
-            <p className="text-center text-sm text-neutral-500 mt-4">
+            <p className="text-neutral-500 text-center mt-4">
               Et {tasks.length - 6} autre{tasks.length - 6 > 1 ? 's' : ''} tâche
               {tasks.length - 6 > 1 ? 's' : ''}...
             </p>
@@ -229,19 +266,18 @@ export const ProjectDetail = () => {
         {/* ═══════════════════════════════════════════ */}
         {/* MODALS : Édition + Suppression */}
         {/* ═══════════════════════════════════════════ */}
-        
-        {/* Modal d'édition */}
+
+        {/* 🔧 Modal d'édition CORRIGÉ */}
         <Modal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           title="Modifier le projet"
         >
           <ProjectForm
-            project={project}
-            onClose={() => {
-              setIsEditModalOpen(false);
-              loadProjectData(); // Recharge les données après modification
-            }}
+            initialData={project}               // ✅ CHANGÉ : project → initialData
+            onSubmit={handleUpdate}             // ✅ AJOUTÉ
+            onCancel={() => setIsEditModalOpen(false)} // ✅ AJOUTÉ
+            isLoading={updating}                // ✅ CHANGÉ
           />
         </Modal>
 

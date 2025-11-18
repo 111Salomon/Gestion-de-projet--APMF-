@@ -282,10 +282,27 @@ export const Tasks = () => {
    * 
    * @param {Object} task - La tâche à éditer
    */
-  const handleEdit = (task) => {
-    setEditingTask(task);  // ← Mode édition
+/**
+ * Ouvre le modal pour modifier une tâche
+ * 🆕 Charge les détails complets depuis l'API
+ */
+const handleEdit = async (task) => {
+  try {
+    console.log('🔍 Chargement de la tâche complète...');
+    
+    // 🆕 Charge les détails complets (avec description, etc.)
+    const fullTask = await tasksAPI.getById(task.id);
+    
+    console.log('✅ Tâche complète chargée:', fullTask);
+    
+    setEditingTask(fullTask);
     setIsModalOpen(true);
-  };
+  } catch (error) {
+    console.error('❌ Erreur chargement tâche:', error);
+    toast.error('Impossible de charger les détails de la tâche');
+  }
+};
+
 
   /**
    * ─────────────────────────────────────────────────────────

@@ -238,6 +238,9 @@ class Comment(models.Model):
         return f"Commentaire de {self.author.username} sur {self.task.title}: {preview}"
 
 
+import os
+
+
 class Attachment(models.Model):
     """
     Modèle représentant une pièce jointe liée à une tâche.
@@ -248,8 +251,9 @@ class Attachment(models.Model):
     
     Types de fichiers acceptés:
         - Documents: pdf, doc, docx, xls, xlsx
-        - Images: jpg, jpeg, png, gif
+        - Images: jpg, jpeg, png, gif, webp
         - Archives: zip, rar
+        - Autres: txt, csv
     """
     
     # Relations
@@ -262,25 +266,28 @@ class Attachment(models.Model):
     
     # Fichier
     file = models.FileField(
-        upload_to='attachments/%Y/%m/',
+        upload_to='uploads/tasks/%Y/%m/',  # ✅ Changé
         validators=[
             FileExtensionValidator([
                 'pdf', 'doc', 'docx', 'xls', 'xlsx',
-                'jpg', 'jpeg', 'png', 'gif',
-                'zip', 'rar'
+                'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg',
+                'zip', 'rar', 'txt', 'csv'
             ])
         ],
         verbose_name='Fichier',
-        help_text='Formats acceptés: PDF, DOC, XLS, images, ZIP'
+        max_length=500,
+        help_text='Formats acceptés: PDF, DOC, XLS, images, ZIP, TXT, CSV'
     )
     
     # Métadonnées du fichier
     file_name = models.CharField(
         max_length=255,
+        blank=True,  # ✅ Ajouté
         verbose_name='Nom du fichier'
     )
     
     file_size = models.PositiveIntegerField(
+        default=0,  # ✅ Ajouté
         verbose_name='Taille (bytes)',
         help_text='Taille du fichier en bytes'
     )
@@ -289,7 +296,7 @@ class Attachment(models.Model):
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='attachments',
+        related_name='uploaded_attachments',  # ✅ Changé pour éviter conflits
         verbose_name='Uploadé par'
     )
     
@@ -311,16 +318,33 @@ class Attachment(models.Model):
     
     def __str__(self):
         """Représentation textuelle de la pièce jointe."""
-        return self.file_name
+        return self.file_name or self.file.name
     
     def save(self, *args, **kwargs):
         """Capture automatiquement le nom et la taille du fichier."""
         if self.file:
-            self.file_name = self.file.name
+            self.file_name = os.path.basename(self.file.name)
             self.file_size = self.file.size
         super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """Supprime le fichier physique lors de la suppression."""
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)
     
     @property
     def file_size_mb(self):
         """Retourne la taille du fichier en MB."""
         return round(self.file_size / (1024 * 1024), 2)
+    
+    @property
+    def file_extension(self):
+        """Retourne l'extension du fichier."""
+        return os.path.splitext(self.file_name or self.file.name)[1].lower()
+    
+    @property
+    def is_image(self):
+        """Vérifie si c'est une image."""
+        return self.file_extension in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']

@@ -1,7 +1,9 @@
+import os 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Q
 from .models import Task, Comment, Attachment
 from .serializers import (
@@ -381,5 +383,70 @@ class CommentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
+        return super().destroy(request, *args, **kwargs)
+
+class AttachmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les pièces jointes.
+    
+    Endpoints :
+    - GET    /api/attachments/              Liste tous les attachments
+    - POST   /api/attachments/              Upload un fichier
+    - GET    /api/attachments/{id}/         Détails d'un attachment
+    - DELETE /api/attachments/{id}/         Supprimer un attachment
+    """
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]  # ✅ Support upload fichiers
+    
+    def get_queryset(self):
+        """Filtre les attachments par tâche si ?task={id} est fourni."""
+        queryset = super().get_queryset().select_related('uploaded_by', 'task')
+        task_id = self.request.query_params.get('task', None)
+        if task_id:
+            queryset = queryset.filter(task_id=task_id)
+        return queryset
+    
+    def perform_create(self, serializer):
+        """
+        Sauvegarde l'attachment avec l'utilisateur connecté.
+        Validation de taille et type de fichier.
+        """
+        file_obj = self.request.FILES.get('file')
+        
+        # Validation de taille (10 MB max)
+        if file_obj and file_obj.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError({
+                'file': 'La taille du fichier ne peut pas dépasser 10 MB.'
+            })
+        
+        # Validation de type
+        allowed_extensions = [
+            '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+            '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+            '.zip', '.rar', '.txt', '.csv'
+        ]
+        if file_obj:
+            ext = os.path.splitext(file_obj.name)[1].lower()
+            if ext not in allowed_extensions:
+                raise serializers.ValidationError({
+                    'file': f'Type de fichier non autorisé. Extensions autorisées : {", ".join(allowed_extensions)}'
+                })
+        
+        serializer.save(uploaded_by=self.request.user)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Supprime l'attachment ET le fichier physique."""
+        attachment = self.get_object()
+        
+        # Vérification : seul l'uploader ou l'admin peut supprimer
+        if attachment.uploaded_by != request.user and not request.user.is_admin:
+            return Response(
+                {'error': 'Vous ne pouvez supprimer que vos propres fichiers.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Le fichier physique sera supprimé par la méthode delete() du modèle
         return super().destroy(request, *args, **kwargs)
 
