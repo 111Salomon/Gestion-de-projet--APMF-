@@ -2,7 +2,8 @@ from rest_framework import serializers
 from .models import Task, Comment, Attachment
 from apps.users.serializers import UserMinimalSerializer
 from apps.projects.serializers import ProjectListSerializer
-
+from apps.projects.models import Project
+from apps.users.models import User
 
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer pour les commentaires."""
@@ -19,7 +20,6 @@ class CommentSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
-        # ✅ AJOUT DE 'task' dans read_only_fields
         read_only_fields = ['id', 'task', 'author', 'created_at', 'updated_at']
 
 
@@ -67,17 +67,23 @@ class AttachmentSerializer(serializers.ModelSerializer):
         return None
 
 
-
 class TaskSerializer(serializers.ModelSerializer):
     """Serializer détaillé pour les tâches."""
     
-    project = ProjectListSerializer(read_only=True)
-    assigned_to = UserMinimalSerializer(read_only=True)
+    # En ÉCRITURE : accepte les IDs
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    
+    # Toujours en read-only
     created_by = UserMinimalSerializer(read_only=True)
-
-        # 🆕 Champs supplémentaires pour compatibilité frontend
-    project_name = serializers.CharField(source='project.name', read_only=True)
-    assigned_to_name = serializers.CharField(source='assigned_to.username', read_only=True)
     
     comments = CommentSerializer(many=True, read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
@@ -92,9 +98,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'title',
             'description',
             'project',
-            'project_name', 
             'assigned_to',
-            'assigned_to_name', 
             'created_by',
             'status',
             'priority',
@@ -115,6 +119,24 @@ class TaskSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
+    
+    def to_representation(self, instance):
+        """
+        Transforme les IDs en objets complets pour la lecture.
+        
+        En ÉCRITURE : on envoie assigned_to = 7
+        En LECTURE : on reçoit assigned_to = { id: 7, username: "dophie", ... }
+        """
+        data = super().to_representation(instance)
+        
+        # Remplace les IDs par les objets complets
+        if instance.project:
+            data['project'] = ProjectListSerializer(instance.project).data
+        
+        if instance.assigned_to:
+            data['assigned_to'] = UserMinimalSerializer(instance.assigned_to).data
+        
+        return data
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):
@@ -132,12 +154,11 @@ class TaskCreateSerializer(serializers.ModelSerializer):
             'priority',
             'due_date'
         ]
-
         read_only_fields = ['id']
     
     def validate(self, attrs):
         """Valide que la date d'échéance ne dépasse pas la fin du projet."""
-        if attrs.get('due_date') and attrs['project'].end_date:
+        if attrs.get('due_date') and attrs.get('project') and attrs['project'].end_date:
             if attrs['due_date'] > attrs['project'].end_date:
                 raise serializers.ValidationError({
                     "due_date": "La date d'échéance ne peut pas dépasser la date de fin du projet."
@@ -148,6 +169,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 class TaskListSerializer(serializers.ModelSerializer):
     """Serializer léger pour la liste des tâches."""
     
+    project = ProjectListSerializer(read_only=True)
     assigned_to = UserMinimalSerializer(read_only=True)
     is_overdue = serializers.ReadOnlyField()
     

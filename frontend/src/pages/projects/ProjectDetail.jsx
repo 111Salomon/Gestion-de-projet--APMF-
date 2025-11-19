@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, Users, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ─── Imports avec chemins relatifs corrigés ───
@@ -13,26 +13,45 @@ import { ProjectStats } from '../../components/projects/ProjectStats';
 import { TaskCard } from '../../components/tasks/TaskCard';
 import { ProjectForm } from '../../components/forms/ProjectForm';
 
+// 🆕 Imports pour la gestion des membres
+import { MemberList } from '../../components/projects/MemberList';
+import { AddMemberModal } from '../../components/projects/AddMemberModal';
+
 // Imports API
 import { projectsAPI } from '../../api/projects';
+
+import { useAuth } from '../../context/AuthContext'; // 🆕 Ajoute cet import
+
 
 export const ProjectDetail = () => {
   // ─── Récupère l'ID depuis l'URL ───
   const { id } = useParams();
   const navigate = useNavigate();
+  // 🆕 Récupère l'utilisateur depuis le contexte
+  const { user: currentUser } = useAuth();
 
-  // ─── État local ───
+
+  // ─── État local (existant) ───
   const [project, setProject] = useState(null);
   const [stats, setStats] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [updating, setUpdating] = useState(false); // 🆕 AJOUTÉ
+  const [updating, setUpdating] = useState(false);
+
+  // 🆕 État local pour la gestion des membres
+  const [members, setMembers] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
 
   // ─── Chargement au montage ───
   useEffect(() => {
     loadProjectData();
+    loadMembers(); // 🆕 Charge les membres
+    loadAvailableUsers(); // 🆕 Charge les users disponibles
   }, [id]);
 
   const loadProjectData = async () => {
@@ -64,13 +83,85 @@ export const ProjectDetail = () => {
     }
   };
 
-  // 🆕 FONCTION AJOUTÉE : Mise à jour du projet
+  // 🆕 Charge la liste des membres du projet
+  const loadMembers = async () => {
+    try {
+      setLoadingMembers(true);
+      const data = await projectsAPI.getMembers(id);
+      setMembers(data);
+    } catch (error) {
+      console.error('❌ Erreur chargement membres:', error);
+      toast.error('Impossible de charger les membres');
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  // 🆕 Charge la liste des utilisateurs disponibles
+  const loadAvailableUsers = async () => {
+    try {
+      const data = await projectsAPI.getAvailableUsers();
+      setAvailableUsers(data);
+    } catch (error) {
+      console.error('❌ Erreur chargement utilisateurs:', error);
+    }
+  };
+
+  // 🆕 Ajoute un membre au projet
+  const handleAddMember = async (userId, role) => {
+    try {
+      setAddingMember(true);
+      await projectsAPI.addMember(id, userId, role);
+      toast.success('Membre ajouté avec succès');
+      
+      // Recharge les membres
+      await loadMembers();
+      
+      // Ferme le modal
+      setIsAddMemberModalOpen(false);
+    } catch (error) {
+      console.error('❌ Erreur ajout membre:', error);
+      toast.error(error.response?.data?.error || 'Impossible d\'ajouter le membre');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  // 🆕 Retire un membre du projet
+  const handleRemoveMember = async (userId) => {
+    try {
+      await projectsAPI.removeMember(id, userId);
+      toast.success('Membre retiré avec succès');
+      
+      // Recharge les membres
+      await loadMembers();
+    } catch (error) {
+      console.error('❌ Erreur suppression membre:', error);
+      toast.error('Impossible de retirer le membre');
+    }
+  };
+
+  // 🆕 Change le rôle d'un membre
+  const handleChangeRole = async (userId, newRole) => {
+    try {
+      await projectsAPI.updateMemberRole(id, userId, newRole);
+      toast.success('Rôle modifié avec succès');
+      
+      // Recharge les membres
+      await loadMembers();
+    } catch (error) {
+      console.error('❌ Erreur changement rôle:', error);
+      toast.error('Impossible de modifier le rôle');
+    }
+  };
+
+  // Mise à jour du projet
   const handleUpdate = async (values) => {
     try {
       setUpdating(true);
       await projectsAPI.update(id, values);
       toast.success('Projet mis à jour');
-      await loadProjectData(); // Recharge les données
+      await loadProjectData();
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur mise à jour:', error);
@@ -101,29 +192,44 @@ export const ProjectDetail = () => {
   };
 
   // Badge de statut avec couleurs
-const getStatusBadge = (status) => {
-  const styles = {
-    planning: 'bg-gray-100 text-gray-700',
-    active: 'bg-blue-100 text-blue-700',
-    on_hold: 'bg-yellow-100 text-yellow-700',
-    completed: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-700',
+  const getStatusBadge = (status) => {
+    const styles = {
+      planning: 'bg-gray-100 text-gray-700',
+      active: 'bg-blue-100 text-blue-700',
+      on_hold: 'bg-yellow-100 text-yellow-700',
+      completed: 'bg-green-100 text-green-700',
+      cancelled: 'bg-red-100 text-red-700',
+    };
+
+    const labels = {
+      planning: 'En planification',
+      active: 'Actif',
+      on_hold: 'En pause',
+      completed: 'Terminé',
+      cancelled: 'Annulé',
+    };
+
+    return (
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
+        {labels[status] || status}
+      </span>
+    );
   };
 
-  const labels = {
-    planning: 'En planification',
-    active: 'Actif',
-    on_hold: 'En pause',
-    completed: 'Terminé',
-    cancelled: 'Annulé',
-  };
+  // 🔍 DEBUG : Ajoute ces lignes temporairement
+  console.log('🔍 project.owner.id:', project?.owner?.id, typeof project?.owner?.id);
+  console.log('🔍 currentUser.id:', currentUser?.id, typeof currentUser?.id);
+  console.log('🔍 Égalité stricte:', project?.owner?.id === currentUser?.id);
+  console.log('🔍 Égalité avec Number():', Number(project?.owner?.id) === Number(currentUser?.id));
+  console.log('🔍 currentUser.role:', currentUser?.role);
 
-  return (
-    <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
-      {labels[status] || status}
-    </span>
+  // ✅ Version corrigée avec Number()
+  const isOwner = currentUser && (
+    Number(project?.owner?.id) === Number(currentUser?.id) || 
+    currentUser?.role === 'admin'
   );
-};
+
+  console.log('🔍 isOwner final:', isOwner);
 
   // ─── Affichage pendant chargement ───
   if (loading) {
@@ -184,17 +290,18 @@ const getStatusBadge = (status) => {
         {/* INFO PROJET : Titre + Description + Dates */}
         {/* ═══════════════════════════════════════════ */}
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-4">
+          <h1 className="text-3xl font-bold text-neutral-900 mb-3">
             {project.name}
           </h1>
+
+          {/* Badge de statut */}
+          <div className="mb-4">
+            {getStatusBadge(project.status)}
+          </div>
+
           <p className="text-neutral-600 mb-6">
             {project.description || 'Aucune description'}
           </p>
-
-            {/* 🆕 Badge de statut AJOUTÉ */}
-  <div className="mb-4">
-    {getStatusBadge(project.status)}
-  </div>
 
           {/* Infos secondaires (dates + membres) */}
           <div className="flex gap-4 text-sm text-neutral-500">
@@ -208,8 +315,7 @@ const getStatusBadge = (status) => {
             </span>
             <span className="flex items-center gap-1">
               <Users className="w-4 h-4" />
-              Équipe : {project.members?.length || 0} membre
-              {project.members?.length > 1 ? 's' : ''}
+              Équipe : {members.length} membre{members.length > 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -218,6 +324,38 @@ const getStatusBadge = (status) => {
         {/* STATISTIQUES : Composant ProjectStats */}
         {/* ═══════════════════════════════════════════ */}
         <ProjectStats stats={stats} />
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* 🆕 MEMBRES DU PROJET : Nouvelle Section */}
+        {/* ═══════════════════════════════════════════ */}
+        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Users className="w-6 h-6" />
+              Membres du Projet ({members.length})
+            </h2>
+            
+            {/* Bouton ajouter (visible seulement pour le owner) */}
+            {isOwner && (
+              <Button
+                variant="primary"
+                onClick={() => setIsAddMemberModalOpen(true)}
+                icon={<UserPlus className="w-4 h-4" />}
+              >
+                Ajouter un membre
+              </Button>
+            )}
+          </div>
+
+          {/* Composant MemberList */}
+          <MemberList
+            members={members}
+            isOwner={isOwner}
+            onRemoveMember={handleRemoveMember}
+            onChangeRole={handleChangeRole}
+            loading={loadingMembers}
+          />
+        </div>
 
         {/* ═══════════════════════════════════════════ */}
         {/* TÂCHES DU PROJET : Grille de cartes */}
@@ -248,7 +386,6 @@ const getStatusBadge = (status) => {
                   key={task.id}
                   task={task}
                   onClick={() => navigate(`/tasks/${task.id}`)}
-                  // {/* Optionnel: ouvrir modal détails */}
                 />
               ))}
             </div>
@@ -264,20 +401,20 @@ const getStatusBadge = (status) => {
         </div>
 
         {/* ═══════════════════════════════════════════ */}
-        {/* MODALS : Édition + Suppression */}
+        {/* MODALS : Édition + Suppression + Membres */}
         {/* ═══════════════════════════════════════════ */}
 
-        {/* 🔧 Modal d'édition CORRIGÉ */}
+        {/* Modal d'édition du projet */}
         <Modal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           title="Modifier le projet"
         >
           <ProjectForm
-            initialData={project}               // ✅ CHANGÉ : project → initialData
-            onSubmit={handleUpdate}             // ✅ AJOUTÉ
-            onCancel={() => setIsEditModalOpen(false)} // ✅ AJOUTÉ
-            isLoading={updating}                // ✅ CHANGÉ
+            initialData={project}
+            onSubmit={handleUpdate}
+            onCancel={() => setIsEditModalOpen(false)}
+            isLoading={updating}
           />
         </Modal>
 
@@ -290,6 +427,16 @@ const getStatusBadge = (status) => {
           message={`Êtes-vous sûr de vouloir supprimer "${project.name}" ? Cette action est irréversible et supprimera aussi toutes les tâches associées.`}
           confirmText="Supprimer"
           variant="danger"
+        />
+
+        {/* 🆕 Modal d'ajout de membre */}
+        <AddMemberModal
+          isOpen={isAddMemberModalOpen}
+          onClose={() => setIsAddMemberModalOpen(false)}
+          onAddMember={handleAddMember}
+          availableUsers={availableUsers}
+          existingMembers={members}
+          loading={addingMember}
         />
       </div>
     </Layout>

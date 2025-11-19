@@ -1,45 +1,90 @@
 from rest_framework import serializers
 from .models import Project, ProjectMember
-from apps.users.serializers import UserMinimalSerializer
 from apps.users.models import User
+from apps.users.serializers import UserMinimalSerializer
 
+
+# ═══════════════════════════════════════════════════════════════════
+# 👤 USER SERIALIZER (pour la gestion des membres)
+# ═══════════════════════════════════════════════════════════════════
+
+class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer complet pour les utilisateurs.
+    Utilisé dans la liste des membres et les users disponibles.
+    """
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'full_name', 'avatar', 'role']
+        read_only_fields = ['id']
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 👥 PROJECT MEMBER SERIALIZER
+# ═══════════════════════════════════════════════════════════════════
 
 class ProjectMemberSerializer(serializers.ModelSerializer):
     """
     Serializer pour ProjectMember.
     Affiche les membres d'un projet avec leurs rôles.
+    
+    📌 Utilisé dans:
+        - GET /api/projects/{id}/members/
+        - POST /api/projects/{id}/members/add/
+        - PATCH /api/projects/{id}/members/{user_id}/role/
     """
     
-    user = UserMinimalSerializer(read_only=True)
+    # Relations
+    user = UserSerializer(read_only=True)  # Infos complètes du user
     user_id = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
         source='user',
-        write_only=True
+        write_only=True  # Utilisé seulement en création
+    )
+    
+    # Champs calculés
+    role_display = serializers.CharField(
+        source='get_role_display', 
+        read_only=True  # Ex: "member" → "Membre"
     )
     
     class Meta:
         model = ProjectMember
         fields = [
             'id',
-            'user',
-            'user_id',
-            'role',
-            'joined_at'
+            'user',           # Objet user complet (lecture)
+            'user_id',        # ID pour création (écriture)
+            'role',           # manager/developer/viewer/member
+            'role_display',   # Libellé français
+            'joined_at'       # Date d'ajout au projet
         ]
         read_only_fields = ['id', 'joined_at']
 
 
+# ═══════════════════════════════════════════════════════════════════
+# 📦 PROJECT SERIALIZERS
+# ═══════════════════════════════════════════════════════════════════
+
 class ProjectSerializer(serializers.ModelSerializer):
     """
-    Serializer pour le modèle Project.
+    Serializer complet pour un projet (détail).
+    Inclut tous les champs + membres.
+    
+    📌 Utilisé dans:
+        - GET /api/projects/{id}/
+        - PUT /api/projects/{id}/
     """
     
+    # Relations
     owner = UserMinimalSerializer(read_only=True)
     project_members = ProjectMemberSerializer(many=True, read_only=True)
     
     # Champs calculés
-    progress = serializers.ReadOnlyField()
+    progress = serializers.ReadOnlyField()  # % calculé dans le modèle
     tasks_count = serializers.SerializerMethodField()
+    members_count = serializers.SerializerMethodField()  # 🆕 Nombre de membres
     
     class Meta:
         model = Project
@@ -53,7 +98,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             'end_date',
             'progress',
             'tasks_count',
-            'project_members',
+            'members_count',      # 🆕 Ajouté
+            'project_members',    # Liste complète des membres
             'created_at',
             'updated_at'
         ]
@@ -62,11 +108,19 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_tasks_count(self, obj):
         """Retourne le nombre de tâches du projet."""
         return obj.tasks.count()
+    
+    def get_members_count(self, obj):
+        """Retourne le nombre de membres du projet."""
+        return obj.project_members.count()
 
 
 class ProjectCreateSerializer(serializers.ModelSerializer):
     """
     Serializer pour la création de projets.
+    Plus léger, sans relations complexes.
+    
+    📌 Utilisé dans:
+        - POST /api/projects/
     """
     
     class Meta:
@@ -79,7 +133,6 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
             'start_date',
             'end_date'
         ]
-
         read_only_fields = ['id']
     
     def validate(self, attrs):
@@ -95,12 +148,17 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
 class ProjectListSerializer(serializers.ModelSerializer):
     """
     Serializer léger pour la liste des projets.
-    N'inclut pas les membres pour optimiser les performances.
+    N'inclut PAS les membres (optimisation).
+    
+    📌 Utilisé dans:
+        - GET /api/projects/
+        - GET /api/projects/my_projects/
     """
     
     owner = UserMinimalSerializer(read_only=True)
     progress = serializers.ReadOnlyField()
     tasks_count = serializers.SerializerMethodField()
+    members_count = serializers.SerializerMethodField()  # 🆕 Ajouté
     
     class Meta:
         model = Project
@@ -111,6 +169,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'status',
             'progress',
             'tasks_count',
+            'members_count',  # 🆕 Ajouté
             'start_date',
             'end_date',
             'created_at'
@@ -118,3 +177,6 @@ class ProjectListSerializer(serializers.ModelSerializer):
     
     def get_tasks_count(self, obj):
         return obj.tasks.count()
+    
+    def get_members_count(self, obj):
+        return obj.project_members.count()

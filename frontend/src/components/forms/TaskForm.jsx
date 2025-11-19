@@ -15,6 +15,7 @@
  * - Si initialData existe → Mode édition (pré-rempli)
  */
 
+
 import { useState, useEffect } from 'react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
@@ -23,6 +24,7 @@ import { required, minLength } from '../../utils/validators';
 import { projectsAPI } from '../../api/projects';
 import AttachmentUploader from '../tasks/AttachmentUploader';
 import AttachmentList from '../tasks/AttachmentList';
+
 
 /**
  * ───────────────────────────────────────────────────────────
@@ -55,6 +57,7 @@ export const TaskForm = ({
   isLoading = false 
 }) => {
 
+
   /**
    * ─────────────────────────────────────────────────────────
    * ÉTAT LOCAL : Liste des Projets
@@ -70,8 +73,14 @@ export const TaskForm = ({
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
+  // 🆕 AJOUT : État pour les membres du projet (pour assignation)
+  const [projectMembers, setProjectMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+
   // 🆕 AJOUT : État pour forcer le refresh des attachments
   const [refreshAttachments, setRefreshAttachments] = useState(0);
+
 
   /**
    * ─────────────────────────────────────────────────────────
@@ -93,6 +102,7 @@ export const TaskForm = ({
     due_date: '',            // Date d'échéance
   };
 
+
   /**
    * Merge des valeurs par défaut avec initialData
    * 
@@ -108,9 +118,15 @@ export const TaskForm = ({
    * initialData = { title: 'Design', status: 'done' }
    * Résultat = { title: 'Design', status: 'done' }
    */
-  const formData = initialData 
-    ? { ...defaultValues, ...initialData } 
-    : defaultValues;
+// 🔧 CORRECTION : Extrait les IDs des objets en mode édition
+const formData = initialData 
+  ? {
+      ...defaultValues,
+      ...initialData,
+      project: initialData.project?.id || initialData.project || '',         // Extrait l'ID
+      assigned_to: initialData.assigned_to?.id || initialData.assigned_to || '',  // Extrait l'ID
+    }
+  : defaultValues;
 
   /**
    * ─────────────────────────────────────────────────────────
@@ -149,6 +165,7 @@ export const TaskForm = ({
     }
   );
 
+
   /**
    * ─────────────────────────────────────────────────────────
    * EFFET : Charger les Projets au Montage
@@ -172,6 +189,26 @@ export const TaskForm = ({
   useEffect(() => {
     loadProjects();
   }, []); // ← Dépendances vides = une seule fois
+
+
+  /**
+   * 🆕 AJOUT : EFFET : Charger les Membres Quand le Projet Change
+   * ─────────────────────────────────────────────────────────
+   * 
+   * PRINCIPE : useEffect avec dépendance values.project
+   * 
+   * Quand values.project change :
+   * 1. Si un projet est sélectionné → charge ses membres
+   * 2. Si aucun projet → vide la liste des membres
+   */
+  useEffect(() => {
+    if (values.project) {
+      loadProjectMembers(values.project);
+    } else {
+      setProjectMembers([]);
+    }
+  }, [values.project]); // ← Se déclenche quand values.project change
+
 
   /**
    * Charge la liste des projets depuis l'API
@@ -200,7 +237,47 @@ export const TaskForm = ({
     }
   };
 
-    /**
+
+  /**
+   * 🆕 AJOUT : Charger les Membres du Projet Sélectionné
+   * ─────────────────────────────────────────────────────────
+   * 
+   * PRINCIPE : Charger dynamiquement les membres quand un projet est sélectionné
+   * 
+   * Cette fonction est appelée quand :
+   * - L'utilisateur sélectionne un projet dans le select
+   * - Le formulaire s'ouvre en mode édition avec un projet déjà assigné
+   */
+  const loadProjectMembers = async (projectId) => {
+    if (!projectId) {
+      setProjectMembers([]);
+      return;
+    }
+
+    try {
+      setLoadingMembers(true);
+      
+      // Appel à l'API pour récupérer les membres du projet
+      const data = await projectsAPI.getMembers(projectId);
+      
+      // Transforme les membres en format utilisable pour le select
+      const membersList = data.map(member => ({
+        id: member.user.id,
+        name: member.user.full_name || member.user.username,
+        email: member.user.email,
+      }));
+      
+      setProjectMembers(membersList);
+    } catch (error) {
+      console.error('Erreur chargement membres:', error);
+      setProjectMembers([]);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+
+  /**
    * ─────────────────────────────────────────────────────────
    * CALLBACK : Après Upload Réussi
    * ─────────────────────────────────────────────────────────
@@ -213,6 +290,7 @@ export const TaskForm = ({
   const handleUploadSuccess = () => {
     setRefreshAttachments(prev => prev + 1);
   };
+
 
   /**
    * ─────────────────────────────────────────────────────────
@@ -241,10 +319,13 @@ export const TaskForm = ({
       return; // Stop ici si invalide
     }
 
+
     // Formulaire valide → on soumet
     // values contient toutes les données du formulaire
     onSubmit(values);
   };
+
+
   /**
    * ─────────────────────────────────────────────────────────
    * RENDU JSX (Interface du Formulaire)
@@ -257,6 +338,7 @@ export const TaskForm = ({
    *   <select status />
    *   <select priority />
    *   <select project />
+   *   <select assigned_to /> 🆕 AJOUT
    *   <Input date />
    *   <Buttons />
    * </form>
@@ -297,6 +379,7 @@ export const TaskForm = ({
         placeholder="Ex: Créer les maquettes UI"
       />
 
+
       {/* ───────────────────────────────────────────────── */}
       {/* CHAMP : Description                               */}
       {/* ───────────────────────────────────────────────── */}
@@ -331,6 +414,7 @@ export const TaskForm = ({
           <p className="error-message">{errors.description}</p>
         )}
       </div>
+
 
       {/* ───────────────────────────────────────────────── */}
       {/* LIGNE : Statut + Priorité (2 colonnes)            */}
@@ -376,6 +460,7 @@ export const TaskForm = ({
           )}
         </div>
 
+
         {/* SELECT : Priorité */}
         <div>
           <label htmlFor="priority" className="label label-required">
@@ -398,6 +483,7 @@ export const TaskForm = ({
           )}
         </div>
       </div>
+
 
       {/* ───────────────────────────────────────────────── */}
       {/* SELECT : Projet                                    */}
@@ -448,6 +534,53 @@ export const TaskForm = ({
         </select>
       </div>
 
+
+      {/* ───────────────────────────────────────────────── */}
+      {/* 🆕 AJOUT : SELECT : Assigner à                     */}
+      {/* ───────────────────────────────────────────────── */}
+      {/*
+        PRINCIPE : Select Conditionnel
+        
+        Ce select n'apparaît QUE si un projet est sélectionné.
+        On ne peut assigner une tâche qu'aux membres du projet.
+        
+        FLOW :
+        1. User sélectionne un projet
+        2. useEffect charge les membres du projet
+        3. Ce select devient disponible avec la liste des membres
+      */}
+      {values.project && (
+        <div>
+          <label htmlFor="assigned_to" className="label">
+            Assigner à
+          </label>
+          <select
+            id="assigned_to"
+            name="assigned_to"
+            value={values.assigned_to}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            className="input-field"
+            disabled={loadingMembers}
+          >
+            <option value="">Non assigné</option>
+            
+            {projectMembers.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.name} ({member.email})
+              </option>
+            ))}
+          </select>
+          
+          {loadingMembers && (
+            <p className="text-sm text-neutral-500 mt-1">
+              Chargement des membres...
+            </p>
+          )}
+        </div>
+      )}
+
+
       {/* ───────────────────────────────────────────────── */}
       {/* INPUT : Date d'Échéance                           */}
       {/* ───────────────────────────────────────────────── */}
@@ -470,6 +603,7 @@ export const TaskForm = ({
         touched={touched.due_date}
         required
       />
+
 
       {/* ───────────────────────────────────────────────── */}
       {/* SECTION : PIÈCES JOINTES (Seulement en mode édition) */}
@@ -518,6 +652,7 @@ export const TaskForm = ({
       )}
 
 
+
       {/* ───────────────────────────────────────────────── */}
       {/* BOUTONS : Soumettre + Annuler                     */}
       {/* ───────────────────────────────────────────────── */}
@@ -547,6 +682,7 @@ export const TaskForm = ({
 };
 
 
+
 /**
  * ═══════════════════════════════════════════════════════════
  * CONCEPTS REACT UTILISÉS
@@ -560,10 +696,12 @@ export const TaskForm = ({
  * 2. useEffect
  *    - Charger les projets au montage
  *    - Dépendances vides [] = une seule fois
+ *    - 🆕 Charger les membres quand le projet change
  * 
  * 3. CONDITIONAL RENDERING
  *    - {touched.title && errors.title && <p>...</p>}
  *    - Affiche l'erreur seulement si conditions vraies
+ *    - 🆕 {values.project && <select>...</select>}
  * 
  * 4. ARRAY.MAP()
  *    - projects.map(p => <option>...)

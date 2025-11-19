@@ -239,22 +239,40 @@ export const TaskDetail = () => {
               <div>
                 <p className="text-sm text-neutral-500">Projet</p>
                 <p className="font-medium text-neutral-900">
-                  {task.project_name || 'Non assigné'}
+                  {task.project?.name || 'Non assigné'}
                 </p>
               </div>
             </div>
 
 
-            {/* Assigné à */}
-            <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-neutral-500" />
-              <div>
-                <p className="text-sm text-neutral-500">Assigné à</p>
-                <p className="font-medium text-neutral-900">
-                  {task.assigned_to_name || 'Non assigné'}
-                </p>
-              </div>
-            </div>
+{/* Assigné à */}
+{task.assigned_to ? (
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold">
+      {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
+    </div>
+    <div>
+      <p className="text-sm text-neutral-500">Assigné à</p>
+      <p className="font-medium text-neutral-900">
+        {task.assigned_to.full_name || task.assigned_to.username}
+      </p>
+      <p className="text-xs text-neutral-500">
+        {task.assigned_to.email}
+      </p>
+    </div>
+  </div>
+) : (
+  <div className="flex items-center gap-3">
+    <User className="w-5 h-5 text-neutral-400" />
+    <div>
+      <p className="text-sm text-neutral-500">Assigné à</p>
+      <p className="font-medium text-neutral-400 italic">
+        Non assigné
+      </p>
+    </div>
+  </div>
+)}
+
 
 
             {/* Date de début */}

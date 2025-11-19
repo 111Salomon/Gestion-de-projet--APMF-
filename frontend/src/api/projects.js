@@ -94,52 +94,164 @@ export const projectsAPI = {
     await axiosInstance.delete(`/projects/${id}/`);
   },
 
-
-
-  
   /**
-   * Ajoute un membre à un projet
+   * Récupère les statistiques d'un projet
    * 
-   * @param {number} projectId - ID du projet
-   * @param {number} userId - ID de l'utilisateur à ajouter
-   * @param {string} role - Rôle (chef ou membre)
-   * @returns {Promise<Object>}
-   */
-  addMember: async (projectId, userId, role = 'membre') => {
-    const response = await axiosInstance.post(`/projects/${projectId}/add_member/`, {
-      user_id: userId,
-      role: role,
-    });
-    return response.data;
-  },
-
-  /**
-   * Retire un membre d'un projet
+   * @param {number} id - ID du projet
+   * @returns {Promise<Object>} Stats du projet
    * 
-   * @param {number} projectId - ID du projet
-   * @param {number} userId - ID de l'utilisateur à retirer
-   * @returns {Promise<Object>}
+   * Exemple de réponse :
+   * {
+   *   total_tasks: 20,
+   *   todo: 5,
+   *   in_progress: 8,
+   *   in_review: 3,
+   *   done: 4,
+   *   completion_percentage: 20.0,
+   *   overdue_tasks: 2
+   * }
    */
-  removeMember: async (projectId, userId) => {
-    const response = await axiosInstance.post(`/projects/${projectId}/remove_member/`, {
-      user_id: userId,
-    });
-    return response.data;
-  },
-  // 🆕 NOUVELLES FONCTIONS
   getStats: async (id) => {
     const response = await axiosInstance.get(`/projects/${id}/stats/`);
     return response.data;
   },
 
-getTasks: async (id) => {
-  const response = await axiosInstance.get('/tasks/', {
-    params: { project: id }
-  });
-  return response.data;
-},
+  /**
+   * Récupère les tâches d'un projet
+   * 
+   * @param {number} id - ID du projet
+   * @returns {Promise<Array>} Liste des tâches du projet
+   */
+  getTasks: async (id) => {
+    const response = await axiosInstance.get('/tasks/', {
+      params: { project: id }
+    });
+    return response.data;
+  },
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 👥 GESTION DES MEMBRES
+  // ═══════════════════════════════════════════════════════════════════
 
-  
-  
+  /**
+   * 🆕 Récupère la liste des membres d'un projet
+   * 
+   * @param {number} projectId - ID du projet
+   * @returns {Promise<Array>} Liste des membres
+   * 
+   * Exemple de réponse :
+   * [
+   *   {
+   *     id: 1,
+   *     user: {
+   *       id: 2,
+   *       username: "john_doe",
+   *       email: "john@example.com",
+   *       full_name: "John Doe",
+   *       avatar: "http://...",
+   *       role: "developer"
+   *     },
+   *     role: "developer",
+   *     role_display: "Développeur",
+   *     joined_at: "2025-11-15T10:30:00Z"
+   *   }
+   * ]
+   */
+  getMembers: async (projectId) => {
+    const response = await axiosInstance.get(`/projects/${projectId}/members/`);
+    return response.data;
+  },
+
+  /**
+   * 🔧 Ajoute un membre à un projet
+   * (URL mise à jour vers /members/add/)
+   * 
+   * @param {number} projectId - ID du projet
+   * @param {number} userId - ID de l'utilisateur à ajouter
+   * @param {string} role - Rôle (member, developer, manager, viewer)
+   * @returns {Promise<Object>} Données du membre ajouté
+   * 
+   * Exemple de réponse :
+   * {
+   *   id: 1,
+   *   user: {...},
+   *   role: "developer",
+   *   role_display: "Développeur",
+   *   joined_at: "2025-11-18T11:20:00Z"
+   * }
+   */
+  addMember: async (projectId, userId, role = 'member') => {
+    const response = await axiosInstance.post(
+      `/projects/${projectId}/members/add/`,  // 🔧 URL mise à jour
+      {
+        user_id: userId,
+        role: role,
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * 🔧 Retire un membre d'un projet
+   * (URL mise à jour vers /members/{user_id}/remove/)
+   * 
+   * @param {number} projectId - ID du projet
+   * @param {number} userId - ID de l'utilisateur à retirer
+   * @returns {Promise<void>}
+   */
+  removeMember: async (projectId, userId) => {
+    await axiosInstance.delete(
+      `/projects/${projectId}/members/${userId}/remove/`  // 🔧 URL mise à jour
+    );
+  },
+
+  /**
+   * 🆕 Modifie le rôle d'un membre
+   * 
+   * @param {number} projectId - ID du projet
+   * @param {number} userId - ID de l'utilisateur
+   * @param {string} newRole - Nouveau rôle (member, developer, manager, viewer)
+   * @returns {Promise<Object>} Données du membre mis à jour
+   * 
+   * Exemple de réponse :
+   * {
+   *   id: 1,
+   *   user: {...},
+   *   role: "manager",
+   *   role_display: "Manager",
+   *   joined_at: "2025-11-15T10:30:00Z"
+   * }
+   */
+  updateMemberRole: async (projectId, userId, newRole) => {
+    const response = await axiosInstance.patch(
+      `/projects/${projectId}/members/${userId}/role/`,
+      {
+        role: newRole
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * 🆕 Récupère la liste des utilisateurs disponibles
+   * (pour ajouter des membres à un projet)
+   * 
+   * @returns {Promise<Array>} Liste des utilisateurs actifs
+   * 
+   * Exemple de réponse :
+   * [
+   *   {
+   *     id: 2,
+   *     username: "alice",
+   *     email: "alice@example.com",
+   *     full_name: "Alice Martin",
+   *     avatar: "http://...",
+   *     role: "developer"
+   *   }
+   * ]
+   */
+  getAvailableUsers: async () => {
+    const response = await axiosInstance.get('/projects/available_users/');
+    return response.data;
+  },
 };

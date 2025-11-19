@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { MoreVertical, Edit2, Trash2, User, Calendar, Flag, Eye } from 'lucide-react'; // 🆕 Ajout Eye
+import { MoreVertical, Edit2, Trash2, User, Calendar, Flag, Eye } from 'lucide-react';
 import { useState } from 'react';
+
 
 export const TaskCard = ({ task, onEdit, onDelete }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
 
   const getPriorityColor = (priority) => {
     const colors = {
@@ -15,6 +17,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     return colors[priority] || 'bg-neutral-100 text-neutral-700';
   };
 
+
   const getPriorityLabel = (priority) => {
     const labels = {
       high: 'Urgent',
@@ -23,6 +26,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     };
     return labels[priority] || priority;
   };
+
 
   const getStatusColor = (status) => {
     const colors = {
@@ -34,6 +38,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     return colors[status] || 'bg-neutral-100 text-neutral-700';
   };
 
+
   const getStatusLabel = (status) => {
     const labels = {
       todo: 'À faire',
@@ -43,6 +48,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     };
     return labels[status] || status;
   };
+
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Pas de date';
@@ -54,6 +60,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     });
   };
 
+
   const isOverdue = () => {
     if (!task.due_date || task.status === 'done') return false;
     const today = new Date();
@@ -61,20 +68,23 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     return dueDate < today;
   };
 
+
   const handleEdit = () => {
     setIsMenuOpen(false);
     onEdit(task);
   };
+
 
   const handleDelete = () => {
     setIsMenuOpen(false);
     onDelete(task);
   };
 
-  // 🆕 Handler pour le bouton "Voir détails"
+
   const handleViewDetails = () => {
     navigate(`/tasks/${task.id}`);
   };
+
 
   return (
     <div className="card group hover:shadow-lg transition-all duration-200">
@@ -84,17 +94,20 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
             {task.title}
           </h3>
 
+
           <div className="flex items-center gap-2 mb-2">
             <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${getPriorityColor(task.priority)}`}>
               <Flag className="w-3 h-3" />
               {getPriorityLabel(task.priority)}
             </span>
 
+
             <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${getStatusColor(task.status)}`}>
               {getStatusLabel(task.status)}
             </span>
           </div>
         </div>
+
 
         <div className="relative">
           <button
@@ -103,6 +116,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
           >
             <MoreVertical className="w-5 h-5 text-neutral-400" />
           </button>
+
 
           {isMenuOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-neutral-200 z-10">
@@ -125,11 +139,13 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
         </div>
       </div>
 
+
       {task.description && (
         <p className="text-sm text-neutral-600 mb-4 line-clamp-2">
           {task.description}
         </p>
       )}
+
 
       {task.project_name && (
         <div className="mb-3">
@@ -140,14 +156,30 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-neutral-200 mb-3"> {/* 🆕 Ajout mb-3 */}
-        <div className="flex items-center gap-2">
-          <User className="w-4 h-4 text-neutral-500" />
-          <span className="text-sm text-neutral-600">
-            {task.assigned_to_name || 'Non assigné'}
-          </span>
-        </div>
 
+      {/* Section Assigné + Date */}
+      <div className="flex items-center justify-between pt-3 border-t border-neutral-200 mb-3">
+        {/* Assigné */}
+        {task.assigned_to ? (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold">
+              {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
+            </div>
+            <span className="text-sm text-neutral-600">
+              {task.assigned_to.full_name || task.assigned_to.username}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4 text-neutral-400" />
+            <span className="text-sm text-neutral-400 italic">
+              Non assigné
+            </span>
+          </div>
+        )}
+
+
+        {/* Date d'échéance */}
         <div className="flex items-center gap-1">
           <Calendar className="w-4 h-4 text-neutral-500" />
           <span className={`text-sm ${isOverdue() ? 'text-red-600 font-semibold' : 'text-neutral-600'}`}>
@@ -156,7 +188,8 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
         </div>
       </div>
 
-      {/* 🆕 BOUTON "VOIR DÉTAILS" */}
+
+      {/* Bouton "Voir détails" */}
       <button
         onClick={handleViewDetails}
         className="w-full py-2 px-4 border border-neutral-300 rounded-lg text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
