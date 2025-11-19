@@ -159,7 +159,8 @@ class ProjectListSerializer(serializers.ModelSerializer):
     progress = serializers.ReadOnlyField()
     tasks_count = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()  # 🆕 Ajouté
-    
+    members = serializers.SerializerMethodField()  # ✅ AJOUTE
+
     class Meta:
         model = Project
         fields = [
@@ -169,7 +170,8 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'status',
             'progress',
             'tasks_count',
-            'members_count',  # 🆕 Ajouté
+            'members_count', 
+            'members',
             'start_date',
             'end_date',
             'created_at'
@@ -180,3 +182,9 @@ class ProjectListSerializer(serializers.ModelSerializer):
     
     def get_members_count(self, obj):
         return obj.project_members.count()
+
+
+    def get_members(self, obj):  # ✅ AJOUTE CETTE MÉTHODE
+        """Retourne les 3 premiers membres pour les avatars."""
+        members = obj.project_members.select_related('user').all()[:3]
+        return ProjectMemberSerializer(members, many=True).data

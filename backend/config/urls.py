@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/users/', include('apps.users.urls')),
     path('api/projects/', include('apps.projects.urls')),
     path('api/', include('apps.tasks.urls')),  # tasks, comments, attachments
+    path('api/notifications/', include('apps.notifications.urls')), 
 ]
 
 # Servir les fichiers media en développement

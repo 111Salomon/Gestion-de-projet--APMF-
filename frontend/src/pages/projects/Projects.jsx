@@ -365,13 +365,37 @@ const filteredProjects = projects.filter((project) => {
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
-                {/* Membres */}
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-neutral-500" />
-                  <span className="text-sm text-neutral-600">
-                    {project.members?.length || 0} membre{project.members?.length > 1 ? 's' : ''}
-                  </span>
-                </div>
+{/* Membres - Style TaskCard avec avatars */}
+<div className="flex items-center gap-2">
+  {project.members_count > 0 ? (
+    <>
+      {/* Avatars empilés */}
+      <div className="flex -space-x-2">
+        {project.members?.slice(0, 3).map((member, index) => (
+          <div
+            key={member.user.id || index}
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold border-2 border-white"
+            title={member.user.full_name || member.user.username}
+          >
+            {(member.user.full_name || member.user.username).charAt(0).toUpperCase()}
+          </div>
+        ))}
+      </div>
+      
+      {/* Compteur */}
+      <span className="text-sm text-neutral-600">
+        {project.members_count} membre{project.members_count > 1 ? 's' : ''}
+      </span>
+    </>
+  ) : (
+    <>
+      <Users className="w-4 h-4 text-neutral-400" />
+      <span className="text-sm text-neutral-400 italic">
+        Aucun membre
+      </span>
+    </>
+  )}
+</div>
 
                 {/* Dates */}
                 <div className="text-sm text-neutral-600">
