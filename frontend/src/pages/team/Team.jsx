@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { getTeamMembers, getTeamStats } from '../../api/team';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Layout } from '../../components/layout/Layout';
+import { MemberProfileModal } from '../../components/team/MemberProfileModal'; 
 
 export const Team = () => {
   // ═══════════════════════════════════════════════════════════
@@ -17,11 +18,16 @@ export const Team = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+    // ✅ NOUVEAUX ÉTATS pour le modal
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Filtres
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   
+
   
   // ═══════════════════════════════════════════════════════════
   // EFFETS
@@ -86,7 +92,16 @@ export const Team = () => {
     setRoleFilter(e.target.value);
   };
   
+  // ✅ NOUVELLES FONCTIONS pour le modal
+  const handleViewProfile = (memberId) => {
+    setSelectedMemberId(memberId);
+    setIsModalOpen(true);
+  };
   
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMemberId(null);
+  };
   // ═══════════════════════════════════════════════════════════
   // RENDU
   // ═══════════════════════════════════════════════════════════
@@ -346,7 +361,9 @@ export const Team = () => {
                     
                     {/* Actions */}
                     <td className="px-6 py-4 text-right">
-                      <button className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors">
+                      <button 
+                      onClick={() => handleViewProfile(member.id)}
+                      className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors">
                         Voir le profil
                       </button>
                     </td>
@@ -357,6 +374,11 @@ export const Team = () => {
           </table>
         </div>
       </div>
+            <MemberProfileModal
+        memberId={selectedMemberId}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </Layout>
   );
 };
