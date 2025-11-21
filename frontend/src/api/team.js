@@ -62,3 +62,16 @@ export const getTeamMemberDetail = async (userId) => {
     throw error;
   }
 };
+
+/**
+ * Invite un nouveau membre à rejoindre l'équipe.
+ */
+export const inviteMember = async (memberData) => {
+  try {
+    const response = await api.post('/users/team/invite/', memberData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'invitation:', error);
+    throw error;
+  }
+};

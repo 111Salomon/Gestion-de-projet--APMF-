@@ -1,76 +1,56 @@
 """
 Vues pour la gestion de l'équipe.
-
-Endpoints :
-    - /api/users/team/ → Liste des membres avec stats
-    - /api/users/team/stats/ → Statistiques globales
-    - /api/users/team/<id>/ → Détails d'un membre
 """
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Count, Q
-from django.utils import timezone
-from datetime import timedelta
+from django.db.models import Q, Count, Avg
+from django.contrib.auth.hashers import make_password  # ✅ NOUVEAU
+import secrets  # ✅ NOUVEAU
 
-from .models import User
+from apps.users.models import User
+from apps.users.serializers_team import TeamMemberSerializer, TeamStatsSerializer
 from apps.tasks.models import Task
-from .serializers_team import TeamMemberSerializer, TeamStatsSerializer
+
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def team_list(request):
     """
-    Liste tous les membres de l'équipe avec leurs statistiques.
-    
-    Filtres disponibles (query params) :
-        - role : Filtre par rôle (admin, chef, membre)
-        - search : Recherche par nom ou email
-        - is_active : true/false pour actif/inactif
-    
-    Exemple :
-        GET /api/users/team/?role=membre&search=dophie
-    
-    Retourne :
-        Liste des utilisateurs avec leurs stats
+    Retourne la liste de tous les membres de l'équipe avec leurs statistiques.
     """
+    search = request.GET.get('search', '')
+    role = request.GET.get('role', '')
+    is_active = request.GET.get('is_active', '')
     
-    # Récupère tous les utilisateurs
-    users = User.objects.all().order_by('-date_joined')
+    users = User.objects.all()
     
-    # Filtres
-    role_filter = request.query_params.get('role', None)
-    search_query = request.query_params.get('search', None)
-    is_active_filter = request.query_params.get('is_active', None)
-    
-    # Filtre par rôle
-    if role_filter:
-        users = users.filter(role=role_filter)
-    
-    # Filtre par recherche (nom ou email)
-    if search_query:
+    if search:
         users = users.filter(
-            Q(first_name__icontains=search_query) |
-            Q(last_name__icontains=search_query) |
-            Q(email__icontains=search_query) |
-            Q(username__icontains=search_query)
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(username__icontains=search)
         )
     
-    # Filtre par statut actif
-    if is_active_filter:
-        is_active = is_active_filter.lower() == 'true'
-        users = users.filter(is_active=is_active)
+    if role:
+        users = users.filter(role=role)
     
-    # Sérialise les données
-    serializer = TeamMemberSerializer(
-        users,
-        many=True,
-        context={'request': request}
-    )
+    if is_active:
+        is_active_bool = is_active.lower() == 'true'
+        users = users.filter(is_active=is_active_bool)
     
+    users = users.order_by('-date_joined')
+    
+    serializer = TeamMemberSerializer(users, many=True, context={'request': request})
     return Response(serializer.data)
 
 
@@ -79,59 +59,28 @@ def team_list(request):
 def team_stats(request):
     """
     Retourne les statistiques globales de l'équipe.
-    
-    Calculs :
-        - total_members : Nombre total d'utilisateurs actifs
-        - active_members : Connectés dans les 7 derniers jours
-        - avg_workload : Nombre moyen de tâches par membre
-        - completion_rate : % moyen de tâches terminées
-    
-    Retourne :
-        {
-            "total_members": 5,
-            "active_members": 4,
-            "avg_workload": 7.2,
-            "completion_rate": 68.5
-        }
     """
+    total_members = User.objects.count()
+    active_members = User.objects.filter(is_active=True).count()
     
-    # Total de membres actifs
-    total_members = User.objects.filter(is_active=True).count()
+    workload_data = User.objects.annotate(
+        task_count=Count('assigned_tasks', filter=Q(assigned_tasks__status__in=['todo', 'in_progress']))
+    ).aggregate(avg_workload=Avg('task_count'))
     
-    # Membres actifs (connectés récemment)
-    seven_days_ago = timezone.now() - timedelta(days=7)
-    active_members = User.objects.filter(
-        is_active=True,
-        last_login__gte=seven_days_ago
-    ).count()
+    avg_workload = round(workload_data['avg_workload'] or 0, 1)
     
-    # Statistiques des tâches
     total_tasks = Task.objects.count()
     done_tasks = Task.objects.filter(status='done').count()
+    completion_rate = round((done_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1)
     
-    # Charge de travail moyenne
-    if total_members > 0:
-        avg_workload = round(total_tasks / total_members, 1)
-    else:
-        avg_workload = 0
-    
-    # Taux de complétion global
-    if total_tasks > 0:
-        completion_rate = round((done_tasks / total_tasks) * 100, 1)
-    else:
-        completion_rate = 0
-    
-    # Prépare les données
-    stats_data = {
+    data = {
         'total_members': total_members,
         'active_members': active_members,
         'avg_workload': avg_workload,
         'completion_rate': completion_rate,
     }
     
-    # Sérialise
-    serializer = TeamStatsSerializer(stats_data)
-    
+    serializer = TeamStatsSerializer(data)
     return Response(serializer.data)
 
 
@@ -139,15 +88,8 @@ def team_stats(request):
 @permission_classes([IsAuthenticated])
 def team_member_detail(request, user_id):
     """
-    Détails d'un membre spécifique.
-    
-    Args:
-        user_id : ID de l'utilisateur
-    
-    Retourne :
-        Informations complètes + liste de ses tâches récentes
+    Retourne les détails d'un membre spécifique avec ses tâches récentes.
     """
-    
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
@@ -156,19 +98,134 @@ def team_member_detail(request, user_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Sérialise l'utilisateur
-    user_data = TeamMemberSerializer(user, context={'request': request}).data
+    serializer = TeamMemberSerializer(user, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def invite_member(request):
+    """
+    Invite un nouveau membre avec envoi d'email contenant un lien de création de mot de passe.
+    """
     
-    # Ajoute ses tâches récentes (10 dernières)
-    tasks = Task.objects.filter(assigned_to=user).order_by('-created_at')[:10]
-    task_list = [{
-        'id': task.id,
-        'title': task.title,
-        'status': task.status,
-        'priority': task.priority,
-        'due_date': task.due_date,
-    } for task in tasks]
+    # Vérifier que l'utilisateur est admin
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Seuls les administrateurs peuvent inviter des membres'},
+            status=status.HTTP_403_FORBIDDEN
+        )
     
-    user_data['recent_tasks'] = task_list
+    # Récupérer les données
+    email = request.data.get('email')
+    role = request.data.get('role', 'membre')
+    first_name = request.data.get('first_name', '')
+    last_name = request.data.get('last_name', '')
     
-    return Response(user_data)
+    # Validation
+    if not email:
+        return Response(
+            {'error': 'L\'email est requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Vérifier si l'email existe déjà
+    if User.objects.filter(email=email).exists():
+        return Response(
+            {'error': 'Cet email est déjà utilisé'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Valider le rôle
+    valid_roles = ['admin', 'chef', 'membre']
+    if role not in valid_roles:
+        return Response(
+            {'error': f'Rôle invalide. Choix possibles : {", ".join(valid_roles)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Créer le username
+        username = email.split('@')[0]
+        base_username = username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        
+        # Générer un mot de passe temporaire
+        random_password = secrets.token_urlsafe(12)
+        
+        # Créer l'utilisateur
+        user = User.objects.create(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            password=make_password(random_password),
+            is_active=True
+        )
+        
+        # ✅ NOUVEAU : Générer le token et le lien
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+        
+        # ✅ NOUVEAU : Préparer l'email
+        role_display = {
+            'admin': 'Administrateur',
+            'chef': 'Chef de projet',
+            'membre': 'Membre'
+        }.get(role, 'Membre')
+        
+        subject = f"Bienvenue sur TaskFlow - Invitation en tant que {role_display}"
+        message = f"""
+Bonjour {user.get_full_name() or user.username},
+
+Vous avez été invité(e) à rejoindre TaskFlow en tant que {role_display} !
+
+Pour activer votre compte et créer votre mot de passe, cliquez sur le lien ci-dessous :
+
+{reset_link}
+
+⚠️ Ce lien est valide pendant 24 heures.
+
+Une fois votre mot de passe créé, vous pourrez vous connecter avec :
+📧 Email : {email}
+🔑 Mot de passe : celui que vous aurez défini
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+
+Cordialement,
+L'équipe TaskFlow
+        """
+        
+        # ✅ NOUVEAU : Envoyer l'email
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            email_sent = True
+        except Exception as email_error:
+            print(f"Erreur d'envoi d'email : {email_error}")
+            email_sent = False
+        
+        # Sérialiser
+        serializer = TeamMemberSerializer(user, context={'request': request})
+        
+        return Response({
+            'message': f'Invitation envoyée à {email}' if email_sent else 'Membre créé, erreur d\'envoi d\'email',
+            'member': serializer.data,
+            'reset_link': reset_link  # Pour debug
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur : {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -12,6 +12,7 @@ import { Kanban } from './pages/kanban/Kanban';
 import { ProjectDetail } from './pages/projects/ProjectDetail';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Team } from './pages/team/Team';  
+import { ResetPassword } from './pages/auth/ResetPassword';
 
 /**
  * Composant pour protéger les routes privées
@@ -104,6 +105,15 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Team />
+                  </PrivateRoute>
+                } 
+              />
+
+              <Route 
+                path="/reset-password" 
+                element={
+                  <PrivateRoute>
+                    <ResetPassword />
                   </PrivateRoute>
                 } 
               />

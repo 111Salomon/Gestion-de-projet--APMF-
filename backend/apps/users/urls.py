@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import UserViewSet
 from . import views_team  # ← Importe views_team
+from apps.users import views, views_team, views_password 
 
 """
 Configuration des URLs pour l'app Users.
@@ -40,6 +41,9 @@ urlpatterns = [
     path('team/stats/', views_team.team_stats, name='team-stats'),
     path('team/<int:user_id>/', views_team.team_member_detail, name='team-member-detail'),
     path('team/', views_team.team_list, name='team-list'),
+    path('team/invite/', views_team.invite_member, name='team-invite'),
+    # Password Reset  ✅ NOUVEAU
+    path('reset-password/', views_password.reset_password, name='reset-password'),
     
     # ═══════════════════════════════════════════════════════════
     # Routes générées par le Router (ViewSet)

@@ -190,3 +190,23 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ═══════════════════════════════════════════════════════════
+# CONFIGURATION EMAIL
+# ═══════════════════════════════════════════════════════════
+
+# Backend SMTP pour Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'odcfigma@gmail.com'  # ✅ REMPLACE PAR TON EMAIL
+EMAIL_HOST_PASSWORD = 'jwew njcl nrpu tsjz'  # ✅ REMPLACE PAR LE MOT DE PASSE D'APPLICATION
+DEFAULT_FROM_EMAIL = 'TaskFlow <noreply@taskflow.com>'
+
+# URL du frontend pour les liens
+FRONTEND_URL = 'http://localhost:5173'
+
+# Pour le développement : afficher les emails dans la console au lieu de les envoyer
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Décommente pour tester sans email

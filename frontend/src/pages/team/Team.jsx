@@ -8,6 +8,7 @@ import { getTeamMembers, getTeamStats } from '../../api/team';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Layout } from '../../components/layout/Layout';
 import { MemberProfileModal } from '../../components/team/MemberProfileModal'; 
+import { InviteMemberModal } from '../../components/team/InviteMemberModal';
 
 export const Team = () => {
   // ═══════════════════════════════════════════════════════════
@@ -22,6 +23,8 @@ export const Team = () => {
     // ✅ NOUVEAUX ÉTATS pour le modal
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   
   // Filtres
   const [searchTerm, setSearchTerm] = useState('');
@@ -102,6 +105,14 @@ export const Team = () => {
     setIsModalOpen(false);
     setSelectedMemberId(null);
   };
+
+  const handleMemberInvited = (newMember) => {
+    // Ajoute le nouveau membre à la liste
+    setMembers((prev) => [newMember, ...prev]);
+    // Recharge les stats
+    loadData();
+  };
+
   // ═══════════════════════════════════════════════════════════
   // RENDU
   // ═══════════════════════════════════════════════════════════
@@ -139,7 +150,9 @@ export const Team = () => {
               Gérez les membres de votre équipe
             </p>
           </div>
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+          <button 
+          onClick={() => setIsInviteModalOpen(true)} 
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
             Inviter un membre
           </button>
         </div>
@@ -378,6 +391,12 @@ export const Team = () => {
         memberId={selectedMemberId}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+      />
+
+            <InviteMemberModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onMemberInvited={handleMemberInvited}
       />
     </Layout>
   );
