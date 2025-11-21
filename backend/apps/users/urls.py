@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import UserViewSet
+from . import views_team  # ← Importe views_team
 
 """
 Configuration des URLs pour l'app Users.
@@ -23,6 +24,25 @@ router = DefaultRouter()
 router.register(r'', UserViewSet, basename='user')
 
 # Les URLs sont générées automatiquement par le router
+# urlpatterns = [
+#     path('', include(router.urls)),
+# ]
+
+
+# Les URLs sont générées automatiquement par le router
 urlpatterns = [
+    # ═══════════════════════════════════════════════════════════
+    # Routes Team (Function-based views) ✅ NOUVEAU
+    # ═══════════════════════════════════════════════════════════
+    # IMPORTANT : Ces routes doivent venir AVANT le router
+    # Sinon, /api/users/team/ sera intercepté par le ViewSet
+    
+    path('team/stats/', views_team.team_stats, name='team-stats'),
+    path('team/<int:user_id>/', views_team.team_member_detail, name='team-member-detail'),
+    path('team/', views_team.team_list, name='team-list'),
+    
+    # ═══════════════════════════════════════════════════════════
+    # Routes générées par le Router (ViewSet)
+    # ═══════════════════════════════════════════════════════════
     path('', include(router.urls)),
-]
+] 
