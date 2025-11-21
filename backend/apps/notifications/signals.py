@@ -1,8 +1,37 @@
 """Signaux pour créer automatiquement les notifications."""
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import Notification
+
+
+# ═══════════════════════════════════════════════════════════
+# VARIABLES GLOBALES pour stocker les anciennes valeurs
+# ═══════════════════════════════════════════════════════════
+
+_task_old_values = {}
+_processed_comments = set()  # ✅ NOUVEAU : Évite les doublons
+
+
+# ═══════════════════════════════════════════════════════════
+# PRE_SAVE : Stocke les anciennes valeurs AVANT la sauvegarde
+# ═══════════════════════════════════════════════════════════
+
+@receiver(pre_save, sender='tasks.Task')
+def store_old_task_values(sender, instance, **kwargs):
+    """Stocke les anciennes valeurs de la tâche AVANT sauvegarde."""
+    if instance.pk:  # Seulement pour les mises à jour
+        try:
+            old_task = sender.objects.get(pk=instance.pk)
+            _task_old_values[instance.pk] = {
+                'assigned_to': old_task.assigned_to,
+                'status': old_task.status,
+            }
+        except sender.DoesNotExist:
+            _task_old_values[instance.pk] = {
+                'assigned_to': None,
+                'status': None,
+            }
 
 
 # ═══════════════════════════════════════════════════════════
@@ -13,37 +42,37 @@ from .models import Notification
 def notify_task_assigned(sender, instance, created, **kwargs):
     """Notifie quand une tâche est assignée."""
     
-    # Ignore si c'est juste une création sans assignation
+    # Ignore si pas d'assigné
     if not instance.assigned_to:
         return
     
-    # Récupère l'ancienne version pour détecter les changements
-    if not created and instance.pk:
-        try:
-            old_task = sender.objects.get(pk=instance.pk)
-            old_assigned = old_task.assigned_to
-        except sender.DoesNotExist:
-            old_assigned = None
-    else:
-        old_assigned = None
+    # Récupère les anciennes valeurs
+    old_values = _task_old_values.get(instance.pk, {})
+    old_assigned = old_values.get('assigned_to')
     
     # Vérifie si c'est une nouvelle assignation
     if old_assigned != instance.assigned_to:
+        # Détermine l'acteur (celui qui a assigné)
+        actor = getattr(instance, 'created_by', None)
+        
         # Ne notifie pas si l'user s'assigne lui-même
-        if instance.created_by and instance.assigned_to != instance.created_by:
+        if actor and instance.assigned_to != actor:
             Notification.create_notification(
                 recipient=instance.assigned_to,
-                actor=instance.created_by,
+                actor=None,
                 notification_type='task_assigned',
                 title='Nouvelle tâche assignée',
-                message=f'{instance.created_by.get_full_name() or instance.created_by.username} vous a assigné la tâche "{instance.title}"',
+                message=f'Vous avez été assigné à la tâche "{instance.title}"',  # ✅ Plus générique
                 task_id=instance.id,
                 action_url=f'/tasks/{instance.id}'
             )
+    
+    # Nettoie la variable globale
+    _task_old_values.pop(instance.pk, None)
 
 
 # ═══════════════════════════════════════════════════════════
-# SIGNAL : Nouveau Commentaire
+# SIGNAL : Nouveau Commentaire ✅ CORRIGÉ
 # ═══════════════════════════════════════════════════════════
 
 @receiver(post_save, sender='tasks.Comment')
@@ -53,6 +82,13 @@ def notify_task_comment(sender, instance, created, **kwargs):
     # Seulement pour les nouveaux commentaires
     if not created:
         return
+    
+    # ✅ NOUVEAU : Évite les doublons (si le signal se déclenche 2x)
+    comment_key = f"comment_{instance.pk}"
+    if comment_key in _processed_comments:
+        return  # Déjà traité
+    
+    _processed_comments.add(comment_key)
     
     task = instance.task
     author = instance.author
@@ -77,6 +113,15 @@ def notify_task_comment(sender, instance, created, **kwargs):
             task_id=task.id,
             action_url=f'/tasks/{task.id}'
         )
+    
+    # ✅ Nettoie après 10 secondes (évite la croissance infinie)
+    import threading
+    def cleanup():
+        import time
+        time.sleep(10)
+        _processed_comments.discard(comment_key)
+    
+    threading.Thread(target=cleanup, daemon=True).start()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -91,15 +136,12 @@ def notify_task_status_changed(sender, instance, created, **kwargs):
     if created:
         return
     
-    # Récupère l'ancien statut
-    try:
-        old_task = sender.objects.get(pk=instance.pk)
-        old_status = old_task.status
-    except sender.DoesNotExist:
-        return
+    # Récupère les anciennes valeurs
+    old_values = _task_old_values.get(instance.pk, {})
+    old_status = old_values.get('status')
     
     # Vérifie si le statut a changé
-    if old_status != instance.status:
+    if old_status and old_status != instance.status:
         status_labels = {
             'todo': 'À faire',
             'in_progress': 'En cours',
@@ -109,11 +151,11 @@ def notify_task_status_changed(sender, instance, created, **kwargs):
         
         new_status_label = status_labels.get(instance.status, instance.status)
         
-        # Notifie le créateur (si ce n'est pas lui qui modifie)
-        if instance.created_by and instance.created_by != instance.assigned_to:
+        # Notifie le créateur
+        if instance.created_by:
             Notification.create_notification(
                 recipient=instance.created_by,
-                actor=instance.assigned_to,
+                actor=instance.assigned_to or instance.created_by,
                 notification_type='task_status',
                 title='Statut modifié',
                 message=f'La tâche "{instance.title}" est maintenant : {new_status_label}',
