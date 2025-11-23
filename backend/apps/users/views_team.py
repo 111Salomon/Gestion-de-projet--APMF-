@@ -229,3 +229,149 @@ L'équipe TaskFlow
             {'error': f'Erreur : {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_member_role(request, user_id):
+    """
+    Met à jour le rôle d'un membre.
+    
+    Données requises :
+        - role : Nouveau rôle (admin, chef, membre)
+    
+    Restrictions :
+        - Seuls les admins peuvent modifier les rôles
+        - On ne peut pas retirer ses propres droits admin
+        - Au moins un admin doit rester
+    """
+    
+    # Vérifier que l'utilisateur est admin
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Seuls les administrateurs peuvent modifier les rôles'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Récupérer le nouveau rôle
+    new_role = request.data.get('role')
+    
+    # Validation
+    if not new_role:
+        return Response(
+            {'error': 'Le rôle est requis'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    valid_roles = ['admin', 'chef', 'membre']
+    if new_role not in valid_roles:
+        return Response(
+            {'error': f'Rôle invalide. Choix : {", ".join(valid_roles)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Récupérer le membre
+        user = User.objects.get(id=user_id)
+        
+        # Protection : Ne pas retirer ses propres droits admin
+        if request.user.id == user_id and request.user.role == 'admin' and new_role != 'admin':
+            return Response(
+                {'error': 'Vous ne pouvez pas retirer vos propres droits administrateur'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Protection : Au moins un admin doit rester
+        if user.role == 'admin' and new_role != 'admin':
+            admin_count = User.objects.filter(role='admin', is_active=True).count()
+            if admin_count <= 1:
+                return Response(
+                    {'error': 'Au moins un administrateur actif doit rester'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Mettre à jour le rôle
+        old_role = user.role
+        user.role = new_role
+        user.save()
+        
+        # Sérialiser
+        serializer = TeamMemberSerializer(user, context={'request': request})
+        
+        role_names = {
+            'admin': 'Administrateur',
+            'chef': 'Chef de projet',
+            'membre': 'Membre'
+        }
+        
+        return Response({
+            'message': f'Rôle modifié de {role_names[old_role]} à {role_names[new_role]}',
+            'member': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def toggle_member_active(request, user_id):
+    """
+    Active ou désactive un membre (toggle).
+    
+    Restrictions :
+        - Seuls les admins peuvent activer/désactiver
+        - On ne peut pas se désactiver soi-même
+        - Au moins un admin actif doit rester
+    """
+    
+    # Vérifier que l'utilisateur est admin
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Seuls les administrateurs peuvent activer/désactiver des membres'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # Récupérer le membre
+        user = User.objects.get(id=user_id)
+        
+        # Protection : Ne pas se désactiver soi-même
+        if request.user.id == user_id:
+            return Response(
+                {'error': 'Vous ne pouvez pas désactiver votre propre compte'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Protection : Au moins un admin actif doit rester
+        if user.role == 'admin' and user.is_active:
+            admin_count = User.objects.filter(role='admin', is_active=True).count()
+            if admin_count <= 1:
+                return Response(
+                    {'error': 'Au moins un administrateur actif doit rester'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Toggle l'état
+        user.is_active = not user.is_active
+        user.save()
+        
+        # Sérialiser
+        serializer = TeamMemberSerializer(user, context={'request': request})
+        
+        status_text = 'activé' if user.is_active else 'désactivé'
+        
+        return Response({
+            'message': f'Membre {status_text} avec succès',
+            'is_active': user.is_active,
+            'member': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )

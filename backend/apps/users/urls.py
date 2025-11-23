@@ -42,7 +42,12 @@ urlpatterns = [
     path('team/<int:user_id>/', views_team.team_member_detail, name='team-member-detail'),
     path('team/', views_team.team_list, name='team-list'),
     path('team/invite/', views_team.invite_member, name='team-invite'),
-    # Password Reset  ✅ NOUVEAU
+
+    #NOUVEAU : Modifier rôle et toggle actif
+    path('team/<int:user_id>/role/', views_team.update_member_role, name='update-member-role'),
+    path('team/<int:user_id>/active/', views_team.toggle_member_active, name='toggle-member-active'),
+
+    # Password Reset 
     path('reset-password/', views_password.reset_password, name='reset-password'),
     
     # ═══════════════════════════════════════════════════════════

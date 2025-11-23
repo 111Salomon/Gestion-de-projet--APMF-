@@ -4,13 +4,18 @@
  */
 
 import { useEffect, useState } from 'react';
-import { getTeamMemberDetail } from '../../api/team';
+import { getTeamMemberDetail, updateMemberRole, toggleMemberActive } from '../../api/team';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import toast from 'react-hot-toast';
 
-export const MemberProfileModal = ({ memberId, isOpen, onClose }) => {
+
+export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated }) => {
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [updatingRole, setUpdatingRole] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Charge les détails du membre quand le modal s'ouvre
   useEffect(() => {
@@ -32,6 +37,41 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose }) => {
       setLoading(false);
     }
   };
+
+    // ✅ FONCTION 1 : Modifier le rôle
+  const handleRoleChange = async (newRole) => {
+    if (newRole === member.role) return;
+    
+    setUpdatingRole(true);
+    try {
+      const response = await updateMemberRole(memberId, newRole);
+      toast.success(response.message);
+      setMember(response.member);
+      if (onMemberUpdated) onMemberUpdated(response.member);
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Erreur lors de la modification du rôle';
+      toast.error(errorMsg);
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
+  
+  // ✅ FONCTION 2 : Toggle actif/inactif
+  const handleToggleActive = async () => {
+    setUpdatingStatus(true);
+    try {
+      const response = await toggleMemberActive(memberId);
+      toast.success(response.message);
+      setMember(response.member);
+      if (onMemberUpdated) onMemberUpdated(response.member);
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Erreur lors du changement de statut';
+      toast.error(errorMsg);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
 
   // Ferme le modal si on clique sur le fond
   const handleBackdropClick = (e) => {
@@ -74,63 +114,67 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose }) => {
           ) : member ? (
             <>
               {/* Infos principales */}
-              <div className="flex items-start gap-6 mb-8">
-                {/* Avatar */}
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                  {member.avatar_url ? (
-                    <img
-                      src={member.avatar_url}
-                      alt={member.full_name}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white text-2xl font-semibold">
-                      {member.full_name.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
+    <div className="flex items-start gap-6 mb-8">
+      {/* Avatar */}
+      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+        {member.avatar_url ? (
+          <img
+            src={member.avatar_url}
+            alt={member.full_name}
+            className="w-full h-full rounded-full object-cover"
+          />
+        ) : (
+          <span className="text-white text-2xl font-semibold">
+            {member.full_name.charAt(0).toUpperCase()}
+          </span>
+        )}
+      </div>
 
-                {/* Informations */}
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                    {member.full_name}
-                  </h3>
-                  <p className="text-sm text-gray-500 mb-3">{member.email}</p>
+      {/* Informations */}
+      <div className="flex-1">
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">
+          {member.full_name}
+        </h3>
+        <p className="text-sm text-gray-500 mb-3">{member.email}</p>
 
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                        member.role === 'admin'
-                          ? 'bg-red-50 text-red-700 border border-red-200'
-                          : member.role === 'chef'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : 'bg-gray-100 text-gray-700 border border-gray-200'
-                      }`}
-                    >
-                      {member.role === 'admin'
-                        ? 'Administrateur'
-                        : member.role === 'chef'
-                        ? 'Chef de projet'
-                        : 'Membre'}
-                    </span>
+        <div className="flex items-center gap-3">
+          {/* ✅ DROPDOWN POUR CHANGER LE RÔLE */}
+          <select
+            value={member.role}
+            onChange={(e) => handleRoleChange(e.target.value)}
+            disabled={updatingRole}
+            className={`px-2.5 py-0.5 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+              member.role === 'admin'
+                ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                : member.role === 'chef'
+                ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+            } ${updatingRole ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <option value="membre">Membre</option>
+            <option value="chef">Chef de projet</option>
+            <option value="admin">Administrateur</option>
+          </select>
 
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                        member.is_active
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          member.is_active ? 'bg-green-500' : 'bg-gray-400'
-                        }`}
-                      ></span>
-                      {member.is_active ? 'Actif' : 'Inactif'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          {/* ✅ TOGGLE POUR ACTIF/INACTIF */}
+          <button
+            onClick={handleToggleActive}
+            disabled={updatingStatus}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium border transition-colors ${
+              member.is_active
+                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+            } ${updatingStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              member.is_active ? 'bg-green-500' : 'bg-gray-400'
+            }`}></span>
+            {member.is_active ? 'Actif' : 'Inactif'}
+          </button>
+        </div>
+      </div>
+    </div>
+
 
               {/* Statistiques */}
               <div className="grid grid-cols-3 gap-4 mb-8">

@@ -113,6 +113,35 @@ export const Team = () => {
     loadData();
   };
 
+
+  const loadStats = async () => {
+  try {
+    const statsData = await getTeamStats();
+    setStats(statsData);
+  } catch (err) {
+    console.error('Erreur lors du chargement des stats:', err);
+  }
+};
+
+  // ✅ AJOUTER CETTE FONCTION
+  const handleMemberUpdated = (updatedMember) => {
+    // Mettre à jour le membre dans la liste
+    setMembers((prev) =>
+      prev.map((m) => (m.id === updatedMember.id ? updatedMember : m))
+    );
+
+  // ✅ Recharger seulement les stats si nécessaire
+  if (updatedMember.is_active !== undefined) {
+    // Si le statut actif a changé, recharger les stats
+    loadStats();
+  }
+
+  };
+
+
+
+
+
   // ═══════════════════════════════════════════════════════════
   // RENDU
   // ═══════════════════════════════════════════════════════════
@@ -391,6 +420,7 @@ export const Team = () => {
         memberId={selectedMemberId}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onMemberUpdated={handleMemberUpdated}
       />
 
             <InviteMemberModal

@@ -75,3 +75,36 @@ export const inviteMember = async (memberData) => {
     throw error;
   }
 };
+
+/**
+ * Met à jour le rôle d'un membre.
+ * 
+ * @param {number} userId - ID du membre
+ * @param {string} role - Nouveau rôle (admin, chef, membre)
+ * @returns {Promise<Object>}
+ */
+export const updateMemberRole = async (userId, role) => {
+  try {
+    const response = await api.patch(`/users/team/${userId}/role/`, { role });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la modification du rôle:', error);
+    throw error;
+  }
+};
+
+/**
+ * Active ou désactive un membre (toggle).
+ * 
+ * @param {number} userId - ID du membre
+ * @returns {Promise<Object>}
+ */
+export const toggleMemberActive = async (userId) => {
+  try {
+    const response = await api.patch(`/users/team/${userId}/active/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du changement de statut:', error);
+    throw error;
+  }
+};
