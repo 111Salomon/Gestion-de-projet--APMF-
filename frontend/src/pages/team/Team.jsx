@@ -20,7 +20,7 @@ export const Team = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-    // ✅ NOUVEAUX ÉTATS pour le modal
+  // ✅ NOUVEAUX ÉTATS pour le modal
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -29,8 +29,6 @@ export const Team = () => {
   // Filtres
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  
-
   
   // ═══════════════════════════════════════════════════════════
   // EFFETS
@@ -43,7 +41,6 @@ export const Team = () => {
   useEffect(() => {
     loadMembers();
   }, [searchTerm, roleFilter]);
-  
   
   // ═══════════════════════════════════════════════════════════
   // FONCTIONS
@@ -84,6 +81,18 @@ export const Team = () => {
       setMembers(data);
     } catch (err) {
       console.error('Erreur lors du filtrage:', err);
+      // ✅ Ne pas afficher de toast ici
+    }
+  };
+  
+  // ✅ FONCTION pour recharger seulement les stats (sans toast d'erreur)
+  const loadStats = async () => {
+    try {
+      const statsData = await getTeamStats();
+      setStats(statsData);
+    } catch (err) {
+      console.error('Erreur silencieuse lors du chargement des stats:', err);
+      // ✅ Ne pas afficher de toast ici
     }
   };
   
@@ -106,41 +115,41 @@ export const Team = () => {
     setSelectedMemberId(null);
   };
 
+  // ✅ CORRIGÉ : Ne plus appeler loadData() mais loadStats()
   const handleMemberInvited = (newMember) => {
     // Ajoute le nouveau membre à la liste
     setMembers((prev) => [newMember, ...prev]);
-    // Recharge les stats
-    loadData();
+    // ✅ Recharge seulement les stats (pas tout)
+    loadStats();
   };
 
-
-  const loadStats = async () => {
-  try {
-    const statsData = await getTeamStats();
-    setStats(statsData);
-  } catch (err) {
-    console.error('Erreur lors du chargement des stats:', err);
-  }
-};
-
-  // ✅ AJOUTER CETTE FONCTION
+  // ✅ Callback pour mise à jour d'un membre
   const handleMemberUpdated = (updatedMember) => {
+    console.log('Membre mis à jour:', updatedMember);
+    
     // Mettre à jour le membre dans la liste
-    setMembers((prev) =>
-      prev.map((m) => (m.id === updatedMember.id ? updatedMember : m))
+    setMembers((prevMembers) =>
+      prevMembers.map((m) =>
+        m.id === updatedMember.id ? updatedMember : m
+      )
     );
 
-  // ✅ Recharger seulement les stats si nécessaire
-  if (updatedMember.is_active !== undefined) {
-    // Si le statut actif a changé, recharger les stats
+    // ✅ Recharger seulement les stats
     loadStats();
-  }
-
   };
 
-
-
-
+  // ✅ Callback pour suppression d'un membre
+  const handleMemberDeleted = (deletedId) => {
+    console.log('Membre supprimé:', deletedId);
+    
+    // Retirer le membre de la liste
+    setMembers((prevMembers) => 
+      prevMembers.filter((m) => m.id !== deletedId)
+    );
+    
+    // ✅ Recharger seulement les stats
+    loadStats();
+  };
 
   // ═══════════════════════════════════════════════════════════
   // RENDU
@@ -180,8 +189,9 @@ export const Team = () => {
             </p>
           </div>
           <button 
-          onClick={() => setIsInviteModalOpen(true)} 
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+            onClick={() => setIsInviteModalOpen(true)} 
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
             Inviter un membre
           </button>
         </div>
@@ -404,8 +414,9 @@ export const Team = () => {
                     {/* Actions */}
                     <td className="px-6 py-4 text-right">
                       <button 
-                      onClick={() => handleViewProfile(member.id)}
-                      className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors">
+                        onClick={() => handleViewProfile(member.id)}
+                        className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                      >
                         Voir le profil
                       </button>
                     </td>
@@ -416,14 +427,16 @@ export const Team = () => {
           </table>
         </div>
       </div>
-            <MemberProfileModal
+      
+      <MemberProfileModal
         memberId={selectedMemberId}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onMemberUpdated={handleMemberUpdated}
+        onMemberDeleted={handleMemberDeleted}
       />
 
-            <InviteMemberModal
+      <InviteMemberModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         onMemberInvited={handleMemberInvited}

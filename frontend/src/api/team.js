@@ -108,3 +108,20 @@ export const toggleMemberActive = async (userId) => {
     throw error;
   }
 };
+
+
+/**
+ * Supprime un membre de l'équipe.
+ * 
+ * @param {number} userId - ID du membre à supprimer
+ * @returns {Promise<Object>}
+ */
+export const deleteMember = async (userId) => {
+  try {
+    const response = await api.delete(`/users/team/${userId}/delete/`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la suppression du membre:', error);
+    throw error;
+  }
+};

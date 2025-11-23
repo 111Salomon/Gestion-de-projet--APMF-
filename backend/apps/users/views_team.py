@@ -375,3 +375,76 @@ def toggle_member_active(request, user_id):
             {'error': 'Utilisateur non trouvé'},
             status=status.HTTP_404_NOT_FOUND
         )
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_member(request, user_id):
+    """
+    Supprime un membre de l'équipe.
+    
+    Restrictions :
+        - Seuls les admins peuvent supprimer
+        - On ne peut pas se supprimer soi-même
+        - Au moins un admin doit rester
+        - Les tâches du membre sont réassignées ou conservées
+    """
+    
+    # Vérifier que l'utilisateur est admin
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Seuls les administrateurs peuvent supprimer des membres'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # Récupérer le membre à supprimer
+        user = User.objects.get(id=user_id)
+        
+        # Protection : Ne pas se supprimer soi-même
+        if request.user.id == user_id:
+            return Response(
+                {'error': 'Vous ne pouvez pas supprimer votre propre compte'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Protection : Au moins un admin doit rester
+        if user.role == 'admin':
+            admin_count = User.objects.filter(role='admin').count()
+            if admin_count <= 1:
+                return Response(
+                    {'error': 'Impossible de supprimer le dernier administrateur'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Récupérer les infos avant suppression (pour le message)
+        member_name = user.get_full_name()
+        member_email = user.email
+        tasks_count = user.assigned_tasks.count()
+        
+        # Option 1 : Supprimer définitivement
+        user.delete()
+        
+        # Option 2 : Désactiver au lieu de supprimer (alternative)
+        # user.is_active = False
+        # user.save()
+        
+        return Response({
+            'message': f'{member_name} a été supprimé de l\'équipe',
+            'deleted_user': {
+                'id': user_id,
+                'name': member_name,
+                'email': member_email,
+                'tasks_count': tasks_count
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la suppression : {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

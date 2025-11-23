@@ -46,7 +46,7 @@ urlpatterns = [
     #NOUVEAU : Modifier rôle et toggle actif
     path('team/<int:user_id>/role/', views_team.update_member_role, name='update-member-role'),
     path('team/<int:user_id>/active/', views_team.toggle_member_active, name='toggle-member-active'),
-
+    path('team/<int:user_id>/delete/', views_team.delete_member, name='delete-member'),
     # Password Reset 
     path('reset-password/', views_password.reset_password, name='reset-password'),
     

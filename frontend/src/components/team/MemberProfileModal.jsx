@@ -6,16 +6,19 @@
 import { useEffect, useState } from 'react';
 import { getTeamMemberDetail, updateMemberRole, toggleMemberActive } from '../../api/team';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { DeleteMemberModal } from './DeleteMemberModal';
 import toast from 'react-hot-toast';
 
 
-export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated }) => {
+export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated, onMemberDeleted }) => {
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [updatingRole, setUpdatingRole] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Charge les détails du membre quand le modal s'ouvre
   useEffect(() => {
@@ -303,15 +306,37 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated 
           ) : null}
         </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Fermer
-          </button>
-        </div>
+{/* Footer */}
+<div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between">
+  {/* ✅ BOUTON SUPPRIMER À GAUCHE */}
+  <button
+    onClick={() => setIsDeleteModalOpen(true)}
+    className="px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors"
+  >
+    Supprimer
+  </button>
+  
+  {/* BOUTON FERMER À DROITE */}
+  <button
+    onClick={onClose}
+    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+  >
+    Fermer
+  </button>
+</div>
+
+{/* ✅ MODAL DE CONFIRMATION DE SUPPRESSION */}
+<DeleteMemberModal
+  member={member}
+  isOpen={isDeleteModalOpen}
+  onClose={() => setIsDeleteModalOpen(false)}
+  onMemberDeleted={(deletedId) => {
+    setIsDeleteModalOpen(false);
+    onClose();
+    if (onMemberDeleted) onMemberDeleted(deletedId);
+  }}
+/>
+
       </div>
     </div>
   );
