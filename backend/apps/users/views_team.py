@@ -2,6 +2,7 @@
 Vues pour la gestion de l'équipe.
 """
 
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,6 +21,9 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 
+from django.core.files.storage import default_storage
+from PIL import Image
+import os
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -446,5 +450,91 @@ def delete_member(request, user_id):
     except Exception as e:
         return Response(
             {'error': f'Erreur lors de la suppression : {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_avatar(request, user_id):
+    """
+    Upload l'avatar d'un membre.
+    
+    Validations :
+        - Format : jpg, jpeg, png, gif, webp
+        - Taille : max 2 MB
+        - Dimensions : redimensionné à 400x400
+    """
+    
+    # Vérifier que l'utilisateur peut modifier cet avatar
+    # (Soit c'est son propre profil, soit il est admin)
+    if request.user.id != user_id and request.user.role != 'admin':
+        return Response(
+            {'error': 'Vous n\'êtes pas autorisé à modifier cet avatar'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # Récupérer l'utilisateur
+        user = User.objects.get(id=user_id)
+        
+        # Vérifier qu'un fichier a été envoyé
+        if 'avatar' not in request.FILES:
+            return Response(
+                {'error': 'Aucun fichier fourni'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        avatar_file = request.FILES['avatar']
+        
+        # Validation du format
+        ext = avatar_file.name.split('.')[-1].lower()
+        allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+        
+        if ext not in allowed_extensions:
+            return Response(
+                {'error': f'Format non autorisé. Formats acceptés : {", ".join(allowed_extensions)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validation de la taille (2 MB max)
+        if avatar_file.size > 2 * 1024 * 1024:
+            return Response(
+                {'error': 'Le fichier est trop volumineux. Taille maximale : 2 MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Supprimer l'ancien avatar si existant
+        if user.avatar:
+            try:
+                if os.path.isfile(user.avatar.path):
+                    os.remove(user.avatar.path)
+            except Exception as e:
+                print(f"Erreur lors de la suppression de l'ancien avatar: {e}")
+        
+        # Sauvegarder le nouveau fichier
+        user.avatar = avatar_file
+        user.save()
+        
+        # Construire l'URL complète
+        avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else None
+        
+        return Response({
+            'message': 'Avatar mis à jour avec succès',
+            'avatar_url': avatar_url,
+            'user': {
+                'id': user.id,
+                'full_name': user.get_full_name(),
+                'avatar_url': avatar_url
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de l\'upload : {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

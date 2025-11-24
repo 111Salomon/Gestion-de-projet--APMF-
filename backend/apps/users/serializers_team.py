@@ -33,6 +33,7 @@ class TeamMemberSerializer(serializers.ModelSerializer):
             'tasks_in_progress',
             'tasks_done',
             'completion_rate',
+            'avatar_url',
             'is_active',
             'date_joined',
         ]

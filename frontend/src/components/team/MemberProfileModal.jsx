@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { getTeamMemberDetail, updateMemberRole, toggleMemberActive } from '../../api/team';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { DeleteMemberModal } from './DeleteMemberModal';
+import { AvatarUploader } from './AvatarUploader';
 import toast from 'react-hot-toast';
 
 
@@ -75,6 +76,22 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
     }
   };
 
+    const handleAvatarUpdated = (newAvatarUrl) => {
+    // Mettre à jour l'avatar dans le state local
+    setMember((prev) => ({
+      ...prev,
+      avatar_url: newAvatarUrl
+    }));
+    
+    // Notifier le parent pour mettre à jour la liste
+    if (onMemberUpdated) {
+      onMemberUpdated({
+        ...member,
+        avatar_url: newAvatarUrl
+      });
+    }
+  };
+
 
   // Ferme le modal si on clique sur le fond
   const handleBackdropClick = (e) => {
@@ -119,7 +136,7 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
               {/* Infos principales */}
     <div className="flex items-start gap-6 mb-8">
       {/* Avatar */}
-      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+      {/* <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
         {member.avatar_url ? (
           <img
             src={member.avatar_url}
@@ -131,7 +148,16 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
             {member.full_name.charAt(0).toUpperCase()}
           </span>
         )}
-      </div>
+      </div> */}
+      {/* ✅ AVATAR AVEC UPLOAD */}
+<div className="flex flex-col items-center gap-6 mb-8">
+  <AvatarUploader
+    userId={member.id}
+    currentAvatar={member.avatar_url}
+    onAvatarUpdated={handleAvatarUpdated}
+  />
+</div>
+
 
       {/* Informations */}
       <div className="flex-1">

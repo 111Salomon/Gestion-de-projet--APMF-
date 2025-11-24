@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import UserViewSet
 from . import views_team  # ← Importe views_team
+from django.urls import path
 from apps.users import views, views_team, views_password 
 
 """
@@ -47,6 +48,9 @@ urlpatterns = [
     path('team/<int:user_id>/role/', views_team.update_member_role, name='update-member-role'),
     path('team/<int:user_id>/active/', views_team.toggle_member_active, name='toggle-member-active'),
     path('team/<int:user_id>/delete/', views_team.delete_member, name='delete-member'),
+
+    path('team/<int:user_id>/avatar/', views_team.upload_avatar, name='upload-avatar'),
+
     # Password Reset 
     path('reset-password/', views_password.reset_password, name='reset-password'),
     

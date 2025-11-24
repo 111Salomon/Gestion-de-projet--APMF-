@@ -125,3 +125,29 @@ export const deleteMember = async (userId) => {
     throw error;
   }
 };
+
+
+/**
+ * Upload l'avatar d'un membre.
+ * 
+ * @param {number} userId - ID du membre
+ * @param {File} file - Fichier image
+ * @returns {Promise<Object>}
+ */
+export const uploadAvatar = async (userId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const response = await api.post(`/users/team/${userId}/avatar/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'upload de l\'avatar:', error);
+    throw error;
+  }
+};
