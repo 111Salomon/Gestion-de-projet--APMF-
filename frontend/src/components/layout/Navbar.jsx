@@ -73,12 +73,21 @@ export const Navbar = () => {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               className="flex items-center gap-3 p-2 hover:bg-neutral-100 rounded-lg transition-colors"
             >
-              {/* Avatar */}
-              <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-                <span className="text-primary-600 font-semibold text-sm">
-                  {user.username?.charAt(0)?.toUpperCase() || 'U'}
-                </span>
-              </div>
+          {/* Avatar */}
+          <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
+            {user.avatar_url ? (
+              <img 
+                src={user.avatar_url} 
+                alt={user.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-primary-600 font-semibold text-sm">
+                {user.username?.charAt(0)?.toUpperCase() || 'U'}
+              </span>
+            )}
+          </div>
+
 
               {/* Nom et rôle */}
               <div className="hidden md:block text-left">

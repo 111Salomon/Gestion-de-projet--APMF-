@@ -83,10 +83,19 @@ export const DeleteMemberModal = ({ member, isOpen, onClose, onMemberDeleted }) 
             {/* Info membre */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <span className="text-white text-sm font-semibold">
-                    {member.full_name.charAt(0).toUpperCase()}
-                  </span>
+                {/* ✅ AVATAR CORRIGÉ */}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
+                  {member.avatar_url ? (
+                    <img 
+                      src={member.avatar_url} 
+                      alt={member.full_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white text-sm font-semibold">
+                      {member.full_name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">{member.full_name}</p>

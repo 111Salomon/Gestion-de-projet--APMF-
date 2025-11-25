@@ -14,6 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     # Champ calculé (read-only)
     full_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField() 
     
     class Meta:
         model = User
@@ -26,6 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
             'full_name',
             'role',
             'avatar',
+            'avatar_url',
             'phone',
             'bio',
             'is_active',
@@ -37,6 +39,16 @@ class UserSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         """Retourne le nom complet de l'utilisateur."""
         return obj.get_full_name()
+
+        # ✅ AJOUT DE CETTE MÉTHODE
+    def get_avatar_url(self, obj):
+        """URL complète de l'avatar ou None."""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

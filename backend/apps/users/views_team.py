@@ -538,3 +538,101 @@ def upload_avatar(request, user_id):
             {'error': f'Erreur lors de l\'upload : {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_member_profile(request, user_id):
+    """
+    Met à jour les informations du profil d'un membre.
+    
+    Champs modifiables :
+        - first_name : Prénom
+        - last_name : Nom
+        - email : Email (doit rester unique)
+        - phone : Téléphone
+        - bio : Biographie
+    
+    Restrictions :
+        - Seul l'utilisateur lui-même ou un admin peut modifier
+        - Email doit rester unique
+    """
+    
+    # Vérifier les permissions
+    if request.user.id != user_id and request.user.role != 'admin':
+        return Response(
+            {'error': 'Vous n\'êtes pas autorisé à modifier ce profil'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # Récupérer l'utilisateur
+        user = User.objects.get(id=user_id)
+        
+        # Récupérer les données
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        email = request.data.get('email')
+        phone = request.data.get('phone', '')
+        bio = request.data.get('bio', '')
+        
+        # Validation : Prénom et nom requis
+        if not first_name or not first_name.strip():
+            return Response(
+                {'error': 'Le prénom est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not last_name or not last_name.strip():
+            return Response(
+                {'error': 'Le nom est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validation : Email requis et unique
+        if not email or not email.strip():
+            return Response(
+                {'error': 'L\'email est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier l'unicité de l'email (sauf si c'est le même)
+        if email != user.email:
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {'error': 'Cet email est déjà utilisé'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Validation : Bio max 500 caractères
+        if bio and len(bio) > 500:
+            return Response(
+                {'error': 'La biographie ne peut pas dépasser 500 caractères'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Mettre à jour les champs
+        user.first_name = first_name.strip()
+        user.last_name = last_name.strip()
+        user.email = email.strip()
+        user.phone = phone.strip()
+        user.bio = bio.strip()
+        user.save()
+        
+        # Sérialiser la réponse
+        serializer = TeamMemberSerializer(user, context={'request': request})
+        
+        return Response({
+            'message': 'Profil mis à jour avec succès',
+            'user': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Utilisateur non trouvé'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Erreur lors de la mise à jour : {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

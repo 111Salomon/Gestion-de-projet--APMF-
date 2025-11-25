@@ -151,3 +151,20 @@ export const uploadAvatar = async (userId, file) => {
     throw error;
   }
 };
+
+/**
+ * Met à jour le profil d'un membre.
+ * 
+ * @param {number} userId - ID du membre
+ * @param {Object} profileData - Données du profil (first_name, last_name, email, phone, bio)
+ * @returns {Promise<Object>}
+ */
+export const updateMemberProfile = async (userId, profileData) => {
+  try {
+    const response = await api.patch(`/users/team/${userId}/profile/`, profileData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    throw error;
+  }
+};

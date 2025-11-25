@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Calendar, Users, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+
 // ─── Imports avec chemins relatifs corrigés ───
 import { Layout } from '../../components/layout/Layout';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -13,14 +14,18 @@ import { ProjectStats } from '../../components/projects/ProjectStats';
 import { TaskCard } from '../../components/tasks/TaskCard';
 import { ProjectForm } from '../../components/forms/ProjectForm';
 
+
 // 🆕 Imports pour la gestion des membres
 import { MemberList } from '../../components/projects/MemberList';
 import { AddMemberModal } from '../../components/projects/AddMemberModal';
 
+
 // Imports API
 import { projectsAPI } from '../../api/projects';
 
-import { useAuth } from '../../context/AuthContext'; // 🆕 Ajoute cet import
+
+import { useAuth } from '../../context/AuthContext';
+
 
 
 export const ProjectDetail = () => {
@@ -29,6 +34,7 @@ export const ProjectDetail = () => {
   const navigate = useNavigate();
   // 🆕 Récupère l'utilisateur depuis le contexte
   const { user: currentUser } = useAuth();
+
 
 
   // ─── État local (existant) ───
@@ -40,6 +46,7 @@ export const ProjectDetail = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
+
   // 🆕 État local pour la gestion des membres
   const [members, setMembers] = useState([]);
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -47,16 +54,19 @@ export const ProjectDetail = () => {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
 
+
   // ─── Chargement au montage ───
   useEffect(() => {
     loadProjectData();
-    loadMembers(); // 🆕 Charge les membres
-    loadAvailableUsers(); // 🆕 Charge les users disponibles
+    loadMembers();
+    loadAvailableUsers();
   }, [id]);
+
 
   const loadProjectData = async () => {
     try {
       setLoading(true);
+
 
       // Charge les 3 API en parallèle
       const [projectData, statsData, tasksData] = await Promise.all([
@@ -65,8 +75,10 @@ export const ProjectDetail = () => {
         projectsAPI.getTasks(id),
       ]);
 
+
       setProject(projectData);
       setStats(statsData);
+
 
       // ✅ Gestion correcte des 2 formats possibles
       const tasksList = Array.isArray(tasksData)
@@ -83,6 +95,7 @@ export const ProjectDetail = () => {
     }
   };
 
+
   // 🆕 Charge la liste des membres du projet
   const loadMembers = async () => {
     try {
@@ -97,6 +110,7 @@ export const ProjectDetail = () => {
     }
   };
 
+
   // 🆕 Charge la liste des utilisateurs disponibles
   const loadAvailableUsers = async () => {
     try {
@@ -106,6 +120,7 @@ export const ProjectDetail = () => {
       console.error('❌ Erreur chargement utilisateurs:', error);
     }
   };
+
 
   // 🆕 Ajoute un membre au projet
   const handleAddMember = async (userId, role) => {
@@ -127,6 +142,7 @@ export const ProjectDetail = () => {
     }
   };
 
+
   // 🆕 Retire un membre du projet
   const handleRemoveMember = async (userId) => {
     try {
@@ -141,6 +157,7 @@ export const ProjectDetail = () => {
     }
   };
 
+
   // 🆕 Change le rôle d'un membre
   const handleChangeRole = async (userId, newRole) => {
     try {
@@ -154,6 +171,7 @@ export const ProjectDetail = () => {
       toast.error('Impossible de modifier le rôle');
     }
   };
+
 
   // Mise à jour du projet
   const handleUpdate = async (values) => {
@@ -171,6 +189,7 @@ export const ProjectDetail = () => {
     }
   };
 
+
   const handleDelete = async () => {
     try {
       await projectsAPI.delete(id);
@@ -182,6 +201,7 @@ export const ProjectDetail = () => {
     }
   };
 
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Non définie';
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -190,6 +210,7 @@ export const ProjectDetail = () => {
       year: 'numeric',
     });
   };
+
 
   // Badge de statut avec couleurs
   const getStatusBadge = (status) => {
@@ -201,6 +222,7 @@ export const ProjectDetail = () => {
       cancelled: 'bg-red-100 text-red-700',
     };
 
+
     const labels = {
       planning: 'En planification',
       active: 'Actif',
@@ -209,6 +231,7 @@ export const ProjectDetail = () => {
       cancelled: 'Annulé',
     };
 
+
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
         {labels[status] || status}
@@ -216,20 +239,67 @@ export const ProjectDetail = () => {
     );
   };
 
-  // 🔍 DEBUG : Ajoute ces lignes temporairement
-  console.log('🔍 project.owner.id:', project?.owner?.id, typeof project?.owner?.id);
-  console.log('🔍 currentUser.id:', currentUser?.id, typeof currentUser?.id);
-  console.log('🔍 Égalité stricte:', project?.owner?.id === currentUser?.id);
-  console.log('🔍 Égalité avec Number():', Number(project?.owner?.id) === Number(currentUser?.id));
-  console.log('🔍 currentUser.role:', currentUser?.role);
 
-  // ✅ Version corrigée avec Number()
-  const isOwner = currentUser && (
-    Number(project?.owner?.id) === Number(currentUser?.id) || 
-    currentUser?.role === 'admin'
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔐 GESTION DES PERMISSIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  // 🔍 DEBUG : Affiche les membres avec leurs rôles
+  console.log('🔍 Membres du projet:', members.map(m => ({
+    username: m.user?.username,
+    role: m.role
+  })));
+
+  // ✅ CORRECTION COMPLÈTE : Vérifie tous les types de propriétaires
+  const isProjectOwner = currentUser && Number(project?.owner?.id) === Number(currentUser?.id);
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const isChef = currentUser && currentUser.role === 'chef';
+
+  // 🆕 Vérifie si l'utilisateur a le rôle "owner" ou "proprietaire" dans ProjectMember
+  const hasOwnerRole = currentUser && members.some(
+    member => {
+      const isSameUser = Number(member.user?.id) === Number(currentUser.id);
+      const isOwnerRole = member.role === 'owner' || 
+                          member.role === 'proprietaire' ||
+                          member.role === 'Propriétaire';
+      
+      if (isSameUser) {
+        console.log(`🔍 Rôle de ${member.user?.username} dans le projet:`, member.role);
+      }
+      
+      return isSameUser && isOwnerRole;
+    }
   );
 
-  console.log('🔍 isOwner final:', isOwner);
+  // Vérifie si gestionnaire
+  const isManager = currentUser && members.some(
+    member => Number(member.user?.id) === Number(currentUser.id) && 
+              (member.role === 'manager' || member.role === 'gestionnaire')
+  );
+
+  // ✅ isOwner = vrai si SOIT champ owner SOIT rôle owner dans members
+  const isOwner = isProjectOwner || hasOwnerRole;
+
+  // ✅ Permission finale
+  const canManageMembers = isOwner || isAdmin || isChef || isManager;
+
+  // 🔍 DEBUG : Affiche toutes les vérifications
+  console.log('═══════════════════════════════════════');
+  console.log('🔍 VÉRIFICATION PERMISSIONS:');
+  console.log('   project.owner.id:', project?.owner?.id);
+  console.log('   currentUser.id:', currentUser?.id);
+  console.log('   currentUser.role:', currentUser?.role);
+  console.log('   ─────────────────────────────────');
+  console.log('   isProjectOwner (champ DB):', isProjectOwner);
+  console.log('   hasOwnerRole (rôle membre):', hasOwnerRole);
+  console.log('   isAdmin:', isAdmin);
+  console.log('   isChef:', isChef);
+  console.log('   isManager:', isManager);
+  console.log('   ─────────────────────────────────');
+  console.log('   → isOwner final:', isOwner);
+  console.log('   → canManageMembers:', canManageMembers);
+  console.log('═══════════════════════════════════════');
+
 
   // ─── Affichage pendant chargement ───
   if (loading) {
@@ -239,6 +309,7 @@ export const ProjectDetail = () => {
       </Layout>
     );
   }
+
 
   // ─── Si projet introuvable ───
   if (!project) {
@@ -250,6 +321,7 @@ export const ProjectDetail = () => {
       </Layout>
     );
   }
+
 
   // ─── RENDU DE LA PAGE ───
   return (
@@ -267,6 +339,7 @@ export const ProjectDetail = () => {
             <ArrowLeft className="w-5 h-5" />
             <span>Retour aux projets</span>
           </button>
+
 
           <div className="flex gap-2">
             <Button
@@ -286,6 +359,7 @@ export const ProjectDetail = () => {
           </div>
         </div>
 
+
         {/* ═══════════════════════════════════════════ */}
         {/* INFO PROJET : Titre + Description + Dates */}
         {/* ═══════════════════════════════════════════ */}
@@ -294,14 +368,17 @@ export const ProjectDetail = () => {
             {project.name}
           </h1>
 
+
           {/* Badge de statut */}
           <div className="mb-4">
             {getStatusBadge(project.status)}
           </div>
 
+
           <p className="text-neutral-600 mb-6">
             {project.description || 'Aucune description'}
           </p>
+
 
           {/* Infos secondaires (dates + membres) */}
           <div className="flex gap-4 text-sm text-neutral-500">
@@ -320,10 +397,12 @@ export const ProjectDetail = () => {
           </div>
         </div>
 
+
         {/* ═══════════════════════════════════════════ */}
         {/* STATISTIQUES : Composant ProjectStats */}
         {/* ═══════════════════════════════════════════ */}
         <ProjectStats stats={stats} />
+
 
         {/* ═══════════════════════════════════════════ */}
         {/* 🆕 MEMBRES DU PROJET : Nouvelle Section */}
@@ -335,8 +414,8 @@ export const ProjectDetail = () => {
               Membres du Projet ({members.length})
             </h2>
             
-            {/* Bouton ajouter (visible seulement pour le owner) */}
-            {isOwner && (
+            {/* Bouton ajouter (visible pour owner, admin, chef, manager) */}
+            {canManageMembers && (
               <Button
                 variant="primary"
                 onClick={() => setIsAddMemberModalOpen(true)}
@@ -344,18 +423,21 @@ export const ProjectDetail = () => {
               >
                 Ajouter un membre
               </Button>
-            )}
+            )}    
           </div>
+
 
           {/* Composant MemberList */}
           <MemberList
             members={members}
-            isOwner={isOwner}
+            canManageMembers={canManageMembers}
+            isOwner={isOwner || isAdmin || isChef}  // Pour changer les rôles
             onRemoveMember={handleRemoveMember}
             onChangeRole={handleChangeRole}
             loading={loadingMembers}
           />
         </div>
+
 
         {/* ═══════════════════════════════════════════ */}
         {/* TÂCHES DU PROJET : Grille de cartes */}
@@ -372,6 +454,7 @@ export const ProjectDetail = () => {
               Voir toutes les tâches
             </Button>
           </div>
+
 
           {/* Liste des tâches ou message vide */}
           {tasks.length === 0 ? (
@@ -391,6 +474,7 @@ export const ProjectDetail = () => {
             </div>
           )}
 
+
           {/* Message si + de 6 tâches */}
           {tasks.length > 6 && (
             <p className="text-neutral-500 text-center mt-4">
@@ -400,9 +484,11 @@ export const ProjectDetail = () => {
           )}
         </div>
 
+
         {/* ═══════════════════════════════════════════ */}
         {/* MODALS : Édition + Suppression + Membres */}
         {/* ═══════════════════════════════════════════ */}
+
 
         {/* Modal d'édition du projet */}
         <Modal
@@ -418,6 +504,7 @@ export const ProjectDetail = () => {
           />
         </Modal>
 
+
         {/* Modal de confirmation suppression */}
         <ConfirmModal
           isOpen={isDeleteModalOpen}
@@ -428,6 +515,7 @@ export const ProjectDetail = () => {
           confirmText="Supprimer"
           variant="danger"
         />
+
 
         {/* 🆕 Modal d'ajout de membre */}
         <AddMemberModal
@@ -442,5 +530,6 @@ export const ProjectDetail = () => {
     </Layout>
   );
 };
+
 
 export default ProjectDetail;

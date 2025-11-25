@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
 
+
 from .models import Project, ProjectMember
 from apps.users.models import User
 from .serializers import (
@@ -16,6 +17,7 @@ from .serializers import (
     UserSerializer  # 🆕 Ajouté pour lister les users
 )
 from apps.users.permissions import IsChefOrAdmin, IsProjectMemberOrReadOnly
+
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -165,7 +167,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         }
         
         📌 Permissions:
-            - Seul le propriétaire ou un admin peut ajouter des membres
+            - Admin (rôle global)
+            - Chef de projet (rôle global)
+            - Propriétaire du projet (champ owner OU rôle owner dans ProjectMember)
+            - Gestionnaire du projet
         
         Returns:
             Données du membre ajouté (201 Created)
@@ -197,10 +202,29 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # ❌ Validation 4: Permissions (owner ou admin seulement)
-        if project.owner != request.user and not request.user.is_admin:
+        # ✅ CORRECTION COMPLÈTE : Vérification de TOUTES les permissions
+        is_project_owner = project.owner == request.user
+        is_admin = request.user.role == 'admin'
+        is_chef = request.user.role == 'chef'
+        
+        # 🆕 Vérifier si l'utilisateur a le rôle "owner" dans ProjectMember
+        has_owner_role = ProjectMember.objects.filter(
+            project=project,
+            user=request.user,
+            role='owner'
+        ).exists()
+        
+        # Vérifier si gestionnaire du projet
+        is_manager = ProjectMember.objects.filter(
+            project=project,
+            user=request.user,
+            role='manager'
+        ).exists()
+        
+        # ❌ Validation 4: Permissions (owner DB OU owner member OU admin OU chef OU manager)
+        if not (is_project_owner or has_owner_role or is_admin or is_chef or is_manager):
             return Response(
-                {'error': 'Seul le propriétaire peut ajouter des membres'},
+                {'error': 'Vous n\'avez pas les permissions pour ajouter des membres'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -222,17 +246,39 @@ class ProjectViewSet(viewsets.ModelViewSet):
         DELETE /api/projects/{id}/members/{user_id}/remove/
         
         📌 Permissions:
-            - Seul le propriétaire ou un admin peut retirer des membres
+            - Admin (rôle global)
+            - Chef de projet (rôle global)
+            - Propriétaire du projet (champ owner OU rôle owner dans ProjectMember)
+            - Gestionnaire du projet
         
         Returns:
             204 No Content si succès
         """
         project = self.get_object()
         
-        # ❌ Validation: Permissions
-        if project.owner != request.user and not request.user.is_admin:
+        # ✅ CORRECTION COMPLÈTE : Vérification de TOUTES les permissions
+        is_project_owner = project.owner == request.user
+        is_admin = request.user.role == 'admin'
+        is_chef = request.user.role == 'chef'
+        
+        # 🆕 Vérifier si l'utilisateur a le rôle "owner" dans ProjectMember
+        has_owner_role = ProjectMember.objects.filter(
+            project=project,
+            user=request.user,
+            role='owner'
+        ).exists()
+        
+        # Vérifier si gestionnaire du projet
+        is_manager = ProjectMember.objects.filter(
+            project=project,
+            user=request.user,
+            role='manager'
+        ).exists()
+        
+        # ❌ Validation: Permissions (owner DB OU owner member OU admin OU chef OU manager)
+        if not (is_project_owner or has_owner_role or is_admin or is_chef or is_manager):
             return Response(
-                {'error': 'Seul le propriétaire peut retirer des membres'},
+                {'error': 'Vous n\'avez pas les permissions pour retirer des membres'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -256,11 +302,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         PATCH /api/projects/{id}/members/{user_id}/role/
         Body: {
-            "role": "manager"  // manager, developer, viewer, member
+            "role": "manager"  // manager, developer, viewer, member, owner
         }
         
         📌 Permissions:
-            - Seul le propriétaire ou un admin peut changer les rôles
+            - Admin (rôle global)
+            - Chef de projet (rôle global)
+            - Propriétaire du projet (champ owner OU rôle owner dans ProjectMember)
+            NOTE: Les gestionnaires NE PEUVENT PAS changer les rôles
         
         Returns:
             Données du membre mis à jour
@@ -275,10 +324,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # ❌ Validation 2: Permissions
-        if project.owner != request.user and not request.user.is_admin:
+        # ✅ CORRECTION COMPLÈTE : Vérification des permissions
+        is_project_owner = project.owner == request.user
+        is_admin = request.user.role == 'admin'
+        is_chef = request.user.role == 'chef'
+        
+        # 🆕 Vérifier si l'utilisateur a le rôle "owner" dans ProjectMember
+        has_owner_role = ProjectMember.objects.filter(
+            project=project,
+            user=request.user,
+            role='owner'
+        ).exists()
+        
+        # ❌ Validation 2: Permissions (owner DB OU owner member OU admin OU chef)
+        # NOTE: Les managers ne peuvent PAS changer les rôles
+        if not (is_project_owner or has_owner_role or is_admin or is_chef):
             return Response(
-                {'error': 'Seul le propriétaire peut modifier les rôles'},
+                {'error': 'Vous n\'avez pas les permissions pour modifier les rôles'},
                 status=status.HTTP_403_FORBIDDEN
             )
         

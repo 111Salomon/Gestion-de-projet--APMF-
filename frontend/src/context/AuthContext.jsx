@@ -48,8 +48,24 @@ export const AuthProvider = ({ children }) => {
     toast.success('Déconnexion réussie');
   };
 
+  // ✅ NOUVELLE FONCTION : Recharger les données de l'utilisateur
+  const refreshUser = async () => {
+    try {
+      const userData = await authAPI.getCurrentUser();
+      setUser(userData);
+    } catch (error) {
+      console.error('Erreur lors du rechargement du user:', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      refreshUser  // ✅ EXPOSER LA FONCTION
+    }}>
       {children}
     </AuthContext.Provider>
   );

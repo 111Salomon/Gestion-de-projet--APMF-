@@ -50,6 +50,7 @@ urlpatterns = [
     path('team/<int:user_id>/delete/', views_team.delete_member, name='delete-member'),
 
     path('team/<int:user_id>/avatar/', views_team.upload_avatar, name='upload-avatar'),
+    path('team/<int:user_id>/profile/', views_team.update_member_profile, name='update-member-profile'),
 
     # Password Reset 
     path('reset-password/', views_password.reset_password, name='reset-password'),
