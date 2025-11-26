@@ -1,11 +1,9 @@
+// StatsContext.jsx - Gestion des statistiques globales
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import { projectsAPI } from '../api/projects';
 import { tasksAPI } from '../api/tasks';
 
-/**
- * Context pour les statistiques de l'application
- * Partage le nombre de projets, tâches, etc. entre tous les composants
- */
 const StatsContext = createContext(null);
 
 export const StatsProvider = ({ children }) => {
@@ -15,53 +13,47 @@ export const StatsProvider = ({ children }) => {
     loading: true,
   });
 
-  /**
-   * Charge les statistiques au montage
-   */
   useEffect(() => {
     loadStats();
   }, []);
 
-  
+  // Charge les statistiques depuis les APIs
+  const loadStats = async () => {
+    try {
+      // Charge projets ET tâches en parallèle
+      const [projectsData, tasksData] = await Promise.all([
+        projectsAPI.getAll(),
+        tasksAPI.getAll()
+      ]);
+      
+      // 🆕 Gère le format paginé ET array direct
+      const projectsCount = projectsData.count 
+        ? projectsData.count  // Format paginé : utilise "count"
+        : (Array.isArray(projectsData) ? projectsData.length : 0);  // Array direct
+      
+      const tasksCount = tasksData.count 
+        ? tasksData.count  // 🎯 Utilise "count" = 37 (total)
+        : (Array.isArray(tasksData) ? tasksData.length : 0);
 
-  /**
-   * Charge toutes les statistiques depuis les APIs
-   */
-const loadStats = async () => {
-  try {
-    // Charge les projets ET les tâches en parallèle
-    const projectsData = await projectsAPI.getAll();
-    const tasksData = await tasksAPI.getAll();  // ← Charge les tâches
-    
-    // Gère le format paginé
-    const projectsList = Array.isArray(projectsData) 
-      ? projectsData 
-      : (projectsData.results || []);
-    
-    const tasksList = Array.isArray(tasksData) 
-      ? tasksData 
-      : (tasksData.results || []);
+      console.log('📊 Stats chargées:', { projectsCount, tasksCount });
 
-    // Met à jour les stats avec les vraies données
-    setStats({
-      projectsCount: projectsList.length,
-      tasksCount: tasksList.length,  // ← Nombre réel de tâches
-      loading: false,
-    });
-  } catch (error) {
-    console.error('Erreur chargement stats:', error);
-    setStats({
-      projectsCount: 0,
-      tasksCount: 0,
-      loading: false,
-    });
-  }
-};
+      setStats({
+        projectsCount,
+        tasksCount,
+        loading: false,
+      });
 
+    } catch (error) {
+      console.error('❌ Erreur chargement stats:', error);
+      setStats({
+        projectsCount: 0,
+        tasksCount: 0,
+        loading: false,
+      });
+    }
+  };
 
-  /**
-   * Recharge les statistiques (appelé après création/suppression)
-   */
+  // Recharge les stats (appelé après création/suppression)
   const refreshStats = () => {
     loadStats();
   };
@@ -73,9 +65,7 @@ const loadStats = async () => {
   );
 };
 
-/**
- * Hook pour utiliser les stats dans n'importe quel composant
- */
+// Hook pour utiliser les stats
 export const useStats = () => {
   const context = useContext(StatsContext);
   if (!context) {
