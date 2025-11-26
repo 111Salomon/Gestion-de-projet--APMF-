@@ -389,3 +389,181 @@ class ProjectViewSet(viewsets.ModelViewSet):
         users = User.objects.filter(is_active=True).order_by('username')
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
+
+
+    @action(detail=False, methods=['get'], url_path='dashboard/stats')
+    def dashboard_stats(self, request):
+        """
+        📊 Retourne les statistiques complètes pour le dashboard.
+        
+        GET /api/projects/dashboard/stats/
+        
+        Returns:
+            - KPIs (projets, tâches, membres)
+            - Graphiques (tâches par statut, projets actifs)
+            - Activités récentes
+            - Tâches urgentes
+        """
+        from apps.tasks.models import Task
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        user = request.user
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 📊 UTILISE get_queryset() pour avoir le MÊME filtrage que partout
+        # ═══════════════════════════════════════════════════════════════
+        
+        # Projets accessibles (utilise la MÊME logique que get_queryset)
+        my_projects = self.get_queryset()  # ✅ CORRECTION : Même filtrage partout
+        
+        # Statistiques projets
+        total_projects = my_projects.count()
+        active_projects = my_projects.filter(status='active').count()
+        
+        # Tâches des projets accessibles (MÊME logique que TaskViewSet)
+        all_tasks = Task.objects.filter(project__in=my_projects)  # ✅ CORRECTION
+        
+        # Statistiques tâches
+        total_tasks = all_tasks.count()
+        completed_tasks = all_tasks.filter(status='done').count()
+        in_progress_tasks = all_tasks.filter(status='in_progress').count()
+        
+        # Tâches terminées aujourd'hui
+        today = timezone.now().date()
+        completed_today = all_tasks.filter(
+            status='done',
+            updated_at__date=today
+        ).count()
+        
+        # Tâches en retard
+        overdue_tasks = all_tasks.filter(
+            due_date__lt=today,
+            status__in=['todo', 'in_progress', 'in_review']
+        ).count()
+        
+        # Membres (compte les membres des projets accessibles)
+        if user.is_admin:
+            # Admin : tous les utilisateurs actifs
+            total_members = User.objects.filter(is_active=True).count()
+        else:
+            # Utilisateur : membres uniques des projets accessibles
+            member_ids = ProjectMember.objects.filter(
+                project__in=my_projects
+            ).values_list('user_id', flat=True).distinct()
+            total_members = len(set(member_ids)) + 1  # +1 pour l'utilisateur
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 📈 Graphiques
+        # ═══════════════════════════════════════════════════════════════
+        
+        # Tâches par statut (MÊME filtrage)
+        tasks_by_status = {
+            'todo': all_tasks.filter(status='todo').count(),
+            'in_progress': all_tasks.filter(status='in_progress').count(),
+            'in_review': all_tasks.filter(status='in_review').count(),
+            'done': all_tasks.filter(status='done').count(),
+        }
+        
+        # Top 5 projets actifs avec progression
+        top_projects = []
+        for project in my_projects.filter(status='active').order_by('-created_at')[:5]:
+            project_tasks = Task.objects.filter(project=project)
+            total = project_tasks.count()
+            done = project_tasks.filter(status='done').count()
+            progress = round((done / total * 100) if total > 0 else 0, 1)
+            
+            top_projects.append({
+                'id': project.id,
+                'name': project.name,
+                'progress': progress,
+                'total_tasks': total,
+                'done_tasks': done,
+            })
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 📋 Activités Récentes
+        # ═══════════════════════════════════════════════════════════════
+        
+        recent_activities = []
+        
+        # Tâches récemment terminées (3 derniers jours)
+        three_days_ago = timezone.now() - timedelta(days=3)
+        recent_completed_tasks = all_tasks.filter(
+            status='done',
+            updated_at__gte=three_days_ago
+        ).select_related('project', 'assigned_to').order_by('-updated_at')[:5]
+        
+        for task in recent_completed_tasks:
+            recent_activities.append({
+                'type': 'completed',
+                'title': 'Tâche terminée',
+                'description': f'{task.title} dans {task.project.name}',
+                'timestamp': task.updated_at.isoformat(),
+                'user': task.assigned_to.get_full_name() if task.assigned_to else 'Non assigné',
+            })
+        
+        # Projets récemment créés
+        recent_projects = my_projects.filter(
+            created_at__gte=three_days_ago
+        ).order_by('-created_at')[:3]
+        
+        for project in recent_projects:
+            recent_activities.append({
+                'type': 'created',
+                'title': 'Nouveau projet',
+                'description': f'{project.name} créé',
+                'timestamp': project.created_at.isoformat(),
+                'user': project.owner.get_full_name(),
+            })
+        
+        # Trier par date
+        recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        recent_activities = recent_activities[:10]  # Garder les 10 plus récentes
+        
+        # ═══════════════════════════════════════════════════════════════
+        # ⚠️ Tâches Urgentes (deadline < 7 jours)
+        # ═══════════════════════════════════════════════════════════════
+        
+        next_week = today + timedelta(days=7)
+        urgent_tasks = all_tasks.filter(
+            due_date__gte=today,
+            due_date__lte=next_week,
+            status__in=['todo', 'in_progress', 'in_review']
+        ).select_related('project', 'assigned_to').order_by('due_date')[:5]
+        
+        urgent_tasks_data = []
+        for task in urgent_tasks:
+            days_left = (task.due_date - today).days
+            urgent_tasks_data.append({
+                'id': task.id,
+                'title': task.title,
+                'project': task.project.name,
+                'due_date': task.due_date.isoformat(),
+                'days_left': days_left,
+                'priority': task.priority,
+                'assigned_to': task.assigned_to.get_full_name() if task.assigned_to else None,
+            })
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 📦 Réponse Finale
+        # ═══════════════════════════════════════════════════════════════
+        
+        return Response({
+            'kpis': {
+                'total_projects': total_projects,
+                'active_projects': active_projects,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'in_progress_tasks': in_progress_tasks,
+                'completed_today': completed_today,
+                'overdue_tasks': overdue_tasks,
+                'total_members': total_members,
+            },
+            'charts': {
+                'tasks_by_status': tasks_by_status,
+                'top_projects': top_projects,
+            },
+            'recent_activities': recent_activities,
+            'urgent_tasks': urgent_tasks_data,
+        })
