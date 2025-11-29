@@ -52,6 +52,12 @@ urlpatterns = [
     path('team/<int:user_id>/avatar/', views_team.upload_avatar, name='upload-avatar'),
     path('team/<int:user_id>/profile/', views_team.update_member_profile, name='update-member-profile'),
 
+
+    # 🆕 Routes d'export
+    path('team-members/export/csv/', views_team.export_team_csv, name='export-team-csv'),
+    path('team-members/export/excel/', views_team.export_team_excel, name='export-team-excel'),
+    path('team-members/export/pdf/', views_team.export_team_pdf, name='export-team-pdf'),
+
     # Password Reset 
     path('reset-password/', views_password.reset_password, name='reset-password'),
     

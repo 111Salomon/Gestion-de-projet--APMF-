@@ -2,14 +2,30 @@
 Vues pour la gestion de l'équipe.
 """
 
-
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q, Count, Avg
-from django.contrib.auth.hashers import make_password  # ✅ NOUVEAU
-import secrets  # ✅ NOUVEAU
+from django.contrib.auth import get_user_model 
+
+# 🆕 NOUVEAUX IMPORTS POUR EXPORT
+import csv
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from django.http import HttpResponse
+from datetime import datetime
+
+User = get_user_model()
+
+from django.contrib.auth.hashers import make_password
+import secrets
 
 from apps.users.models import User
 from apps.users.serializers_team import TeamMemberSerializer, TeamStatsSerializer
@@ -24,6 +40,7 @@ from django.utils.encoding import force_bytes
 from django.core.files.storage import default_storage
 from PIL import Image
 import os
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -171,12 +188,12 @@ def invite_member(request):
             is_active=True
         )
         
-        # ✅ NOUVEAU : Générer le token et le lien
+        # Générer le token et le lien
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
         
-        # ✅ NOUVEAU : Préparer l'email
+        # Préparer l'email
         role_display = {
             'admin': 'Administrateur',
             'chef': 'Chef de projet',
@@ -205,7 +222,7 @@ Cordialement,
 L'équipe TaskFlow
         """
         
-        # ✅ NOUVEAU : Envoyer l'email
+        # Envoyer l'email
         try:
             send_mail(
                 subject=subject,
@@ -225,7 +242,7 @@ L'équipe TaskFlow
         return Response({
             'message': f'Invitation envoyée à {email}' if email_sent else 'Membre créé, erreur d\'envoi d\'email',
             'member': serializer.data,
-            'reset_link': reset_link  # Pour debug
+            'reset_link': reset_link
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
@@ -380,6 +397,7 @@ def toggle_member_active(request, user_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_member(request, user_id):
@@ -425,12 +443,8 @@ def delete_member(request, user_id):
         member_email = user.email
         tasks_count = user.assigned_tasks.count()
         
-        # Option 1 : Supprimer définitivement
+        # Supprimer définitivement
         user.delete()
-        
-        # Option 2 : Désactiver au lieu de supprimer (alternative)
-        # user.is_active = False
-        # user.save()
         
         return Response({
             'message': f'{member_name} a été supprimé de l\'équipe',
@@ -453,6 +467,7 @@ def delete_member(request, user_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_avatar(request, user_id):
@@ -466,7 +481,6 @@ def upload_avatar(request, user_id):
     """
     
     # Vérifier que l'utilisateur peut modifier cet avatar
-    # (Soit c'est son propre profil, soit il est admin)
     if request.user.id != user_id and request.user.role != 'admin':
         return Response(
             {'error': 'Vous n\'êtes pas autorisé à modifier cet avatar'},
@@ -538,6 +552,7 @@ def upload_avatar(request, user_id):
             {'error': f'Erreur lors de l\'upload : {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
@@ -636,3 +651,303 @@ def update_member_profile(request, user_id):
             {'error': f'Erreur lors de la mise à jour : {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# ═══════════════════════════════════════════════════════════
+# 🆕 FONCTIONS HELPER POUR L'EXPORT (AJOUTÉES)
+# ═══════════════════════════════════════════════════════════
+
+def _get_role_label(role):
+    """
+    Fonction helper pour obtenir le label français d'un rôle.
+    
+    Args:
+        role (str): Code du rôle ('admin', 'chef', 'membre')
+    
+    Returns:
+        str: Label français du rôle
+    """
+    labels = {
+        'admin': 'Administrateur',
+        'chef': 'Chef de projet',
+        'membre': 'Membre'
+    }
+    return labels.get(role, role)
+
+
+def _get_filtered_members(request):
+    """
+    Fonction helper pour récupérer les membres filtrés selon les query params.
+    Réutilise la même logique que team_list() pour cohérence.
+    
+    Args:
+        request: HttpRequest avec les query params
+    
+    Returns:
+        QuerySet: Membres filtrés avec annotations de stats
+    """
+    # Récupération des query params
+    search = request.GET.get('search', '')
+    role = request.GET.get('role', '')
+    is_active = request.GET.get('is_active', '')
+    
+    # Base queryset avec annotations
+    users = User.objects.annotate(
+        tasks_total=Count('assigned_tasks'),
+        tasks_in_progress=Count('assigned_tasks', filter=Q(assigned_tasks__status='in_progress')),
+        tasks_completed=Count('assigned_tasks', filter=Q(assigned_tasks__status='done'))
+    )
+    
+    # Application des filtres
+    if search:
+        users = users.filter(
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(username__icontains=search)
+        )
+    
+    if role:
+        users = users.filter(role=role)
+    
+    if is_active:
+        is_active_bool = is_active.lower() == 'true'
+        users = users.filter(is_active=is_active_bool)
+    
+    return users.order_by('-date_joined')
+
+
+# ═══════════════════════════════════════════════════════════
+# 🆕 VUES D'EXPORT - Liste de l'Équipe
+# ═══════════════════════════════════════════════════════════
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_team_csv(request):
+    """
+    📄 Exporte la liste des membres de l'équipe en CSV.
+    """
+    try:
+        users = _get_filtered_members(request)
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        writer.writerow([
+            'Nom Complet',
+            'Email',
+            'Rôle',
+            'Statut',
+            'Tâches Totales',
+            'Tâches En Cours',
+            'Tâches Terminées',
+            'Taux de Complétion (%)',
+            'Date d\'Inscription'
+        ])
+        
+        for user_obj in users:
+            completion_rate = 0
+            if user_obj.tasks_total > 0:
+                completion_rate = round((user_obj.tasks_completed / user_obj.tasks_total) * 100)
+            
+            full_name = user_obj.get_full_name() or user_obj.username
+            
+            writer.writerow([
+                full_name,
+                user_obj.email,
+                _get_role_label(user_obj.role),
+                'Actif' if user_obj.is_active else 'Inactif',
+                user_obj.tasks_total or 0,
+                user_obj.tasks_in_progress or 0,
+                user_obj.tasks_completed or 0,
+                completion_rate,
+                user_obj.date_joined.strftime('%d/%m/%Y')
+            ])
+        
+        output.seek(0)
+        csv_content = '\ufeff' + output.getvalue()
+        
+        response = HttpResponse(csv_content, content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="equipe_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        return response
+    
+    except Exception as e:
+        print(f"❌ Erreur export CSV: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f'Erreur: {str(e)}', status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_team_excel(request):
+    """
+    📊 Exporte la liste des membres de l'équipe en Excel (.xlsx).
+    """
+    try:
+        users = _get_filtered_members(request)
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Équipe"
+        
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=12)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        headers = [
+            'Nom Complet', 'Email', 'Rôle', 'Statut', 'Tâches Totales',
+            'Tâches En Cours', 'Tâches Terminées', 'Taux de Complétion (%)', 'Date d\'Inscription'
+        ]
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+        
+        for row_num, user_obj in enumerate(users, 2):
+            completion_rate = 0
+            if user_obj.tasks_total > 0:
+                completion_rate = round((user_obj.tasks_completed / user_obj.tasks_total) * 100)
+            
+            full_name = user_obj.get_full_name() or user_obj.username
+            
+            ws.cell(row=row_num, column=1, value=full_name)
+            ws.cell(row=row_num, column=2, value=user_obj.email)
+            ws.cell(row=row_num, column=3, value=_get_role_label(user_obj.role))
+            ws.cell(row=row_num, column=4, value='Actif' if user_obj.is_active else 'Inactif')
+            ws.cell(row=row_num, column=5, value=user_obj.tasks_total or 0)
+            ws.cell(row=row_num, column=6, value=user_obj.tasks_in_progress or 0)
+            ws.cell(row=row_num, column=7, value=user_obj.tasks_completed or 0)
+            ws.cell(row=row_num, column=8, value=completion_rate)
+            ws.cell(row=row_num, column=9, value=user_obj.date_joined.strftime('%d/%m/%Y'))
+            
+            for col_num in range(1, 10):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="equipe_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+        
+        return response
+    
+    except Exception as e:
+        print(f"❌ Erreur export Excel: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f'Erreur: {str(e)}', status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_team_pdf(request):
+    """
+    📄 Exporte la liste des membres de l'équipe en PDF.
+    """
+    try:
+        users = _get_filtered_members(request)
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            rightMargin=1*cm,
+            leftMargin=1*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#4472C4'),
+            spaceAfter=30,
+            alignment=1
+        )
+        
+        elements = []
+        title = Paragraph(
+            f"Liste de l'Équipe - {datetime.now().strftime('%d/%m/%Y')}",
+            title_style
+        )
+        elements.append(title)
+        elements.append(Spacer(1, 12))
+        
+        data = [
+            ['Nom', 'Email', 'Rôle', 'Statut', 'Tâches\nTotales', 'En\nCours', 'Terminées', 'Taux\n(%)']
+        ]
+        
+        for user_obj in users:
+            completion_rate = 0
+            if user_obj.tasks_total > 0:
+                completion_rate = round((user_obj.tasks_completed / user_obj.tasks_total) * 100)
+            
+            full_name = user_obj.get_full_name() or user_obj.username
+            
+            data.append([
+                full_name,
+                user_obj.email,
+                _get_role_label(user_obj.role),
+                'Actif' if user_obj.is_active else 'Inactif',
+                str(user_obj.tasks_total or 0),
+                str(user_obj.tasks_in_progress or 0),
+                str(user_obj.tasks_completed or 0),
+                f"{completion_rate}%"
+            ])
+        
+        table = Table(data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F0F0F0')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        elements.append(table)
+        doc.build(elements)
+        
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="equipe_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+        
+        return response
+    
+    except Exception as e:
+        print(f"❌ Erreur export PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        return HttpResponse(f'Erreur: {str(e)}', status=500)

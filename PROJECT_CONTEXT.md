@@ -181,3 +181,112 @@ backend/
 - Utilise `TaskSerializer` pour les détails (complet avec relations)
 - StatsContext charge les stats au montage ET après chaque action
 
+Gestion de projet/
+├── backend/
+│   ├── .env
+│   ├── .gitignore
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── apps/
+│   │   ├── notifications/
+│   │   │   ├── __init__.py
+│   │   │   ├── admin.py
+│   │   │   ├── apps.py
+│   │   │   ├── models.py
+│   │   │   ├── serializers.py
+│   │   │   ├── signals.py
+│   │   │   ├── tests.py
+│   │   │   ├── urls.py
+│   │   │   ├── views.py
+│   │   │   └── migrations/
+│   │   │       ├── 0001_initial.py
+│   │   │       └── __init__.py
+│   │   ├── projects/
+│   │   │   ├── __init__.py
+│   │   │   ├── admin.py
+│   │   │   ├── apps.py
+│   │   │   ├── models.py
+│   │   │   ├── serializers.py
+│   │   │   ├── tests.py
+│   │   │   ├── urls.py
+│   │   │   ├── views.py
+│   │   │   └── migrations/
+│   │   │       ├── 0001_initial.py
+│   │   │       └── __init__.py
+│   │   ├── tasks/
+│   │   │   ├── __init__.py
+│   │   │   ├── admin.py
+│   │   │   ├── apps.py
+│   │   │   ├── models.py
+│   │   │   ├── serializers.py
+│   │   │   ├── tests.py
+│   │   │   ├── urls.py
+│   │   │   ├── views.py
+│   │   │   └── migrations/
+│   │   │       ├── 0001_initial.py
+│   │   │       ├── 0002_alter_attachment_file_alter_attachment_file_name_and_more.py
+│   │   │       └── __init__.py
+│   │   └── users/
+│   │       ├── __init__.py
+│   │       ├── admin.py
+│   │       ├── apps.py
+│   │       ├── authentication.py
+│   │       ├── models.py
+│   │       ├── permissions.py
+│   │       ├── serializers.py
+│   │       ├── serializers_team.py
+│   │       ├── tests.py
+│   │       ├── urls.py
+│   │       ├── views.py
+│   │       ├── views_password.py
+│   │       ├── views_team.py
+│   │       └── migrations/
+│   │           ├── 0001_initial.py
+│   │           └── __init__.py
+│   ├── config/
+│   │   ├── __init__.py
+│   │   ├── asgi.py
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── media/
+│   │   ├── avatars/
+│   │   │   └── 2025/
+│   │   └── uploads/
+│   │       └── tasks/
+│   └── venv/ … (fichiers d’environnement virtuel nombreux, non listés ici)
+│
+└── frontend/
+    ├── README.md
+    ├── dist/
+    │   ├── assets/…
+    │   ├── index.html
+    │   └── vite.svg
+    ├── node_modules/ … (dépendances nombreuses, non listées ici)
+    ├── public/
+    │   └── vite.svg
+    ├── src/
+    │   ├── App.jsx
+    │   ├── index.css
+    │   ├── main.jsx
+    │   ├── api/
+    │   │   ├── attachments.js
+    │   │   ├── auth.js
+    │   │   ├── axios.js
+    │   │   ├── dashboard.js
+    │   │   ├── notifications.js
+    │   │   ├── projects.js
+    │   │   ├── tasks.js
+    │   │   └── team.js
+    │   ├── assets/
+    │   │   └── react.svg
+    │   ├── components/
+    │   │   ├── common/ (Button.jsx, ConfirmModal.jsx, Input.jsx, LoadingSpinner.jsx, Modal.jsx, Pagination.jsx)
+    │   │   ├── dashboard/ (DonutChart.jsx, ProjectCard.jsx, ProjectProgressBar.jsx, RecentActivity.jsx, StatCard.jsx, UrgentTasks.jsx)
+    │   │   ├── forms/ (ProjectForm.jsx, TaskForm.jsx)
+    │   │   ├── kanban/ (KanbanCard.jsx, KanbanColumn.jsx)
+    │   │   ├── layout/ (Layout.jsx, Navbar.jsx, Sidebar.jsx)
+    │   │   ├── notifications/ (NotificationBell.jsx, NotificationDropdown.jsx)
+    │   │   ├── projects/ (AddMemberModal.jsx, MemberList.jsx, ProjectStats.jsx)
+    │   │   ├── tasks/ (AttachmentList.jsx, AttachmentUploader.jsx, CommentSection.jsx, TaskCard.jsx)
+    │   │   └── team/ (Voici l’inventaire demandé (fichiers seulement, caches/`__pycache__`, `node_modules/`, `venv/…` exclus).  
