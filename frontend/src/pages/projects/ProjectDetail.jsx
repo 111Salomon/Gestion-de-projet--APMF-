@@ -430,9 +430,10 @@ const handleExport = async (format) => {
                       onClick={() => handleExport('pdf')}
                       className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                      {/* <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
                         <span className="text-xl">📄</span>
-                      </div>
+                      </div> */}
+                      <Download className="w-4 h-4" />
                       <div>
                         <div className="font-medium text-neutral-900">PDF Complet</div>
                         <div className="text-xs text-neutral-500">Rapport détaillé multi-pages</div>
@@ -445,9 +446,10 @@ const handleExport = async (format) => {
                       onClick={() => handleExport('excel')}
                       className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                      {/* <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
                         <span className="text-xl">📊</span>
-                      </div>
+                      </div> */}
+                      <Download className="w-4 h-4" />
                       <div>
                         <div className="font-medium text-neutral-900">Excel (6 onglets)</div>
                         <div className="text-xs text-neutral-500">Données structurées et éditables</div>
@@ -460,9 +462,10 @@ const handleExport = async (format) => {
                       onClick={() => handleExport('zip')}
                       className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group rounded-b-lg"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      {/* <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                         <span className="text-xl">📦</span>
-                      </div>
+                      </div> */}
+                      <Download className="w-4 h-4" />
                       <div>
                         <div className="font-medium text-neutral-900">Archive ZIP</div>
                         <div className="text-xs text-neutral-500">JSON + fichiers attachés</div>

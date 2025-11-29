@@ -8,7 +8,8 @@ import {
   LogOut,
   ChevronLeft,
   Calendar as CalendarIcon,
-  Trello
+  Trello,
+  BarChart3
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +32,14 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       path: '/dashboard', 
       badge: null 
     },
+
+    { 
+      name: 'Analytics',  // 🆕 AJOUTÉ
+      icon: BarChart3,    // 🆕 AJOUTÉ
+      path: '/analytics', // 🆕 AJOUTÉ
+      badge: null         // 🆕 AJOUTÉ
+    },
+    
     { 
       name: 'Projets', 
       icon: FolderKanban, 

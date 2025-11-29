@@ -1419,3 +1419,167 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 {'error': f'Erreur lors de l\'export archive: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+            
+
+    # ═══════════════════════════════════════════════════════════════════
+    # 📊 ANALYTICS & RAPPORTS (AJOUTÉ - 2025-11-29)
+    # ═══════════════════════════════════════════════════════════════════
+
+    @action(detail=False, methods=['get'], url_path='analytics/performance')
+    def analytics_performance(self, request):
+        """
+        📈 Récupère les performances d'un membre spécifique.
+        
+        Query Parameters:
+            - user_id (requis): ID de l'utilisateur
+            - days (optionnel): Période d'analyse (défaut: 30)
+        
+        Exemple: GET /api/projects/analytics/performance/?user_id=1&days=30
+        """
+        from .analytics import get_member_performance
+        
+        user_id = request.query_params.get('user_id')
+        days = request.query_params.get('days', 30)
+        
+        if not user_id:
+            return Response(
+                {'error': 'Le paramètre user_id est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user_id = int(user_id)
+            days = int(days)
+        except ValueError:
+            return Response(
+                {'error': 'user_id et days doivent être des nombres entiers'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if days < 1 or days > 365:
+            return Response(
+                {'error': 'days doit être entre 1 et 365'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            performance = get_member_performance(user_id, days)
+            return Response(performance, status=status.HTTP_200_OK)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Utilisateur introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"❌ Erreur analytics performance: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Erreur lors du calcul des performances: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+    @action(detail=False, methods=['get'], url_path='analytics/team-comparison')
+    def analytics_team_comparison(self, request):
+        """
+        👥 Compare les performances de toute l'équipe.
+        
+        Query Parameters:
+            - project_id (optionnel): ID du projet
+            - days (optionnel): Période d'analyse (défaut: 30)
+        
+        Exemple: GET /api/projects/analytics/team-comparison/?days=30
+        """
+        from .analytics import get_team_comparison
+        
+        project_id = request.query_params.get('project_id')
+        days = request.query_params.get('days', 30)
+        
+        try:
+            days = int(days)
+            if project_id:
+                project_id = int(project_id)
+        except ValueError:
+            return Response(
+                {'error': 'days et project_id doivent être des nombres entiers'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if days < 1 or days > 365:
+            return Response(
+                {'error': 'days doit être entre 1 et 365'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            comparison = get_team_comparison(project_id, days)
+            
+            return Response({
+                'period_days': days,
+                'project_id': project_id,
+                'members_count': len(comparison),
+                'team_stats': comparison
+            }, status=status.HTTP_200_OK)
+            
+        except Project.DoesNotExist:
+            return Response(
+                {'error': 'Projet introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            print(f"❌ Erreur analytics team comparison: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Erreur lors de la comparaison d\'équipe: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+    @action(detail=False, methods=['get'], url_path='analytics/productivity')
+    def analytics_productivity(self, request):
+        """
+        📉 Récupère les tendances de productivité jour par jour.
+        
+        Query Parameters:
+            - days (optionnel): Période d'analyse (défaut: 30)
+            - project_id (optionnel): Filtrer par projet
+        
+        Exemple: GET /api/projects/analytics/productivity/?days=7
+        """
+        from .analytics import get_productivity_trends
+        
+        days = request.query_params.get('days', 30)
+        project_id = request.query_params.get('project_id')
+        
+        try:
+            days = int(days)
+            if project_id:
+                project_id = int(project_id)
+        except ValueError:
+            return Response(
+                {'error': 'days et project_id doivent être des nombres entiers'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if days < 1 or days > 365:
+            return Response(
+                {'error': 'days doit être entre 1 et 365'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            trends = get_productivity_trends(days, project_id)
+            return Response(trends, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f"❌ Erreur analytics productivity: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Erreur lors du calcul des tendances: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
