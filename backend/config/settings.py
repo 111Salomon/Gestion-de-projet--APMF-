@@ -175,8 +175,24 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',      # React Create React App
     'http://localhost:5173',      # Vite (plus moderne)
+    # 'http://localhost:8000',  # ✅ Ajouter aussi le backend
+    # 'http://127.0.0.1:8000',  # ✅ Ajouter aussi le backend
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# 🆕 AJOUT : Headers nécessaires pour le téléchargement de fichiers
+# CORS_ALLOW_HEADERS = [
+#     'accept',
+#     'accept-encoding',
+#     'authorization',
+#     'content-type',
+#     'dnt',
+#     'origin',
+#     'user-agent',
+#     'x-csrftoken',
+#     'x-requested-with',
+#     'content-disposition',  # ✅ Important pour les téléchargements
+# ]
 
 ## Media files (fichiers uploadés par les utilisateurs)
 MEDIA_URL = '/media/'

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Calendar, Users, UserPlus } from 'lucide-react';
+// 🆕 AJOUTÉ : Imports pour l'export
+import { Download, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 
 // ─── Imports avec chemins relatifs corrigés ───
 import { Layout } from '../../components/layout/Layout';
@@ -14,19 +15,14 @@ import { ProjectStats } from '../../components/projects/ProjectStats';
 import { TaskCard } from '../../components/tasks/TaskCard';
 import { ProjectForm } from '../../components/forms/ProjectForm';
 
-
 // 🆕 Imports pour la gestion des membres
 import { MemberList } from '../../components/projects/MemberList';
 import { AddMemberModal } from '../../components/projects/AddMemberModal';
 
-
 // Imports API
 import { projectsAPI } from '../../api/projects';
 
-
 import { useAuth } from '../../context/AuthContext';
-
-
 
 export const ProjectDetail = () => {
   // ─── Récupère l'ID depuis l'URL ───
@@ -34,8 +30,6 @@ export const ProjectDetail = () => {
   const navigate = useNavigate();
   // 🆕 Récupère l'utilisateur depuis le contexte
   const { user: currentUser } = useAuth();
-
-
 
   // ─── État local (existant) ───
   const [project, setProject] = useState(null);
@@ -46,7 +40,6 @@ export const ProjectDetail = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-
   // 🆕 État local pour la gestion des membres
   const [members, setMembers] = useState([]);
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -54,6 +47,9 @@ export const ProjectDetail = () => {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
 
+  // 🆕 AJOUTÉ : États pour l'export
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // ─── Chargement au montage ───
   useEffect(() => {
@@ -62,11 +58,28 @@ export const ProjectDetail = () => {
     loadAvailableUsers();
   }, [id]);
 
+  // 🆕 AJOUTÉ : Fermer le dropdown d'export au clic en dehors
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const target = event.target;
+      const isExportElement = target.closest('[data-export-dropdown="true"]');
+      if (!isExportElement && isExportDropdownOpen) {
+        setIsExportDropdownOpen(false);
+      }
+    };
+
+    if (isExportDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExportDropdownOpen]);
 
   const loadProjectData = async () => {
     try {
       setLoading(true);
-
 
       // Charge les 3 API en parallèle
       const [projectData, statsData, tasksData] = await Promise.all([
@@ -75,10 +88,8 @@ export const ProjectDetail = () => {
         projectsAPI.getTasks(id),
       ]);
 
-
       setProject(projectData);
       setStats(statsData);
-
 
       // ✅ Gestion correcte des 2 formats possibles
       const tasksList = Array.isArray(tasksData)
@@ -95,7 +106,6 @@ export const ProjectDetail = () => {
     }
   };
 
-
   // 🆕 Charge la liste des membres du projet
   const loadMembers = async () => {
     try {
@@ -110,7 +120,6 @@ export const ProjectDetail = () => {
     }
   };
 
-
   // 🆕 Charge la liste des utilisateurs disponibles
   const loadAvailableUsers = async () => {
     try {
@@ -120,7 +129,6 @@ export const ProjectDetail = () => {
       console.error('❌ Erreur chargement utilisateurs:', error);
     }
   };
-
 
   // 🆕 Ajoute un membre au projet
   const handleAddMember = async (userId, role) => {
@@ -142,7 +150,6 @@ export const ProjectDetail = () => {
     }
   };
 
-
   // 🆕 Retire un membre du projet
   const handleRemoveMember = async (userId) => {
     try {
@@ -157,7 +164,6 @@ export const ProjectDetail = () => {
     }
   };
 
-
   // 🆕 Change le rôle d'un membre
   const handleChangeRole = async (userId, newRole) => {
     try {
@@ -171,6 +177,75 @@ export const ProjectDetail = () => {
       toast.error('Impossible de modifier le rôle');
     }
   };
+
+// 🆕 CORRIGÉ : Fonction d'export simplifiée avec projectsAPI
+const handleExport = async (format) => {
+  try {
+    setIsExporting(true);
+    setIsExportDropdownOpen(false);
+
+    let blob;
+    let extension;
+
+    // ✅ Utilise les fonctions de projects.js (déjà configurées)
+    if (format === 'pdf') {
+      blob = await projectsAPI.exportProjectPDF(id);
+      extension = 'pdf';
+    } else if (format === 'excel') {
+      blob = await projectsAPI.exportProjectExcel(id);
+      extension = 'xlsx';
+    } else if (format === 'zip') {
+      blob = await projectsAPI.exportProjectArchive(id);
+      extension = 'zip';
+    }
+
+    // Vérification que le blob est valide
+    if (!blob || blob.size === 0) {
+      throw new Error('Fichier vide reçu');
+    }
+
+    // Création du lien de téléchargement
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Nom du fichier avec sanitization
+    const safeName = project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    link.download = `projet_${safeName}_${Date.now()}.${extension}`;
+    
+    // Ajout au DOM, clic, puis suppression
+    document.body.appendChild(link);
+    link.click();
+    
+    // Nettoyage
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+
+    const formatLabels = {
+      pdf: 'PDF',
+      excel: 'Excel',
+      zip: 'Archive ZIP',
+    };
+
+    toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
+    
+  } catch (error) {
+    console.error('❌ Erreur export:', error);
+    
+    // Message d'erreur plus spécifique
+    if (error.response) {
+      toast.error(`Erreur serveur: ${error.response.status}`);
+    } else if (error.message === 'Fichier vide reçu') {
+      toast.error('Le fichier exporté est vide');
+    } else {
+      toast.error('Impossible d\'exporter le projet');
+    }
+  } finally {
+    setIsExporting(false);
+  }
+};
 
 
   // Mise à jour du projet
@@ -189,7 +264,6 @@ export const ProjectDetail = () => {
     }
   };
 
-
   const handleDelete = async () => {
     try {
       await projectsAPI.delete(id);
@@ -201,7 +275,6 @@ export const ProjectDetail = () => {
     }
   };
 
-
   const formatDate = (dateString) => {
     if (!dateString) return 'Non définie';
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -210,7 +283,6 @@ export const ProjectDetail = () => {
       year: 'numeric',
     });
   };
-
 
   // Badge de statut avec couleurs
   const getStatusBadge = (status) => {
@@ -222,7 +294,6 @@ export const ProjectDetail = () => {
       cancelled: 'bg-red-100 text-red-700',
     };
 
-
     const labels = {
       planning: 'En planification',
       active: 'Actif',
@@ -231,14 +302,12 @@ export const ProjectDetail = () => {
       cancelled: 'Annulé',
     };
 
-
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
         {labels[status] || status}
       </span>
     );
   };
-
 
   // ═══════════════════════════════════════════════════════════════════
   // 🔐 GESTION DES PERMISSIONS
@@ -300,7 +369,6 @@ export const ProjectDetail = () => {
   console.log('   → canManageMembers:', canManageMembers);
   console.log('═══════════════════════════════════════');
 
-
   // ─── Affichage pendant chargement ───
   if (loading) {
     return (
@@ -309,7 +377,6 @@ export const ProjectDetail = () => {
       </Layout>
     );
   }
-
 
   // ─── Si projet introuvable ───
   if (!project) {
@@ -321,7 +388,6 @@ export const ProjectDetail = () => {
       </Layout>
     );
   }
-
 
   // ─── RENDU DE LA PAGE ───
   return (
@@ -340,8 +406,75 @@ export const ProjectDetail = () => {
             <span>Retour aux projets</span>
           </button>
 
-
+          {/* 🆕 MODIFIÉ : Section des boutons avec Export */}
           <div className="flex gap-2">
+            {/* 🆕 AJOUTÉ : BOUTON EXPORT AVEC DROPDOWN */}
+            <div className="relative" data-export-dropdown="true">
+              <Button
+                variant="outline"
+                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                disabled={isExporting}
+                icon={<Download className="w-4 h-4" />}
+              >
+                {isExporting ? 'Export en cours...' : 'Exporter'}
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+
+              {/* 🆕 AJOUTÉ : Dropdown des formats d'export */}
+              {isExportDropdownOpen && (
+                <div className="absolute left-0 mt-2 w-56 bg-white border border-neutral-200 rounded-lg shadow-lg z-20">
+                  <div className="py-1">
+                    {/* PDF */}
+                    <button
+                      type="button"
+                      onClick={() => handleExport('pdf')}
+                      className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                        <span className="text-xl">📄</span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-neutral-900">PDF Complet</div>
+                        <div className="text-xs text-neutral-500">Rapport détaillé multi-pages</div>
+                      </div>
+                    </button>
+
+                    {/* Excel */}
+                    <button
+                      type="button"
+                      onClick={() => handleExport('excel')}
+                      className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                        <span className="text-xl">📊</span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-neutral-900">Excel (6 onglets)</div>
+                        <div className="text-xs text-neutral-500">Données structurées et éditables</div>
+                      </div>
+                    </button>
+
+                    {/* Archive ZIP */}
+                    <button
+                      type="button"
+                      onClick={() => handleExport('zip')}
+                      className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group rounded-b-lg"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                        <span className="text-xl">📦</span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-neutral-900">Archive ZIP</div>
+                        <div className="text-xs text-neutral-500">JSON + fichiers attachés</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* FIN 🆕 AJOUTÉ */}
+
+            {/* Boutons existants */}
             <Button
               variant="outline"
               onClick={() => setIsEditModalOpen(true)}
@@ -359,7 +492,6 @@ export const ProjectDetail = () => {
           </div>
         </div>
 
-
         {/* ═══════════════════════════════════════════ */}
         {/* INFO PROJET : Titre + Description + Dates */}
         {/* ═══════════════════════════════════════════ */}
@@ -368,17 +500,14 @@ export const ProjectDetail = () => {
             {project.name}
           </h1>
 
-
           {/* Badge de statut */}
           <div className="mb-4">
             {getStatusBadge(project.status)}
           </div>
 
-
           <p className="text-neutral-600 mb-6">
             {project.description || 'Aucune description'}
           </p>
-
 
           {/* Infos secondaires (dates + membres) */}
           <div className="flex gap-4 text-sm text-neutral-500">
@@ -397,12 +526,10 @@ export const ProjectDetail = () => {
           </div>
         </div>
 
-
         {/* ═══════════════════════════════════════════ */}
         {/* STATISTIQUES : Composant ProjectStats */}
         {/* ═══════════════════════════════════════════ */}
         <ProjectStats stats={stats} />
-
 
         {/* ═══════════════════════════════════════════ */}
         {/* 🆕 MEMBRES DU PROJET : Nouvelle Section */}
@@ -426,18 +553,16 @@ export const ProjectDetail = () => {
             )}    
           </div>
 
-
           {/* Composant MemberList */}
           <MemberList
             members={members}
             canManageMembers={canManageMembers}
-            isOwner={isOwner || isAdmin || isChef}  // Pour changer les rôles
+            isOwner={isOwner || isAdmin || isChef}
             onRemoveMember={handleRemoveMember}
             onChangeRole={handleChangeRole}
             loading={loadingMembers}
           />
         </div>
-
 
         {/* ═══════════════════════════════════════════ */}
         {/* TÂCHES DU PROJET : Grille de cartes */}
@@ -454,7 +579,6 @@ export const ProjectDetail = () => {
               Voir toutes les tâches
             </Button>
           </div>
-
 
           {/* Liste des tâches ou message vide */}
           {tasks.length === 0 ? (
@@ -474,7 +598,6 @@ export const ProjectDetail = () => {
             </div>
           )}
 
-
           {/* Message si + de 6 tâches */}
           {tasks.length > 6 && (
             <p className="text-neutral-500 text-center mt-4">
@@ -484,11 +607,9 @@ export const ProjectDetail = () => {
           )}
         </div>
 
-
         {/* ═══════════════════════════════════════════ */}
         {/* MODALS : Édition + Suppression + Membres */}
         {/* ═══════════════════════════════════════════ */}
-
 
         {/* Modal d'édition du projet */}
         <Modal
@@ -504,7 +625,6 @@ export const ProjectDetail = () => {
           />
         </Modal>
 
-
         {/* Modal de confirmation suppression */}
         <ConfirmModal
           isOpen={isDeleteModalOpen}
@@ -515,7 +635,6 @@ export const ProjectDetail = () => {
           confirmText="Supprimer"
           variant="danger"
         />
-
 
         {/* 🆕 Modal d'ajout de membre */}
         <AddMemberModal
@@ -530,6 +649,5 @@ export const ProjectDetail = () => {
     </Layout>
   );
 };
-
 
 export default ProjectDetail;

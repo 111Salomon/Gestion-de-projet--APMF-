@@ -254,4 +254,50 @@ export const projectsAPI = {
     const response = await axiosInstance.get('/projects/available_users/');
     return response.data;
   },
+
+
+    // ═══════════════════════════════════════════════════════════════════
+  // 📤 EXPORT COMPLET DE PROJET (AJOUTÉ)
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * 🆕 Exporte un projet complet en PDF
+   * 
+   * @param {number} projectId - ID du projet
+   * @returns {Promise<Blob>} Fichier PDF
+   */
+  exportProjectPDF: async (projectId) => {
+    const response = await axiosInstance.get(`/projects/${projectId}/export/pdf/`, {
+      responseType: 'blob', // Important pour télécharger le fichier
+    });
+    return response.data;
+  },
+
+  /**
+   * 🆕 Exporte un projet complet en Excel
+   * 
+   * @param {number} projectId - ID du projet
+   * @returns {Promise<Blob>} Fichier Excel (.xlsx)
+   */
+  exportProjectExcel: async (projectId) => {
+    const response = await axiosInstance.get(`/projects/${projectId}/export/excel/`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  /**
+   * 🆕 Exporte un projet complet en archive ZIP
+   * 
+   * @param {number} projectId - ID du projet
+   * @returns {Promise<Blob>} Archive ZIP
+   */
+  exportProjectArchive: async (projectId) => {
+    const response = await axiosInstance.get(`/projects/${projectId}/export/archive/`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
+
+
