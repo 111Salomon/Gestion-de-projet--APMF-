@@ -53,7 +53,7 @@ export const tasksAPI = {
 
   // POST /api/tasks/:id/change_status/ - Changer le statut
   changeStatus: async (id, newStatus) => {
-    const response = await axiosInstance.post(`/tasks/${id}/change_status/`, {
+    const response = await axiosInstance.patch(`/tasks/${id}/change-status/`, {
       status: newStatus,
     });
     return response.data;

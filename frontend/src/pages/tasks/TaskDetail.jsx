@@ -108,9 +108,9 @@ export const TaskDetail = () => {
   const handleChangeStatus = async (newStatus) => {
     try {
       setUpdating(true);
-      await tasksAPI.partialUpdate(id, { status: newStatus });
+      await tasksAPI.changeStatus(id, newStatus);  // ✅ Bon endpoint
       toast.success('Statut mis à jour');
-      await loadTask(); // Recharge les données
+      await loadTask();
       setIsStatusModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur changement statut:', error);

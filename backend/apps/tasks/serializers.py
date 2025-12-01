@@ -2,8 +2,9 @@ from rest_framework import serializers
 from .models import Task, Comment, Attachment
 from apps.users.serializers import UserMinimalSerializer
 from apps.projects.serializers import ProjectListSerializer
-from apps.projects.models import Project
+from apps.projects.models import Project, ProjectMember
 from apps.users.models import User
+
 
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer pour les commentaires."""
@@ -91,6 +92,10 @@ class TaskSerializer(serializers.ModelSerializer):
     is_overdue = serializers.ReadOnlyField()
     is_completed = serializers.ReadOnlyField()
     
+    # ✅ AJOUT : Permissions calculées côté backend
+    user_role_in_project = serializers.SerializerMethodField()
+    user_permissions = serializers.SerializerMethodField()
+    
     class Meta:
         model = Task
         fields = [
@@ -110,7 +115,9 @@ class TaskSerializer(serializers.ModelSerializer):
             'comments',
             'attachments',
             'created_at',
-            'updated_at'
+            'updated_at',
+            'user_role_in_project',  # ✅ NOUVEAU
+            'user_permissions',      # ✅ NOUVEAU
         ]
         read_only_fields = [
             'id',
@@ -119,6 +126,117 @@ class TaskSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
+    
+    def get_user_role_in_project(self, obj):
+        """Retourne le rôle de l'utilisateur dans le projet de cette tâche."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        
+        user = request.user
+        project = obj.project
+        
+        if not project:
+            return None
+        
+        # 1. Créateur du projet
+        if project.owner == user:
+            return 'creator'
+        
+        # 2. Rôle dans ProjectMember
+        try:
+            membership = ProjectMember.objects.get(project=project, user=user)
+            return membership.role  # 'owner', 'manager', 'member', 'viewer'
+        except ProjectMember.DoesNotExist:
+            return None
+    
+    def get_user_permissions(self, obj):
+        """Retourne les permissions de l'utilisateur sur cette tâche."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return {
+                'can_edit': False,
+                'can_delete': False,
+                'can_change_status': False,
+            }
+        
+        user = request.user
+        project = obj.project
+        
+        if not project:
+            return {
+                'can_edit': False,
+                'can_delete': False,
+                'can_change_status': False,
+            }
+        
+        # 1️⃣ Admin/Chef global → Tous les droits
+        if user.role in ['admin', 'chef']:
+            return {
+                'can_edit': True,
+                'can_delete': True,
+                'can_change_status': True,
+            }
+        
+        # 2️⃣ Créateur du projet → Tous les droits
+        if project.owner == user:
+            return {
+                'can_edit': True,
+                'can_delete': True,
+                'can_change_status': True,
+            }
+        
+        # 3️⃣ Vérifier le rôle dans ProjectMember
+        try:
+            membership = ProjectMember.objects.get(project=project, user=user)
+            
+            # Propriétaire désigné → Tous les droits (sauf delete selon ta logique)
+            if membership.role == 'owner':
+                return {
+                    'can_edit': True,
+                    'can_delete': True,  # Mets False si seul le créateur peut supprimer
+                    'can_change_status': True,
+                }
+            
+            # Gestionnaire → Peut modifier et supprimer
+            elif membership.role == 'manager':
+                return {
+                    'can_edit': True,
+                    'can_delete': True,
+                    'can_change_status': True,
+                }
+            
+            # Membre → Lecture seule + changer statut si assigné
+            elif membership.role == 'member':
+                is_assigned = (obj.assigned_to == user)
+                return {
+                    'can_edit': False,
+                    'can_delete': False,
+                    'can_change_status': is_assigned,  # Seulement si assigné
+                }
+            
+            # Viewer → Lecture seule
+            else:
+                return {
+                    'can_edit': False,
+                    'can_delete': False,
+                    'can_change_status': False,
+                }
+        
+        except ProjectMember.DoesNotExist:
+            # 4️⃣ Pas membre → Vérifier si assigné à la tâche
+            if obj.assigned_to == user:
+                return {
+                    'can_edit': False,
+                    'can_delete': False,
+                    'can_change_status': True,  # Peut changer le statut
+                }
+            
+            return {
+                'can_edit': False,
+                'can_delete': False,
+                'can_change_status': False,
+            }
     
     def to_representation(self, instance):
         """
@@ -131,7 +249,7 @@ class TaskSerializer(serializers.ModelSerializer):
         
         # Remplace les IDs par les objets complets
         if instance.project:
-            data['project'] = ProjectListSerializer(instance.project).data
+            data['project'] = ProjectListSerializer(instance.project, context=self.context).data
         
         if instance.assigned_to:
             data['assigned_to'] = UserMinimalSerializer(instance.assigned_to).data
@@ -173,6 +291,9 @@ class TaskListSerializer(serializers.ModelSerializer):
     assigned_to = UserMinimalSerializer(read_only=True)
     is_overdue = serializers.ReadOnlyField()
     
+    # ✅ AJOUT : Permissions aussi dans la liste
+    user_permissions = serializers.SerializerMethodField()
+    
     class Meta:
         model = Task
         fields = [
@@ -184,5 +305,43 @@ class TaskListSerializer(serializers.ModelSerializer):
             'priority',
             'due_date',
             'is_overdue',
-            'created_at'
+            'created_at',
+            'user_permissions',  # ✅ NOUVEAU
         ]
+    
+    def get_user_permissions(self, obj):
+        """Même logique que TaskSerializer."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return {'can_edit': False, 'can_delete': False, 'can_change_status': False}
+        
+        user = request.user
+        project = obj.project
+        
+        if not project:
+            return {'can_edit': False, 'can_delete': False, 'can_change_status': False}
+        
+        # Admin/Chef
+        if user.role in ['admin', 'chef']:
+            return {'can_edit': True, 'can_delete': True, 'can_change_status': True}
+        
+        # Créateur
+        if project.owner == user:
+            return {'can_edit': True, 'can_delete': True, 'can_change_status': True}
+        
+        # ProjectMember
+        try:
+            membership = ProjectMember.objects.get(project=project, user=user)
+            if membership.role == 'owner':
+                return {'can_edit': True, 'can_delete': True, 'can_change_status': True}
+            elif membership.role == 'manager':
+                return {'can_edit': True, 'can_delete': True, 'can_change_status': True}
+            elif membership.role == 'member':
+                is_assigned = (obj.assigned_to == user)
+                return {'can_edit': False, 'can_delete': False, 'can_change_status': is_assigned}
+            else:
+                return {'can_edit': False, 'can_delete': False, 'can_change_status': False}
+        except ProjectMember.DoesNotExist:
+            if obj.assigned_to == user:
+                return {'can_edit': False, 'can_delete': False, 'can_change_status': True}
+            return {'can_edit': False, 'can_delete': False, 'can_change_status': False}
