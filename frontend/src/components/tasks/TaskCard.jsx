@@ -1,11 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { MoreVertical, Edit2, Trash2, User, Calendar, Flag, Eye } from 'lucide-react';
 import { useState } from 'react';
-
+// ✅ CHANGEMENT 1 : Import des permissions et du contexte Auth
+import { canModifyTask, canDeleteTask } from '../../utils/permissions';
+import { useAuth } from '../../context/AuthContext';
 
 export const TaskCard = ({ task, onEdit, onDelete }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // ✅ CHANGEMENT 2 : Récupère l'utilisateur connecté
+  const { user } = useAuth();
+
+
+    // ✅ CHANGEMENT 3 : Calcul des permissions
+  const userCanModify = canModifyTask(user, task);
+  const userCanDelete = canDeleteTask(user, task);
+  const hasAnyAction = userCanModify || userCanDelete;
 
 
   const getPriorityColor = (priority) => {
@@ -109,35 +120,46 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
         </div>
 
 
-        <div className="relative">
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
-          >
-            <MoreVertical className="w-5 h-5 text-neutral-400" />
-          </button>
+
+        {/* ✅ CHANGEMENT 4 : Menu conditionnel selon les permissions */}
+        {hasAnyAction && (
+          <div className="relative">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+            >
+              <MoreVertical className="w-5 h-5 text-neutral-400" />
+            </button>
 
 
-          {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-neutral-200 z-10">
-              <button
-                onClick={handleEdit}
-                className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 rounded-t-lg"
-              >
-                <Edit2 size={16} />
-                Modifier
-              </button>
-              <button
-                onClick={handleDelete}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
-              >
-                <Trash2 size={16} />
-                Supprimer
-              </button>
-            </div>
-          )}
-        </div>
+
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-neutral-200 z-10">
+                {userCanModify && (
+                  <button
+                    onClick={handleEdit}
+                    className="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 rounded-t-lg"
+                  >
+                    <Edit2 size={16} />
+                    Modifier
+                  </button>
+                )}
+                
+                {userCanDelete && (
+                  <button
+                    onClick={handleDelete}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                  >
+                    <Trash2 size={16} />
+                    Supprimer
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
 
 
       {task.description && (
@@ -147,15 +169,15 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
       )}
 
 
-      {task.project_name && (
+
+      {task.project?.name && (
         <div className="mb-3">
           <span className="text-xs text-neutral-500">Projet : </span>
           <span className="text-xs font-medium text-neutral-700">
-            {task.project_name}
+            {task.project.name}
           </span>
         </div>
       )}
-
 
       {/* Section Assigné + Date */}
       <div className="flex items-center justify-between pt-3 border-t border-neutral-200 mb-3">

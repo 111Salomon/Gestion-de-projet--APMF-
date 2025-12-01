@@ -15,29 +15,37 @@ from .serializers import (
     CommentSerializer,
     AttachmentSerializer
 )
-from apps.users.permissions import IsTaskAssignedOrProjectMember
-
+# from apps.users.permissions import IsTaskAssignedOrProjectMember
+from .permissions import (
+    CanModifyTask,
+    CanDeleteTask,
+    CanChangeTaskStatus,
+    CanCreateTask
+)
 
 class TaskViewSet(viewsets.ModelViewSet):
     """
-    ViewSet pour gérer les tâches avec pagination et filtrage serveur.
+    ViewSet pour gérer les tâches avec permissions granulaires.
+    
+    🔒 SYSTÈME DE PERMISSIONS :
     
     Endpoints disponibles :
-        - GET    /api/tasks/                      Liste des tâches
-        - POST   /api/tasks/                      Créer une tâche
-        - GET    /api/tasks/{id}/                 Détails d'une tâche
-        - PUT    /api/tasks/{id}/                 Modifier une tâche
-        - PATCH  /api/tasks/{id}/                 Modification partielle
-        - DELETE /api/tasks/{id}/                 Supprimer une tâche
-        - GET    /api/tasks/my_tasks/             Tâches assignées à l'utilisateur
-        - POST   /api/tasks/{id}/mark_as_done/    Marquer comme terminée
-        - PATCH  /api/tasks/{id}/update_status/   Kanban drag & drop
-        
-    Paramètres de filtrage (GET /api/tasks/) :
-        ?status=done         Filtre par statut
-        ?priority=high       Filtre par priorité
-        ?search=design       Recherche dans titre et description
-        ?project=14          Filtre par projet
+        - GET    /api/tasks/                      Liste des tâches (Tous)
+        - POST   /api/tasks/                      Créer une tâche (Manager+)
+        - GET    /api/tasks/{id}/                 Détails d'une tâche (Tous)
+        - PUT    /api/tasks/{id}/                 Modifier une tâche (Manager+)
+        - PATCH  /api/tasks/{id}/                 Modification partielle (Manager+)
+        - DELETE /api/tasks/{id}/                 Supprimer une tâche (Manager+)
+        - GET    /api/tasks/my_tasks/             Tâches assignées (Tous)
+        - POST   /api/tasks/{id}/mark_as_done/    Marquer terminée (Assigné+)
+        - PATCH  /api/tasks/{id}/change-status/   Changer statut (Assigné+)
+        - PATCH  /api/tasks/{id}/update-order/    Réorganiser (Manager+)
+    
+    Permissions par action :
+        - Créer : Manager/Owner/Admin
+        - Modifier : Manager/Owner/Admin
+        - Supprimer : Manager/Owner/Admin
+        - Changer statut : Assigné OU Manager+
     """
     
     permission_classes = [IsAuthenticated]
@@ -46,13 +54,13 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         Retourne les tâches accessibles avec filtrage côté serveur.
         
-        Permissions :
-        - Admin : voit toutes les tâches
-        - Utilisateur : voit ses tâches et celles de ses projets
+        Règles :
+        - Admin : Voit TOUTES les tâches
+        - Autres : Voit les tâches des projets dont il est propriétaire OU membre
         
         Filtres supportés :
         - status : Filtre par statut (todo, in_progress, in_review, done)
-        - priority : Filtre par priorité (low, medium, high)
+        - priority : Filtre par priorité (low, medium, high, urgent)
         - search : Recherche textuelle (titre + description)
         - project : Filtre par projet
         """
@@ -66,24 +74,24 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(project__owner=user) | Q(project__members=user)
             ).distinct()
         
-        # 🆕 FILTRAGE PAR STATUT (?status=done)
+        # 🔍 FILTRAGE PAR STATUT (?status=done)
         status_param = self.request.query_params.get('status', None)
         if status_param and status_param != 'all':
             queryset = queryset.filter(status=status_param)
         
-        # 🆕 FILTRAGE PAR PRIORITÉ (?priority=high)
+        # 🔍 FILTRAGE PAR PRIORITÉ (?priority=high)
         priority = self.request.query_params.get('priority', None)
         if priority and priority != 'all':
             queryset = queryset.filter(priority=priority)
         
-        # 🆕 FILTRAGE PAR RECHERCHE (?search=design)
+        # 🔍 FILTRAGE PAR RECHERCHE (?search=design)
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
                 Q(title__icontains=search) | Q(description__icontains=search)
             )
         
-        # Filtre par projet (?project=14)
+        # 🔍 Filtre par projet (?project=14)
         project_id = self.request.query_params.get('project', None)
         if project_id:
             queryset = queryset.filter(project_id=project_id)
@@ -99,21 +107,57 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TaskListSerializer
         return TaskSerializer
     
+    # ✅ CHANGEMENT 2 : Permissions granulaires selon l'action
     def get_permissions(self):
-        """Définit les permissions selon l'action."""
-        if self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), IsTaskAssignedOrProjectMember()]
+        """
+        Définit les permissions selon l'action.
+        
+        Logique :
+        - create → CanCreateTask (Manager+)
+        - update/partial_update → CanModifyTask (Manager+)
+        - destroy → CanDeleteTask (Manager+)
+        - change_status/mark_as_done → CanChangeTaskStatus (Assigné+)
+        - update_order → CanModifyTask (Manager+ pour réorganiser)
+        - autres actions → IsAuthenticated seulement
+        """
+        if self.action == 'create':
+            return [IsAuthenticated(), CanCreateTask()]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), CanModifyTask()]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), CanDeleteTask()]
+        elif self.action in ['change_status', 'mark_as_done']:
+            return [IsAuthenticated(), CanChangeTaskStatus()]
+        elif self.action == 'update_order':
+            return [IsAuthenticated(), CanModifyTask()]
         return [IsAuthenticated()]
     
+    # ✅ CHANGEMENT 3 : Vérification du projet lors de la création
     def perform_create(self, serializer):
         """
-        Sauvegarde la tâche avec l'utilisateur connecté comme créateur.
-        Calcule automatiquement l'ordre de la tâche.
+        Sauvegarde la tâche avec vérification des permissions sur le projet.
+        
+        Étapes :
+        1. Récupère le projet de la tâche
+        2. Vérifie que l'utilisateur peut créer dans ce projet
+        3. Calcule l'ordre de la tâche
+        4. Sauvegarde avec created_by
         """
         project = serializer.validated_data['project']
+        
+        # Vérifie que l'utilisateur peut créer dans CE projet
+        permission = CanCreateTask()
+        if not permission.has_project_permission(self.request, project):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "Vous n'avez pas les droits pour créer une tâche dans ce projet."
+            )
+        
+        # Calcul de l'ordre (pour tri manuel)
         last_task = Task.objects.filter(project=project).order_by('-order').first()
         order = (last_task.order + 1) if last_task else 1
         
+        # Sauvegarde avec created_by
         serializer.save(created_by=self.request.user, order=order)
     
     @action(detail=False, methods=['get'])
@@ -121,6 +165,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         Retourne les tâches assignées à l'utilisateur connecté.
         GET /api/tasks/my_tasks/
+        
+        🔒 Permission : IsAuthenticated (tous les utilisateurs connectés)
         """
         tasks = self.get_queryset().filter(assigned_to=request.user)
         serializer = TaskListSerializer(tasks, many=True)
@@ -131,8 +177,20 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         Marque une tâche comme terminée.
         POST /api/tasks/{id}/mark_as_done/
+        
+        🔒 Permission : CanChangeTaskStatus (assigné OU manager+)
+        
+        Fonctionnement :
+        1. Récupère la tâche
+        2. Vérifie les permissions (automatique via get_permissions)
+        3. Change le statut en 'done'
+        4. Enregistre la date de complétion
         """
         task = self.get_object()
+        
+        # ✅ AJOUTÉ : Vérification explicite de permission
+        # (Déjà fait automatiquement, mais on le met pour clarté)
+        self.check_object_permissions(request, task)
         
         from django.utils import timezone
         task.status = 'done'
@@ -142,27 +200,106 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(task)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['patch'])
-    def update_status(self, request, pk=None):
+    # ✅ CHANGEMENT 4 : Renommage et amélioration de l'endpoint
+    @action(detail=True, methods=['patch'], url_path='change-status')
+    def change_status(self, request, pk=None):
         """
-        Endpoint spécial pour le Kanban - Drag & Drop
-        PATCH /api/tasks/{id}/update_status/
+        Endpoint pour changer SON statut (membre assigné).
+        PATCH /api/tasks/{id}/change-status/
         
-        Body : { "status": "in_progress", "order": 2 }
+        Body : { "status": "in_progress" }
+        
+        🔒 Permission : CanChangeTaskStatus (assigné OU manager+)
+        
+        Différence avec update() :
+        - update() : Modifie TOUS les champs (Manager+)
+        - change_status() : Modifie SEULEMENT le statut (Assigné+)
+        
+        Exemple d'utilisation :
+        Jean (membre simple) assigné à une tâche peut :
+        ✅ Changer le statut : todo → in_progress → done
+        ❌ Ne peut PAS modifier le titre, description, etc.
         """
         task = self.get_object()
         
+        # ✅ Vérification explicite de permission
+        self.check_object_permissions(request, task)
+        
+        # Validation : champ status requis
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response(
+                {'error': 'Le champ status est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validation : statut valide
+        valid_statuses = ['todo', 'in_progress', 'in_review', 'done']
+        if new_status not in valid_statuses:
+            return Response(
+                {'error': f'Statut invalide. Utilisez: {", ".join(valid_statuses)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # Mise à jour du statut
+        task.status = new_status
+        
+        # Gestion de la date de complétion
+        if new_status == 'done':
+            from django.utils import timezone
+            task.completed_at = timezone.now()
+        elif task.completed_at:
+            # Si on repasse la tâche en "en cours", on supprime la date de complétion
+            task.completed_at = None
+        
+        task.save()
+        
+        serializer = TaskListSerializer(task, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    # ✅ CHANGEMENT 5 : Nouvel endpoint pour le Kanban (drag & drop)
+    @action(detail=True, methods=['patch'], url_path='update-order')
+    def update_order(self, request, pk=None):
+        """
+        Endpoint pour le Kanban - Drag & Drop (ordre ET statut).
+        PATCH /api/tasks/{id}/update-order/
+        
+        Body : { "status": "in_progress", "order": 2 }
+        
+        🔒 Permission : CanModifyTask (Manager+ seulement)
+        
+        Pourquoi Manager+ ?
+        Réorganiser les tâches affecte toute l'équipe.
+        C'est une responsabilité de gestion, pas une action individuelle.
+        
+        Différence avec change_status() :
+        - change_status() : Un membre change le statut de SA tâche
+        - update_order() : Un manager réorganise le tableau Kanban complet
+        """
+        task = self.get_object()
+        
+        # ✅ Vérification explicite de permission
+        # (Déjà fait via get_permissions, mais on le met pour clarté)
+        permission = CanModifyTask()
+        if not permission.has_object_permission(request, self, task):
+            return Response(
+                {
+                    'error': 'Accès refusé',
+                    'message': 'Seuls les gestionnaires peuvent réorganiser les tâches',
+                    'code': 'PERMISSION_DENIED'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Mise à jour du statut (optionnel)
         new_status = request.data.get('status')
         if new_status:
             valid_statuses = ['todo', 'in_progress', 'in_review', 'done']
-            
             if new_status not in valid_statuses:
                 return Response(
                     {'error': f'Statut invalide. Utilisez: {", ".join(valid_statuses)}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
             task.status = new_status
             
             # Gestion de la date de complétion
@@ -172,7 +309,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             elif task.completed_at:
                 task.completed_at = None
         
-        # Mise à jour de l'ordre
+        # Mise à jour de l'ordre (optionnel)
         new_order = request.data.get('order')
         if new_order is not None:
             task.order = new_order
@@ -182,6 +319,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = TaskListSerializer(task, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
     @action(detail=True, methods=['get', 'post'], url_path='comments')
     def task_comments(self, request, pk=None):
         """
@@ -189,6 +327,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         
         GET  /api/tasks/{id}/comments/  → Liste des commentaires
         POST /api/tasks/{id}/comments/  → Ajouter un commentaire
+        
+        🔒 Permission : IsAuthenticated (tous les membres du projet)
         """
         task = self.get_object()
         
@@ -203,6 +343,131 @@ class TaskViewSet(viewsets.ModelViewSet):
                 serializer.save(task=task, author=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# ═══════════════════════════════════════════════════════════════════
+# CommentViewSet et AttachmentViewSet restent INCHANGÉS
+# ═══════════════════════════════════════════════════════════════════
+
+class CommentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les commentaires.
+    
+    🔒 Permissions :
+    - Ajouter : Tous les membres
+    - Modifier : Seulement l'auteur
+    - Supprimer : Seulement l'auteur
+    """
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        """Sauvegarde le commentaire avec l'auteur connecté."""
+        serializer.save(author=self.request.user)
+    
+    def get_queryset(self):
+        """
+        Filtre les commentaires par tâche si ?task={id} fourni.
+        Exemple : GET /api/comments/?task=17
+        """
+        queryset = super().get_queryset()
+        task_id = self.request.query_params.get('task', None)
+        if task_id is not None:
+            queryset = queryset.filter(task_id=task_id)
+        return queryset.order_by('-created_at')
+    
+    def update(self, request, *args, **kwargs):
+        """Modifie un commentaire (uniquement si auteur)."""
+        comment = self.get_object()
+        
+        if comment.author != request.user:
+            return Response(
+                {'error': 'Vous ne pouvez modifier que vos propres commentaires.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Supprime un commentaire (uniquement si auteur)."""
+        comment = self.get_object()
+        
+        if comment.author != request.user:
+            return Response(
+                {'error': 'Vous ne pouvez supprimer que vos propres commentaires.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().destroy(request, *args, **kwargs)
+
+
+
+class AttachmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les pièces jointes.
+    
+    🔒 Permissions :
+    - Upload : Tous les membres
+    - Supprimer : Seulement l'uploader OU admin
+    """
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def get_queryset(self):
+        """Filtre les attachments par tâche si ?task={id} fourni."""
+        queryset = super().get_queryset().select_related('uploaded_by', 'task')
+        task_id = self.request.query_params.get('task', None)
+        if task_id:
+            queryset = queryset.filter(task_id=task_id)
+        return queryset
+    
+    def perform_create(self, serializer):
+        """
+        Sauvegarde l'attachment avec validation de taille et type.
+        Limite : 10 MB max.
+        """
+        file_obj = self.request.FILES.get('file')
+        
+        # Validation de taille (10 MB max)
+        if file_obj and file_obj.size > 10 * 1024 * 1024:
+            from rest_framework import serializers
+            raise serializers.ValidationError({
+                'file': 'La taille du fichier ne peut pas dépasser 10 MB.'
+            })
+        
+        # Validation de type
+        allowed_extensions = [
+            '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+            '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+            '.zip', '.rar', '.txt', '.csv'
+        ]
+        if file_obj:
+            ext = os.path.splitext(file_obj.name)[1].lower()
+            if ext not in allowed_extensions:
+                from rest_framework import serializers
+                raise serializers.ValidationError({
+                    'file': f'Type de fichier non autorisé. Extensions autorisées : {", ".join(allowed_extensions)}'
+                })
+        
+        serializer.save(uploaded_by=self.request.user)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Supprime l'attachment ET le fichier physique."""
+        attachment = self.get_object()
+        
+        # Vérification : seul l'uploader ou l'admin peut supprimer
+        if attachment.uploaded_by != request.user and not request.user.is_admin:
+            return Response(
+                {'error': 'Vous ne pouvez supprimer que vos propres fichiers.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Le fichier physique sera supprimé par la méthode delete() du modèle
+        return super().destroy(request, *args, **kwargs)
 
 
 class CommentViewSet(viewsets.ModelViewSet):

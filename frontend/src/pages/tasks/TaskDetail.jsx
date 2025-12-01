@@ -21,17 +21,25 @@ import AttachmentList from '../../components/tasks/AttachmentList';
 // Import API
 import { tasksAPI } from '../../api/tasks';
 
+// ✅ CHANGEMENT 1 : Import des permissions et du contexte Auth
+import { canModifyTask, canDeleteTask, canChangeTaskStatus } from '../../utils/permissions';
+import { useAuth } from '../../context/AuthContext';
+
 
 export const TaskDetail = () => {
   // Récupère l'ID depuis l'URL (ex: /tasks/15)
   const { id } = useParams();
   const navigate = useNavigate();
   
+  // ✅ CHANGEMENT 2 : Récupère l'utilisateur connecté
+  const { user } = useAuth();
+
   // États locaux
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); 
   const [updating, setUpdating] = useState(false); // 🆕 AJOUTÉ
 
 
@@ -67,7 +75,11 @@ export const TaskDetail = () => {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur mise à jour:', error);
-      toast.error('Impossible de mettre à jour la tâche');
+      if (error.response?.status === 403) {
+        toast.error('Vous n\'avez pas les droits pour modifier cette tâche');
+      } else {
+        toast.error('Impossible de mettre à jour la tâche');
+      }
     } finally {
       setUpdating(false);
     }
@@ -82,9 +94,36 @@ export const TaskDetail = () => {
       navigate('/tasks');
     } catch (error) {
       console.error('❌ Erreur suppression:', error);
-      toast.error('Impossible de supprimer la tâche');
+      if (error.response?.status === 403) {
+        toast.error('Vous n\'avez pas les droits pour supprimer cette tâche');
+      } else {
+        toast.error('Impossible de supprimer la tâche');
+      }
     }
   };
+
+    // Ajoute après handleDelete() (ligne 115 environ)
+
+  // ✅ NOUVELLE FONCTION : Changer le statut
+  const handleChangeStatus = async (newStatus) => {
+    try {
+      setUpdating(true);
+      await tasksAPI.partialUpdate(id, { status: newStatus });
+      toast.success('Statut mis à jour');
+      await loadTask(); // Recharge les données
+      setIsStatusModalOpen(false);
+    } catch (error) {
+      console.error('❌ Erreur changement statut:', error);
+      if (error.response?.status === 403) {
+        toast.error('Vous n\'avez pas les droits pour changer ce statut');
+      } else {
+        toast.error('Impossible de mettre à jour le statut');
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
 
 
   // Formatage de date
@@ -175,23 +214,42 @@ export const TaskDetail = () => {
           </button>
 
 
-          {/* Boutons Modifier et Supprimer */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditModalOpen(true)}
-              icon={<Edit className="w-4 h-4" />}
-            >
-              Modifier
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => setIsDeleteModalOpen(true)}
-              icon={<Trash2 className="w-4 h-4" />}
-            >
-              Supprimer
-            </Button>
-          </div>
+  {/* ✅ CORRIGÉ : Boutons d'action selon les permissions */}
+  <div className="flex gap-2">
+    {/* Bouton "Modifier" pour Manager+ */}
+    {canModifyTask(user, task) && (
+      <Button
+        variant="outline"
+        onClick={() => setIsEditModalOpen(true)}
+        icon={<Edit className="w-4 h-4" />}
+      >
+        Modifier
+      </Button>
+    )}
+    
+    {/* ✅ NOUVEAU : Bouton "Changer le statut" pour assigné (si pas Manager+) */}
+    {canChangeTaskStatus(user, task) && !canModifyTask(user, task) && (
+      <Button
+        variant="primary"
+        onClick={() => setIsStatusModalOpen(true)}
+        icon={<Flag className="w-4 h-4" />}
+      >
+        Changer le statut
+      </Button>
+    )}
+    
+    {/* Bouton "Supprimer" pour Manager+ */}
+    {canDeleteTask(user, task) && (
+      <Button
+        variant="danger"
+        onClick={() => setIsDeleteModalOpen(true)}
+        icon={<Trash2 className="w-4 h-4" />}
+      >
+        Supprimer
+      </Button>
+    )}
+  </div>
+
         </div>
 
 
@@ -344,6 +402,78 @@ export const TaskDetail = () => {
           variant="danger"
         />
 
+        {/* ✅ NOUVELLE MODAL : Changer le statut */}
+        <Modal
+          isOpen={isStatusModalOpen}
+          onClose={() => setIsStatusModalOpen(false)}
+          title="Changer le statut"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-600">
+              Sélectionnez le nouveau statut de la tâche :
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleChangeStatus('todo')}
+                disabled={updating}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  task.status === 'todo'
+                    ? 'border-neutral-500 bg-neutral-50'
+                    : 'border-neutral-200 hover:border-neutral-400'
+                }`}
+              >
+                <div className="font-semibold text-neutral-900">À faire</div>
+                <div className="text-xs text-neutral-500 mt-1">Pas encore commencé</div>
+              </button>
+              
+              <button
+                onClick={() => handleChangeStatus('in_progress')}
+                disabled={updating}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  task.status === 'in_progress'
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-neutral-200 hover:border-primary-300'
+                }`}
+              >
+                <div className="font-semibold text-primary-900">En cours</div>
+                <div className="text-xs text-primary-600 mt-1">En cours de réalisation</div>
+              </button>
+              
+              <button
+                onClick={() => handleChangeStatus('in_review')}
+                disabled={updating}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  task.status === 'in_review'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-neutral-200 hover:border-amber-300'
+                }`}
+              >
+                <div className="font-semibold text-amber-900">En révision</div>
+                <div className="text-xs text-amber-600 mt-1">En attente de validation</div>
+              </button>
+              
+              <button
+                onClick={() => handleChangeStatus('done')}
+                disabled={updating}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  task.status === 'done'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-neutral-200 hover:border-green-300'
+                }`}
+              >
+                <div className="font-semibold text-green-900">Terminé</div>
+                <div className="text-xs text-green-600 mt-1">Tâche complétée</div>
+              </button>
+            </div>
+            
+            {updating && (
+              <div className="text-center text-sm text-neutral-500">
+                Mise à jour en cours...
+              </div>
+            )}
+          </div>
+        </Modal>
 
 
         {/* Section commentaires - Style réseaux sociaux */}
