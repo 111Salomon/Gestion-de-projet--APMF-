@@ -298,6 +298,22 @@ export const projectsAPI = {
     });
     return response.data;
   },
+
+
+
+    /**
+   * 📊 Récupère les analytics d'un projet spécifique.
+   * 
+   * @param {number} projectId - ID du projet
+   * @param {number} days - Période d'analyse (défaut: 30)
+   * @returns {Promise<Object>} Analytics du projet
+   */
+  getProjectAnalytics: async (projectId, days = 30) => {
+    const response = await axiosInstance.get(`/projects/${projectId}/analytics/`, {
+      params: { days }
+    });
+    return response.data;
+  },
 };
 
 

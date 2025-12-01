@@ -36,6 +36,7 @@ from django.http import HttpResponse
 from datetime import datetime
 import os
 from django.conf import settings
+from .permissions_analytics import CanViewGlobalAnalytics
 
 
 
@@ -1423,7 +1424,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             
 
     # ═══════════════════════════════════════════════════════════════════
-    # 📊 ANALYTICS & RAPPORTS (AJOUTÉ - 2025-11-29)
+    # 📊 ANALYTICS & RAPPORTS (CORRIGÉ - 2025-12-01)
     # ═══════════════════════════════════════════════════════════════════
 
     @action(detail=False, methods=['get'], url_path='analytics/performance')
@@ -1431,12 +1432,27 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         📈 Récupère les performances d'un membre spécifique.
         
-        Query Parameters:
-            - user_id (requis): ID de l'utilisateur
-            - days (optionnel): Période d'analyse (défaut: 30)
-        
-        Exemple: GET /api/projects/analytics/performance/?user_id=1&days=30
+        🔒 ACCÈS RESTREINT : Admin + Chef de Projet uniquement
         """
+        # ═══════════════════════════════════════════════════════════════
+        # 🔒 VÉRIFICATION DES PERMISSIONS
+        # ═══════════════════════════════════════════════════════════════
+        
+        permission = CanViewGlobalAnalytics()
+        if not permission.has_permission(request, self):
+            return Response(
+                {
+                    'error': 'Accès refusé',
+                    'message': 'Cette section est réservée aux administrateurs et chefs de projet.',
+                    'code': 'PERMISSION_DENIED'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🔍 VALIDATION DES PARAMÈTRES
+        # ═══════════════════════════════════════════════════════════════
+        
         from .analytics import get_member_performance
         
         user_id = request.query_params.get('user_id')
@@ -1463,17 +1479,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # ✅ AJOUTÉ : Récupération et retour des données
         try:
-            performance = get_member_performance(user_id, days)
-            return Response(performance, status=status.HTTP_200_OK)
-            
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'Utilisateur introuvable'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            data = get_member_performance(user_id=user_id, days=days)
+            return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"❌ Erreur analytics performance: {e}")
+            print(f"❌ Erreur analytics_performance: {e}")
             import traceback
             traceback.print_exc()
             return Response(
@@ -1483,28 +1494,41 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=False, methods=['get'], url_path='analytics/team-comparison')
-    def analytics_team_comparison(self, request):
+    def team_comparison(self, request):
         """
-        👥 Compare les performances de toute l'équipe.
+        📊 Comparaison des performances de l'équipe (TOUTES les tâches).
         
-        Query Parameters:
-            - project_id (optionnel): ID du projet
-            - days (optionnel): Période d'analyse (défaut: 30)
-        
-        Exemple: GET /api/projects/analytics/team-comparison/?days=30
+        🔒 ACCÈS RESTREINT : Admin et Chef de projet uniquement
         """
+        # ═══════════════════════════════════════════════════════════════
+        # 🔒 VÉRIFICATION DES PERMISSIONS
+        # ═══════════════════════════════════════════════════════════════
+        
+        user = request.user
+        
+        if user.role not in ['admin', 'chef']:
+            return Response(
+                {
+                    'error': 'Accès refusé',
+                    'message': 'Seuls les administrateurs et chefs de projet peuvent accéder aux analytics globales.',
+                    'code': 'PERMISSION_DENIED'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🔍 VALIDATION DES PARAMÈTRES
+        # ═══════════════════════════════════════════════════════════════
+        
         from .analytics import get_team_comparison
         
-        project_id = request.query_params.get('project_id')
         days = request.query_params.get('days', 30)
         
         try:
             days = int(days)
-            if project_id:
-                project_id = int(project_id)
         except ValueError:
             return Response(
-                {'error': 'days et project_id doivent être des nombres entiers'},
+                {'error': 'days doit être un nombre entier'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -1514,54 +1538,59 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # ═══════════════════════════════════════════════════════════════
+        # 📊 RÉCUPÉRATION DES DONNÉES
+        # ═══════════════════════════════════════════════════════════════
+        
         try:
-            comparison = get_team_comparison(project_id, days)
-            
-            return Response({
-                'period_days': days,
-                'project_id': project_id,
-                'members_count': len(comparison),
-                'team_stats': comparison
-            }, status=status.HTTP_200_OK)
-            
-        except Project.DoesNotExist:
-            return Response(
-                {'error': 'Projet introuvable'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            data = get_team_comparison(project_id=None, days=days)
+            return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"❌ Erreur analytics team comparison: {e}")
+            print(f"❌ Erreur team_comparison: {e}")
             import traceback
             traceback.print_exc()
             return Response(
-                {'error': f'Erreur lors de la comparaison d\'équipe: {str(e)}'},
+                {'error': f'Erreur lors du calcul des analytics: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
     @action(detail=False, methods=['get'], url_path='analytics/productivity')
-    def analytics_productivity(self, request):
+    def productivity_trends(self, request):
         """
-        📉 Récupère les tendances de productivité jour par jour.
+        📈 Tendances de productivité globale (TOUTES les tâches).
         
-        Query Parameters:
-            - days (optionnel): Période d'analyse (défaut: 30)
-            - project_id (optionnel): Filtrer par projet
-        
-        Exemple: GET /api/projects/analytics/productivity/?days=7
+        🔒 ACCÈS RESTREINT : Admin et Chef de projet uniquement
         """
+        # ═══════════════════════════════════════════════════════════════
+        # 🔒 VÉRIFICATION DES PERMISSIONS
+        # ═══════════════════════════════════════════════════════════════
+        
+        user = request.user
+        
+        if user.role not in ['admin', 'chef']:
+            return Response(
+                {
+                    'error': 'Accès refusé',
+                    'message': 'Seuls les administrateurs et chefs de projet peuvent accéder aux analytics globales.',
+                    'code': 'PERMISSION_DENIED'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🔍 VALIDATION DES PARAMÈTRES
+        # ═══════════════════════════════════════════════════════════════
+        
         from .analytics import get_productivity_trends
         
         days = request.query_params.get('days', 30)
-        project_id = request.query_params.get('project_id')
         
         try:
             days = int(days)
-            if project_id:
-                project_id = int(project_id)
         except ValueError:
             return Response(
-                {'error': 'days et project_id doivent être des nombres entiers'},
+                {'error': 'days doit être un nombre entier'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -1571,15 +1600,140 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # ═══════════════════════════════════════════════════════════════
+        # 📊 RÉCUPÉRATION DES DONNÉES
+        # ═══════════════════════════════════════════════════════════════
+        
         try:
-            trends = get_productivity_trends(days, project_id)
-            return Response(trends, status=status.HTTP_200_OK)
-            
+            data = get_productivity_trends(days=days, project_id=None)
+            return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"❌ Erreur analytics productivity: {e}")
+            print(f"❌ Erreur productivity_trends: {e}")
             import traceback
             traceback.print_exc()
             return Response(
-                {'error': f'Erreur lors du calcul des tendances: {str(e)}'},
+                {'error': f'Erreur lors du calcul des analytics: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+    @action(detail=True, methods=['get'], url_path='analytics')
+    def project_analytics(self, request, pk=None):
+        """
+        📊 Analytics spécifiques à UN projet.
+        """
+        # ═══════════════════════════════════════════════════════════════
+        # 🔍 RÉCUPÉRATION DU PROJET
+        # ═══════════════════════════════════════════════════════════════
+        
+        project = self.get_object()
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🔒 VÉRIFICATION DES PERMISSIONS
+        # ═══════════════════════════════════════════════════════════════
+        
+        user = request.user
+        has_access = False
+        access_level = None
+        
+        # 1. Admin ou Chef de projet global → Accès total
+        if user.role in ['admin', 'chef']:
+            has_access = True
+            access_level = 'global_manager'
+        
+        # 2. Propriétaire du projet (champ owner)
+        elif project.owner == user:
+            has_access = True
+            access_level = 'owner'
+        
+        # 3. Membre avec rôle élevé (owner, manager, gestionnaire)
+        else:
+            try:
+                from .models import ProjectMember
+                membership = ProjectMember.objects.get(project=project, user=user)
+                
+                allowed_roles = ['owner', 'manager', 'gestionnaire', 'proprietaire']
+                if membership.role in allowed_roles:
+                    has_access = True
+                    access_level = f'project_{membership.role}'
+            except ProjectMember.DoesNotExist:
+                pass
+            except Exception as e:
+                print(f'❌ Erreur vérification membership : {e}')
+        
+        # Si aucun accès autorisé
+        if not has_access:
+            return Response(
+                {
+                    'error': 'Accès refusé',
+                    'message': 'Vous devez être administrateur, chef de projet, propriétaire ou gestionnaire de ce projet.',
+                    'code': 'PERMISSION_DENIED'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 🔍 VALIDATION DES PARAMÈTRES
+        # ═══════════════════════════════════════════════════════════════
+        
+        from .analytics import get_team_comparison, get_productivity_trends
+        
+        days = request.query_params.get('days', 30)
+        
+        try:
+            days = int(days)
+        except ValueError:
+            return Response(
+                {'error': 'days doit être un nombre entier'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if days < 1 or days > 365:
+            return Response(
+                {'error': 'days doit être entre 1 et 365'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # ═══════════════════════════════════════════════════════════════
+        # 📊 RÉCUPÉRATION DES DONNÉES (filtrées sur ce projet)
+        # ═══════════════════════════════════════════════════════════════
+        
+        try:
+            team_stats = get_team_comparison(project_id=project.id, days=days)
+            productivity = get_productivity_trends(days=days, project_id=project.id)
+            
+            from apps.tasks.models import Task
+            total_tasks = Task.objects.filter(project=project).count()
+            completed_tasks = Task.objects.filter(project=project, status='done').count()
+            completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            
+            return Response({
+                'project': {
+                    'id': project.id,
+                    'name': project.name,
+                    'description': project.description,
+                    'owner': {
+                        'id': project.owner.id,
+                        'full_name': project.owner.get_full_name(),
+                        'avatar': project.owner.avatar.url if project.owner.avatar else None,
+                    },
+                    'total_tasks': total_tasks,
+                    'completed_tasks': completed_tasks,
+                    'completion_rate': round(completion_rate, 1),
+                },
+                'access_level': access_level,
+                'period_days': days,
+                'team_stats': team_stats,
+                'productivity': productivity,
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f"❌ Erreur project analytics: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'Erreur lors du calcul des analytics: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    # ✅ FIN DE LA SECTION ANALYTICS - PAS DE CODE EN DOUBLE APRÈS

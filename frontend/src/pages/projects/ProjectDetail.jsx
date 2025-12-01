@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Calendar, Users, UserPlus } from 'lucide-react';
+import { useParams, useNavigate,Link } from 'react-router-dom';
+import { ArrowLeft, Edit, Trash2, Calendar, Users, UserPlus,BarChart3 } from 'lucide-react';
 // 🆕 AJOUTÉ : Imports pour l'export
 import { Download, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -275,6 +275,88 @@ const handleExport = async (format) => {
     }
   };
 
+/**
+ * 🔒 Vérifie si l'utilisateur peut voir les analytics du projet
+ */
+const canViewProjectAnalytics = () => {
+  console.log('═══════════════════════════════════════');
+  console.log('🔍 DEBUG canViewProjectAnalytics');
+  console.log('═══════════════════════════════════════');
+  
+  // Vérifications de base
+  console.log('1️⃣ project existe ?', !!project);
+  console.log('2️⃣ currentUser existe ?', !!currentUser);
+  
+  if (!project || !currentUser) {
+    console.log('❌ Arrêt : project ou currentUser manquant');
+    return false;
+  }
+  
+  // Affiche les données
+  console.log('───────────────────────────────────────');
+  console.log('📊 DONNÉES:');
+  console.log('currentUser.id:', currentUser.id, typeof currentUser.id);
+  console.log('currentUser.role:', currentUser.role);
+  console.log('project.owner.id:', project?.owner?.id, typeof project?.owner?.id);
+  console.log('───────────────────────────────────────');
+  
+  // Test 1 : Admin ou Chef
+  const isAdminOrChef = currentUser?.role === 'admin' || currentUser?.role === 'chef';
+  console.log('3️⃣ Admin ou Chef ?', isAdminOrChef);
+  if (isAdminOrChef) {
+    console.log('✅ ACCÈS AUTORISÉ (Admin/Chef)');
+    return true;
+  }
+  
+  // Test 2 : Propriétaire
+  const isOwner = Number(project?.owner?.id) === Number(currentUser?.id);
+  console.log('4️⃣ Propriétaire ?', isOwner);
+  console.log('   Comparaison:', Number(project?.owner?.id), '===', Number(currentUser?.id));
+  if (isOwner) {
+    console.log('✅ ACCÈS AUTORISÉ (Propriétaire)');
+    return true;
+  }
+  
+  // Test 3 : Gestionnaire
+  console.log('5️⃣ Vérification dans members...');
+  console.log('   members:', members);
+  console.log('   members.length:', members?.length);
+  
+  if (members && members.length > 0) {
+    members.forEach((m, index) => {
+      console.log(`   membre[${index}]:`, {
+        userId: m.user?.id,
+        username: m.user?.username,
+        role: m.role,
+        isSameUser: Number(m.user?.id) === Number(currentUser.id)
+      });
+    });
+  }
+  
+  const myMembership = members?.find(m => Number(m.user?.id) === Number(currentUser.id));
+  console.log('6️⃣ Mon membership trouvé ?', !!myMembership);
+  if (myMembership) {
+    console.log('   Mon rôle dans le projet:', myMembership.role);
+  }
+  
+  const isManager = myMembership?.role === 'manager' || 
+                    myMembership?.role === 'gestionnaire' ||
+                    myMembership?.role === 'owner' ||
+                    myMembership?.role === 'proprietaire';
+  console.log('7️⃣ Est Manager/Gestionnaire/Owner ?', isManager);
+  
+  if (isManager) {
+    console.log('✅ ACCÈS AUTORISÉ (Gestionnaire)');
+  } else {
+    console.log('❌ ACCÈS REFUSÉ');
+  }
+  
+  console.log('═══════════════════════════════════════');
+  
+  return isManager;
+};
+
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Non définie';
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -301,6 +383,7 @@ const handleExport = async (format) => {
       completed: 'Terminé',
       cancelled: 'Annulé',
     };
+
 
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
@@ -405,6 +488,17 @@ const handleExport = async (format) => {
             <ArrowLeft className="w-5 h-5" />
             <span>Retour aux projets</span>
           </button>
+          
+{/* Bouton Analytics du Projet */}
+{canViewProjectAnalytics() && (
+  <Link
+    to={`/projects/${project.id}/analytics`}
+    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+  >
+    <BarChart3 className="w-4 h-4" />
+    <span className="font-medium">Analytics du Projet</span>
+  </Link>
+)}
 
           {/* 🆕 MODIFIÉ : Section des boutons avec Export */}
           <div className="flex gap-2">

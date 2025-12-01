@@ -24,6 +24,18 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { stats } = useStats();
 //   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+
+  
+  // 🆕 AJOUTE CETTE FONCTION
+  /**
+   * Vérifie si l'utilisateur peut voir les analytics globales
+   */
+  const canViewGlobalAnalytics = () => {
+    return user?.role === 'admin' || user?.role === 'chef';
+  };
+
+
  // Navigation avec badges dynamiques
   const navItems = [
     { 
@@ -33,12 +45,12 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       badge: null 
     },
 
-    { 
-      name: 'Analytics',  // 🆕 AJOUTÉ
-      icon: BarChart3,    // 🆕 AJOUTÉ
-      path: '/analytics', // 🆕 AJOUTÉ
-      badge: null         // 🆕 AJOUTÉ
-    },
+  ...(canViewGlobalAnalytics() ? [{
+  name: 'Analytics',
+  icon: BarChart3,
+  path: '/analytics',
+  badge: null
+  }] : []),
     
     { 
       name: 'Projets', 

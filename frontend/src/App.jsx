@@ -14,6 +14,7 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Team } from './pages/team/Team';  
 import { ResetPassword } from './pages/auth/ResetPassword';
 import { Analytics } from './pages/reports/Reports'; 
+import { ProjectAnalytics } from './pages/projects/ProjectAnalytics'; 
 
 /**
  * Composant pour protéger les routes privées
@@ -33,6 +34,58 @@ const PrivateRoute = ({ children }) => {
 
   // Redirige vers login si pas authentifié
   return user ? children : <Navigate to="/login" replace />;
+};
+
+
+
+/**
+ * 🔒 Composant de protection pour les routes Admin/Chef de Projet
+ */
+const AdminOrManagerRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  // Affiche un spinner pendant le chargement
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  // Vérifie si l'utilisateur a le bon rôle
+  const isAuthorized = user?.role === 'admin' || user?.role === 'chef';
+
+  // Si pas autorisé, affiche un message d'erreur
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md p-8">
+          <div className="mb-6">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl">🔒</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Accès Refusé</h1>
+            <p className="text-gray-600 mb-6">
+              Cette section est réservée aux <strong>administrateurs</strong> et <strong>chefs de projet</strong>.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Si vous pensez que c'est une erreur, contactez votre administrateur.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            ← Retour au Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si autorisé, affiche le contenu
+  return children;
 };
 
 function App() {
@@ -55,6 +108,16 @@ function App() {
                 }
               />
 
+              {/* 🔒 Analytics Globales - PROTÉGÉ : Admin + Chef de Projet uniquement */}
+              <Route path="/analytics"
+                element={
+                  <PrivateRoute>
+                    <AdminOrManagerRoute>  {/* 🆕 Protection supplémentaire */}
+                      <Analytics />
+                    </AdminOrManagerRoute>
+                  </PrivateRoute>
+                }
+              />
 
               <Route
                 path="/projects"
@@ -64,6 +127,14 @@ function App() {
                   </PrivateRoute>
                 }
               />
+
+              {/* Analytics d'un projet spécifique */}
+              <Route path="/projects/:id/analytics" element={
+                <PrivateRoute>
+                  <ProjectAnalytics />
+                </PrivateRoute>
+              } />
+
 
               <Route 
                 path="/projects/:id" 
@@ -109,15 +180,6 @@ function App() {
                     <Team />
                   </PrivateRoute>
                 } 
-              />
-
-
-              <Route path="/analytics"
-                element={
-                  <PrivateRoute>
-                    <Analytics />
-                  </PrivateRoute>
-                }
               />
 
               <Route 

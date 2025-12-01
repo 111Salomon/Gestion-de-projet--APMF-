@@ -284,15 +284,13 @@ def get_productivity_trends(days=30, project_id=None):
         
         # Tâches créées ce jour
         created_count = Task.objects.filter(
-            created_at__gte=current_date,
-            created_at__lt=next_date,
+            created_at__date=current_date,
             **task_filter
         ).count()
         
         # Tâches complétées ce jour (completed_at dans cette journée)
         completed_count = Task.objects.filter(
-            completed_at__gte=current_date,
-            completed_at__lt=next_date,
+            completed_at__date=current_date,
             status='done',
             **task_filter
         ).count()
