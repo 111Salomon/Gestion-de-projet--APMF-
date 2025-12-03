@@ -14,7 +14,8 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Team } from './pages/team/Team';  
 import { ResetPassword } from './pages/auth/ResetPassword';
 import { Analytics } from './pages/reports/Reports'; 
-import { ProjectAnalytics } from './pages/projects/ProjectAnalytics'; 
+import { ProjectAnalytics } from './pages/projects/ProjectAnalytics';
+import { Calendar } from './pages/calendar/Calendar';
 
 /**
  * Composant pour protéger les routes privées
@@ -178,6 +179,15 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Team />
+                  </PrivateRoute>
+                } 
+              />
+
+              <Route 
+                path="/calendar" 
+                element={
+                  <PrivateRoute>
+                    <Calendar />
                   </PrivateRoute>
                 } 
               />

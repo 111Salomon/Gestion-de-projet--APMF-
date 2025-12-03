@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'apps.tasks',
     'apps.notifications',
     'django_extensions',
+    'apps.calendar', 
 ]
 
 MIDDLEWARE = [

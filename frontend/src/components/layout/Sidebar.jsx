@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useStats } from '../../context/StatsContext';
+// import { Calendar } from 'lucide-react';
 
 
 export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
@@ -78,7 +79,17 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       path: '/team', 
       badge: null 
     },
+
+    
+    {
+    path: '/calendar',
+    icon: Calendar,
+    label: 'Calendrier',
+    roles: ['admin', 'chef', 'membre'], // Tous
+    },
   ];
+
+  
 
   /**
    * Gère la déconnexion
@@ -170,27 +181,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
       </nav>
 
-      {/* Calendrier (uniquement si sidebar non réduite) */}
-      {!isCollapsed && (
-        <div className="px-4 pb-4 border-t border-neutral-200">
-          <div>
-            <div className="flex items-center gap-2 mb-3 px-2">
-              <CalendarIcon className="w-4 h-4 text-neutral-600" />
-              <h3 className="text-sm font-semibold text-neutral-900">Calendrier</h3>
-            </div>
-            
-            {/* Composant React Calendar avec styles personnalisés */}
-            <div className="react-calendar-wrapper">
-              <Calendar
-                onChange={setSelectedDate}
-                value={selectedDate}
-                locale="fr-FR"
-                className="border-0 w-full"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Footer avec boutons */}
       <div className="px-4 py-4 border-t border-neutral-200 space-y-2">
