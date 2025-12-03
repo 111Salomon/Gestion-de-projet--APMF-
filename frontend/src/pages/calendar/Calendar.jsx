@@ -62,6 +62,10 @@ export const Calendar = () => {
     setIsModalOpen(true);
   };
 
+  const handleTasksUpdate = () => {
+  loadTasks(currentDate);
+};
+
   if (loading && tasks.length === 0) {
     return (
       <Layout>
@@ -88,6 +92,7 @@ export const Calendar = () => {
             currentDate={currentDate}
             onTaskClick={handleTaskClick}
             onMonthChange={handleMonthChange}
+            onTasksUpdate={handleTasksUpdate} 
           />
         </div>
 

@@ -355,3 +355,17 @@
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out;
 }
+
+/* Curseur pendant le drag */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
+
+/* Animation du grip vertical */
+.group:hover .grip-handle {
+  opacity: 1;
+}

@@ -8,6 +8,8 @@ from apps.tasks.models import Task
 from apps.projects.models import ProjectMember
 from .serializers import CalendarTaskSerializer
 
+from apps.tasks.permissions import CanModifyTask
+
 
 class CalendarViewSet(viewsets.ViewSet):
     """ViewSet pour la vue calendrier avec permissions granulaires"""
@@ -200,3 +202,95 @@ class CalendarViewSet(viewsets.ViewSet):
             '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'
         ]
         return colors[project.id % len(colors)]
+
+    @action(detail=True, methods=['patch'], url_path='change-date')
+    def change_task_date(self, request, pk=None):
+        """
+        Endpoint pour changer la date d'échéance (Drag & Drop).
+        PATCH /api/calendar/{task_id}/change-date/
+        
+        Body : { "due_date": "2025-12-15" }
+        
+        🔒 Permissions :
+        - Admin/Chef : Peuvent tout changer
+        - Manager/Owner : Peuvent changer les tâches de leur projet
+        - Membre : Peuvent changer leurs propres tâches
+        """
+        try:
+            task = Task.objects.get(pk=pk)
+        except Task.DoesNotExist:
+            return Response(
+                {'error': 'Tâche introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        user = request.user
+        
+        # Vérification des permissions
+        # Admin/Chef → Peut tout
+        if user.role in ['admin', 'chef']:
+            can_modify = True
+        # Propriétaire du projet
+        elif task.project.owner == user:
+            can_modify = True
+        # Manager du projet
+        elif hasattr(task.project, 'members') and task.project.members.filter(
+            id=user.id,
+            projectmember__role__in=['owner', 'manager']
+        ).exists():
+            can_modify = True
+        # Assigné à la tâche
+        elif task.assigned_to == user:
+            can_modify = True
+        else:
+            can_modify = False
+        
+        if not can_modify:
+            return Response(
+                {
+                    'error': 'Permission refusée',
+                    'message': 'Vous ne pouvez pas modifier cette tâche'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Récupération de la nouvelle date
+        new_date_str = request.data.get('due_date')
+        
+        if not new_date_str:
+            return Response(
+                {'error': 'Le champ due_date est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validation du format de date
+        try:
+            new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': 'Format de date invalide. Utilisez YYYY-MM-DD'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Sauvegarde de l'ancienne date (pour log)
+        old_date = task.due_date
+        
+        # Mise à jour
+        task.due_date = new_date
+        task.save()
+        
+        # Log de l'action (optionnel)
+        from django.utils import timezone
+        print(f"✅ {user.username} a déplacé '{task.title}' de {old_date} vers {new_date}")
+        
+        # Retourne la tâche mise à jour
+        from .serializers import CalendarTaskSerializer
+        serializer = CalendarTaskSerializer(task, context={'request': request})
+        
+        return Response({
+            'success': True,
+            'message': 'Date d\'échéance mise à jour',
+            'old_date': old_date.isoformat() if old_date else None,
+            'new_date': new_date.isoformat(),
+            'task': serializer.data
+        }, status=status.HTTP_200_OK)

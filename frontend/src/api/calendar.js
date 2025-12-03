@@ -20,4 +20,14 @@ export const calendarAPI = {
     return response.data;
   },
 
+
+  //Changer la date d'échéance (Drag & Drop)
+  changeTaskDate: async (taskId, newDate) => {
+    const response = await axiosInstance.patch(
+      `/calendar/${taskId}/change-date/`,
+      { due_date: newDate }
+    );
+    return response.data;
+  },
+
 };
