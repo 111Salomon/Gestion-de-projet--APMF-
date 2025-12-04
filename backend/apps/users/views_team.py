@@ -252,6 +252,152 @@ L'équipe TaskFlow
         )
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_member(request):
+    """
+    Ajoute un nouveau membre directement via formulaire complet.
+    Différence avec invite_member : pas d'email envoyé, création immédiate.
+    
+    Données requises :
+        - email : Email unique (requis)
+        - first_name : Prénom (requis)
+        - last_name : Nom (requis)
+        - role : Rôle (admin/chef/membre, requis)
+        - password : Mot de passe (requis, min 8 caractères)
+        - password_confirm : Confirmation mot de passe (requis)
+        - phone : Téléphone (optionnel)
+        - bio : Biographie (optionnel, max 500 caractères)
+    
+    Restrictions :
+        - Seuls les administrateurs peuvent ajouter des membres
+    
+    Returns :
+        201 : Membre créé avec succès
+        400 : Données invalides
+        403 : Permission refusée
+        500 : Erreur serveur
+    """
+    
+    # ─── Vérification Permission Admin ───
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Seuls les administrateurs peuvent ajouter des membres'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # ─── Récupération des Données ───
+    email = request.data.get('email', '').strip()
+    first_name = request.data.get('first_name', '').strip()
+    last_name = request.data.get('last_name', '').strip()
+    role = request.data.get('role', 'membre')
+    password = request.data.get('password', '')
+    password_confirm = request.data.get('password_confirm', '')
+    phone = request.data.get('phone', '').strip()
+    bio = request.data.get('bio', '').strip()
+    
+    # ─── Validations ───
+    errors = {}
+    
+    # Email
+    if not email:
+        errors['email'] = 'L\'email est requis'
+    elif User.objects.filter(email=email).exists():
+        errors['email'] = 'Cet email est déjà utilisé'
+    
+    # Prénom
+    if not first_name:
+        errors['first_name'] = 'Le prénom est requis'
+    elif len(first_name) < 2:
+        errors['first_name'] = 'Le prénom doit contenir au moins 2 caractères'
+    
+    # Nom
+    if not last_name:
+        errors['last_name'] = 'Le nom est requis'
+    elif len(last_name) < 2:
+        errors['last_name'] = 'Le nom doit contenir au moins 2 caractères'
+    
+    # Rôle
+    valid_roles = ['admin', 'chef', 'membre']
+    if role not in valid_roles:
+        errors['role'] = f'Rôle invalide. Choix possibles : {", ".join(valid_roles)}'
+    
+    # Mot de passe
+    if not password:
+        errors['password'] = 'Le mot de passe est requis'
+    elif len(password) < 8:
+        errors['password'] = 'Le mot de passe doit contenir au moins 8 caractères'
+    
+    # Confirmation mot de passe
+    if not password_confirm:
+        errors['password_confirm'] = 'La confirmation du mot de passe est requise'
+    elif password != password_confirm:
+        errors['password_confirm'] = 'Les mots de passe ne correspondent pas'
+    
+    # Bio (max 500 caractères)
+    if bio and len(bio) > 500:
+        errors['bio'] = 'La biographie ne peut pas dépasser 500 caractères'
+    
+    # Si erreurs, retourner
+    if errors:
+        return Response(
+            {'errors': errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # ─── Création du Membre ───
+    try:
+        # Générer un username unique
+        username = email.split('@')[0]
+        base_username = username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+        
+        # Créer l'utilisateur
+        user = User.objects.create(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            phone=phone,
+            bio=bio,
+            is_active=True
+        )
+        
+        # Hash et enregistrer le mot de passe
+        user.set_password(password)
+        user.save()
+        
+        # Sérialiser la réponse
+        serializer = TeamMemberSerializer(user, context={'request': request})
+        
+        # Préparer le message
+        role_display = {
+            'admin': 'Administrateur',
+            'chef': 'Chef de projet',
+            'membre': 'Membre'
+        }.get(role, 'Membre')
+        
+        return Response({
+            'message': f'{user.get_full_name()} a été ajouté en tant que {role_display}',
+            'member': serializer.data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        # Log l'erreur pour debug
+        import traceback
+        traceback.print_exc()
+        
+        return Response(
+            {'error': f'Erreur lors de la création du membre : {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_member_role(request, user_id):

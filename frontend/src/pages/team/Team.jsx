@@ -9,6 +9,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Layout } from '../../components/layout/Layout';
 import { MemberProfileModal } from '../../components/team/MemberProfileModal';
 import { InviteMemberModal } from '../../components/team/InviteMemberModal';
+import { AddMemberModal } from '../../components/team/AddMemberModal';
 
 // 🆕 Imports pour les icônes d'export
 import { Download, ChevronDown } from 'lucide-react';
@@ -31,6 +32,7 @@ export const Team = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);  
 
   // Filtres
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,6 +146,12 @@ export const Team = () => {
     setMembers((prev) => [newMember, ...prev]);
     loadStats();
   };
+
+  const handleMemberAdded = (newMember) => {
+  setMembers((prev) => [newMember, ...prev]);
+  loadStats();
+};
+
 
   const handleMemberUpdated = (updatedMember) => {
     console.log('Membre mis à jour:', updatedMember);
@@ -343,6 +351,25 @@ const handleExport = async (format) => {
                 </div>
               )}
             </div>
+
+            {/* 🆕 NOUVEAU - Bouton Ajouter */}
+  <button
+    onClick={() => setIsAddModalOpen(true)}
+    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+  >
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    </svg>
+    Ajouter un membre
+  </button>
+
+    {/* Ajouter un membre (texte simple) */}
+  {/* <button
+    onClick={() => setIsAddModalOpen(true)}
+    className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-black transition-colors"
+  >
+    Ajouter un membre
+  </button> */}
 
             {/* Bouton Inviter (existant) */}
             <button
@@ -668,6 +695,13 @@ const handleExport = async (format) => {
         onClose={() => setIsInviteModalOpen(false)}
         onMemberInvited={handleMemberInvited}
       />
+
+      <AddMemberModal
+  isOpen={isAddModalOpen}
+  onClose={() => setIsAddModalOpen(false)}
+  onMemberAdded={handleMemberAdded}
+/>
+
     </Layout>
   );
 };

@@ -76,6 +76,25 @@ export const inviteMember = async (memberData) => {
   }
 };
 
+
+/**
+ * Ajoute un nouveau membre directement (admin seulement).
+ * Différence avec inviteMember : création immédiate avec mot de passe.
+ * 
+ * @param {Object} memberData - Données complètes du membre
+ * @returns {Promise<Object>}
+ */
+export const addMember = async (memberData) => {
+  try {
+    const response = await api.post('/users/team/add/', memberData);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout du membre:', error);
+    throw error;
+  }
+};
+
+
 /**
  * Met à jour le rôle d'un membre.
  * 

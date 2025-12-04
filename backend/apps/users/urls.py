@@ -43,6 +43,7 @@ urlpatterns = [
     path('team/<int:user_id>/', views_team.team_member_detail, name='team-member-detail'),
     path('team/', views_team.team_list, name='team-list'),
     path('team/invite/', views_team.invite_member, name='team-invite'),
+    path('team/add/', views_team.add_member, name='team-add-member'),
 
     #NOUVEAU : Modifier rôle et toggle actif
     path('team/<int:user_id>/role/', views_team.update_member_role, name='update-member-role'),
