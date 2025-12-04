@@ -52,14 +52,15 @@ class CalendarViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'], url_path='tasks')
     def calendar_tasks(self, request):
         """
-        Endpoint principal du calendrier
-        GET /api/calendar/tasks/?start=2025-12-01&end=2025-12-31
+        Endpoint principal du calendrier avec filtres avancés
+        GET /api/calendar/tasks/?start=2025-12-01&end=2025-12-31&projects=14,23&status=todo,in_progress
         
         Query params :
         - start : Date de début (YYYY-MM-DD)
         - end : Date de fin (YYYY-MM-DD)
-        - project : ID du projet (optionnel)
-        - status : Statut des tâches (optionnel)
+        - projects : IDs des projets séparés par virgule (ex: 14,23,45)
+        - status : Statuts séparés par virgule (ex: todo,in_progress,done)
+        - priority : Priorités séparées par virgule (ex: urgent,high)
         - assigned_to : ID utilisateur (optionnel, admin/chef only)
         """
         user = request.user
@@ -84,7 +85,6 @@ class CalendarViewSet(viewsets.ViewSet):
         if not start_date or not end_date:
             today = datetime.now().date()
             start_date = today.replace(day=1)
-            # Dernier jour du mois
             if today.month == 12:
                 end_date = today.replace(year=today.year + 1, month=1, day=1) - timedelta(days=1)
             else:
@@ -93,27 +93,71 @@ class CalendarViewSet(viewsets.ViewSet):
         # Récupération des tâches
         tasks = self._get_user_tasks(user, start_date, end_date)
         
-        # Filtres additionnels
-        project_id = request.query_params.get('project')
-        if project_id:
-            tasks = tasks.filter(project_id=project_id)
+        # 🆕 FILTRES AVANCÉS
         
-        status_filter = request.query_params.get('status')
-        if status_filter and status_filter != 'all':
-            tasks = tasks.filter(status=status_filter)
+        # Filtre par projets (multi-select)
+        projects_param = request.query_params.get('projects')
+        if projects_param:
+            try:
+                project_ids = [int(pid) for pid in projects_param.split(',') if pid]
+                tasks = tasks.filter(project_id__in=project_ids)
+            except ValueError:
+                return Response(
+                    {'error': 'IDs de projet invalides'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
-        # Filtre assigned_to (admin/chef seulement)
-        assigned_to_id = request.query_params.get('assigned_to')
-        if assigned_to_id:
+        # Filtre par statuts (multi-select)
+        statuses_param = request.query_params.get('status')
+        if statuses_param:
+            statuses = [s.strip() for s in statuses_param.split(',') if s.strip()]
+            valid_statuses = ['todo', 'in_progress', 'in_review', 'done']
+            
+            # Validation
+            invalid = [s for s in statuses if s not in valid_statuses]
+            if invalid:
+                return Response(
+                    {'error': f'Statuts invalides: {", ".join(invalid)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            tasks = tasks.filter(status__in=statuses)
+        
+        # Filtre par priorités (multi-select)
+        priorities_param = request.query_params.get('priority')
+        if priorities_param:
+            priorities = [p.strip() for p in priorities_param.split(',') if p.strip()]
+            valid_priorities = ['urgent', 'high', 'medium', 'low']
+            
+            # Validation
+            invalid = [p for p in priorities if p not in valid_priorities]
+            if invalid:
+                return Response(
+                    {'error': f'Priorités invalides: {", ".join(invalid)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            tasks = tasks.filter(priority__in=priorities)
+        
+        # Filtre par utilisateur assigné (admin/chef seulement)
+        assigned_to_param = request.query_params.get('assigned_to')
+        if assigned_to_param:
             if user.role in ['admin', 'chef']:
-                tasks = tasks.filter(assigned_to_id=assigned_to_id)
+                try:
+                    assigned_to_id = int(assigned_to_param)
+                    tasks = tasks.filter(assigned_to_id=assigned_to_id)
+                except ValueError:
+                    return Response(
+                        {'error': 'ID utilisateur invalide'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             else:
                 return Response(
                     {'error': 'Vous ne pouvez pas filtrer par utilisateur'},
                     status=status.HTTP_403_FORBIDDEN
                 )
         
-        # Tri par date
+        # Tri par date puis priorité
         tasks = tasks.order_by('due_date', 'priority')
         
         # Sérialisation
@@ -127,8 +171,15 @@ class CalendarViewSet(viewsets.ViewSet):
             'count': tasks.count(),
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat(),
+            'filters_applied': {
+                'projects': projects_param,
+                'status': statuses_param,
+                'priority': priorities_param,
+                'assigned_to': assigned_to_param,
+            },
             'tasks': serializer.data
         })
+
     
     @action(detail=False, methods=['get'], url_path='summary')
     def calendar_summary(self, request):
