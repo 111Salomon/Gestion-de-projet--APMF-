@@ -34,6 +34,14 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     return user?.role === 'admin' || user?.role === 'chef';
   };
 
+  /**
+ * 🆕 Vérifie si l'utilisateur peut accéder à la page Équipe
+ * ADMIN et CHEF peuvent voir, MEMBRE non
+ */
+  const canAccessTeam = () => {
+    return user?.role === 'admin' || user?.role === 'chef';
+  };
+
   // Navigation avec badges dynamiques
   const navItems = [
     { 
@@ -66,12 +74,13 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       path: '/kanban',
       badge: null
     },
-    { 
-      name: 'Équipe', 
-      icon: Users, 
-      path: '/team', 
-      badge: null 
-    },
+  // 🆕 Équipe visible pour ADMIN et CHEF uniquement
+  ...(canAccessTeam() ? [{
+    name: 'Équipe',
+    icon: Users,
+    path: '/team',
+    badge: null
+  }] : []),
     {
       name: 'Calendrier',
       icon: CalendarIcon,
