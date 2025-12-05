@@ -14,9 +14,11 @@ import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { ProjectForm } from '../../components/forms/ProjectForm';
 import { projectsAPI } from '../../api/projects';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { useStats } from '../../context/StatsContext';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { useAuth } from '../../context/AuthContext';  // 🆕 AJOUTER
+import { canCreateProject } from '../../utils/permissions';  // 🆕 AJOUTER
 
 
 
@@ -26,6 +28,11 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
  */
 export const Projects = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); 
+
+    // 🆕 AJOUTER CES LIGNES
+  // Vérifie si l'utilisateur peut créer un projet
+  const canCreate = canCreateProject(user);
   // États pour les projets
   const { stats, refreshStats } = useStats(); 
   const [projects, setProjects] = useState([]);
@@ -251,10 +258,12 @@ const filteredProjects = projects.filter((project) => {
             </p>
           </div>
           
+        {canCreate && (
           <Button variant="primary" onClick={handleCreate}>
             <Plus size={18} />
             Nouveau Projet
           </Button>
+        )}
         </div>
 
         {/* Barre de recherche et filtres */}
@@ -296,13 +305,21 @@ const filteredProjects = projects.filter((project) => {
           <p className="text-neutral-600 mt-4">Chargement des projets...</p>
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-neutral-600">Aucun projet trouvé</p>
-          <Button variant="primary" onClick={handleCreate} className="mt-4">
-            <Plus size={18} />
-            Créer le premier projet
-          </Button>
-        </div>
+  <div className="text-center py-12">
+    <p className="text-neutral-600">Aucun projet trouvé</p>
+    
+    {/* 🆕 Bouton ou message selon le rôle */}
+    {canCreate ? (
+      <Button variant="primary" onClick={handleCreate} className="mt-4">
+        <Plus size={18} />
+        Créer le premier projet
+      </Button>
+    ) : (
+      <p className="text-neutral-400 text-sm mt-2">
+        Vous verrez ici les projets auxquels vous êtes assigné
+      </p>
+    )}
+  </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (

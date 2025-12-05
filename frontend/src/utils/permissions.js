@@ -162,3 +162,22 @@ export const isAdmin = (user) => {
   if (!user) return false;
   return user.role === 'admin';
 };
+
+/**
+ * Vérifie si l'utilisateur peut CRÉER un nouveau projet
+ * Seuls ADMIN et CHEF peuvent créer des projets
+ */
+export const canCreateProject = (user) => {
+  if (!user) return false;
+  return user.role === 'admin' || user.role === 'chef';
+};
+
+
+/**
+ * Vérifie si l'utilisateur peut CRÉER une tâche (vue globale Tasks.jsx)
+ * Seuls ADMIN et CHEF peuvent créer des tâches depuis la page globale
+ */
+export const canCreateTaskGlobal = (user) => {
+  if (!user) return false;
+  return user.role === 'admin' || user.role === 'chef';
+};

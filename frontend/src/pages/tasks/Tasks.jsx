@@ -12,15 +12,21 @@ import { TaskForm } from '../../components/forms/TaskForm';
 import { tasksAPI } from '../../api/tasks';
 import { useStats } from '../../context/StatsContext';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';  // 🆕 AJOUTER
+import { canCreateTaskGlobal } from '../../utils/permissions';  // 🆕 AJOUTER
+
 
 export const Tasks = () => {
-  
+  const { user } = useAuth();
+
+  const canCreate = canCreateTaskGlobal(user);
   // États - Données
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  
 
   // États - Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -189,10 +195,13 @@ export const Tasks = () => {
             </p>
           </div>
           
+        {/* 🆕 Bouton conditionnel selon le rôle */}
+        {canCreate && (
           <Button variant="primary" onClick={handleCreate}>
             <Plus size={18} />
             Nouvelle Tâche
           </Button>
+        )}
         </div>
 
         {/* BARRE DE RECHERCHE ET FILTRES */}
@@ -248,17 +257,25 @@ export const Tasks = () => {
         </div>
         
       ) : tasks.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-neutral-600 mb-4">
-            {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
-              ? 'Aucune tâche ne correspond aux filtres'
-              : 'Aucune tâche créée'}
-          </p>
-          <Button variant="primary" onClick={handleCreate}>
-            <Plus size={18} />
-            Créer la première tâche
-          </Button>
-        </div>
+  <div className="text-center py-12">
+    <p className="text-neutral-600 mb-4">
+      {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
+        ? 'Aucune tâche ne correspond aux filtres'
+        : 'Aucune tâche créée'}
+    </p>
+    
+    {/* 🆕 Bouton ou message selon le rôle */}
+    {canCreate ? (
+      <Button variant="primary" onClick={handleCreate}>
+        <Plus size={18} />
+        Créer la première tâche
+      </Button>
+    ) : (
+      <p className="text-neutral-400 text-sm mt-2">
+        Vous verrez ici les tâches qui vous sont assignées
+      </p>
+    )}
+  </div>
         
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
