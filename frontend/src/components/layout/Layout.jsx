@@ -7,16 +7,18 @@ export const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-neutral-50 overflow-hidden">
+      {/* Sidebar flottante (sans fond sombre derrière) */}
       <Sidebar 
         isCollapsed={isCollapsed} 
         setIsCollapsed={setIsCollapsed} 
       />
 
+      {/* Contenu principal - Fond blanc */}
       <div 
         className={`
           flex-1 flex flex-col 
           transition-all duration-300 ease-in-out
-          ${isCollapsed ? 'ml-20' : 'ml-80'}
+          ${isCollapsed ? 'ml-28' : 'ml-80'}
         `}
       >
         <Navbar />
