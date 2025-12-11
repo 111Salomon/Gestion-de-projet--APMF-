@@ -14,7 +14,8 @@ import {
   Target,
   TrendingUp,
   CheckCircle2,
-  Folder
+  Folder,
+  MoreVertical  // 🆕 Icône menu 3 points
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -51,9 +52,11 @@ export const ProjectDetail = () => {
   const [addingMember, setAddingMember] = useState(false);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false); // 🆕 Menu contextuel
 
-  // Ref pour le dropdown
+  // Refs
   const exportDropdownRef = useRef(null);
+  const actionsMenuRef = useRef(null); // 🆕
 
   // Chargement
   useEffect(() => {
@@ -62,11 +65,14 @@ export const ProjectDetail = () => {
     loadAvailableUsers();
   }, [id]);
 
-  // Fermer dropdown au clic extérieur
+  // Fermer dropdowns au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
         setIsExportDropdownOpen(false);
+      }
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
+        setIsActionsMenuOpen(false);
       }
     };
 
@@ -160,6 +166,7 @@ export const ProjectDetail = () => {
     try {
       setIsExporting(true);
       setIsExportDropdownOpen(false);
+      setIsActionsMenuOpen(false); // 🆕 Fermer le menu
 
       let blob;
       let extension;
@@ -346,134 +353,196 @@ export const ProjectDetail = () => {
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         
-        {/* 🎯 HEADER PREMIUM */}
-        <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/projects')}
-              className="flex items-center gap-2 px-4 py-2.5 text-neutral-700 font-medium
-                       hover:text-neutral-900 hover:bg-neutral-100 rounded-xl
-                       transition-all duration-300"
+{/* 🧭 HEADER STICKY AVEC BREADCRUMBS */}
+<div className="sticky top-0 z-40 -mx-6 px-6 py-4 
+              bg-white/70 backdrop-blur-xl 
+              border-b border-neutral-200/50 
+              rounded-b-2xl
+              shadow-sm mb-6">
+  <div className="max-w-7xl mx-auto flex items-center justify-between">
+    
+    {/* Breadcrumbs GitHub Style */}
+    <nav className="flex items-center gap-2 text-sm">
+      <button
+        onClick={() => navigate('/projects')}
+        className="text-neutral-600 hover:text-neutral-900 font-medium
+                 transition-colors duration-200"
+      >
+        Projets
+      </button>
+      <span className="text-neutral-400 select-none">/</span>
+      <span className="text-neutral-900 font-semibold truncate max-w-[300px] md:max-w-[500px]">
+        {project?.name}
+      </span>
+    </nav>
+
+    {/* Menu Actions (3 points) */}
+    <div className="relative" ref={actionsMenuRef}>
+      <button
+        onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+        className="p-2.5 hover:bg-white/60 rounded-xl transition-all duration-200
+                 group relative"
+        aria-label="Actions du projet"
+      >
+        <MoreVertical className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900" strokeWidth={2.5} />
+      </button>
+
+      {/* 🎨 DROPDOWN PROFESSIONNEL MINIMALISTE */}
+      {isActionsMenuOpen && (
+        <div className="absolute right-0 mt-2 w-64 
+                      bg-white/95 backdrop-blur-xl
+                      rounded-2xl border border-neutral-200/50
+                      shadow-xl shadow-neutral-900/10
+                      z-50 overflow-hidden py-2
+                      animate-in fade-in slide-in-from-top-2 duration-200">
+          
+          {/* Analytics */}
+          {canViewProjectAnalytics() && (
+            <Link
+              to={`/projects/${project.id}/analytics`}
+              className="flex items-center gap-3 px-4 py-3
+                       hover:bg-neutral-50 transition-all duration-200
+                       group"
+              onClick={() => setIsActionsMenuOpen(false)}
             >
-              <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
-              <span>Retour aux projets</span>
+              <BarChart3 className="w-5 h-5 text-neutral-400 group-hover:text-blue-600 
+                                  transition-colors flex-shrink-0" strokeWidth={2} />
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-neutral-900 text-sm">Analytics</div>
+                <div className="text-xs text-neutral-500">Statistiques avancées</div>
+              </div>
+            </Link>
+          )}
+
+          {/* Exporter (avec sous-menu) */}
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+              disabled={isExporting}
+              className="w-full flex items-center gap-3 px-4 py-3
+                       hover:bg-neutral-50 transition-all duration-200 text-left
+                       group"
+            >
+              <Download className="w-5 h-5 text-neutral-400 group-hover:text-green-600 
+                                transition-colors flex-shrink-0" strokeWidth={2} />
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-neutral-900 text-sm">
+                  {isExporting ? 'Export en cours...' : 'Exporter'}
+                </div>
+                <div className="text-xs text-neutral-500">PDF, Excel ou ZIP</div>
+              </div>
+              <ChevronDown 
+                className={`w-4 h-4 text-neutral-400 flex-shrink-0
+                          transition-transform duration-200
+                          ${isExportDropdownOpen ? 'rotate-180' : ''}`}
+                strokeWidth={2}
+              />
             </button>
 
-            <div className="flex items-center gap-3">
-              {canViewProjectAnalytics() && (
-                <Link
-                  to={`/projects/${project.id}/analytics`}
-                  className="flex items-center gap-2 px-5 py-2.5 
-                           bg-gradient-to-r from-blue-500 to-blue-600 text-white 
-                           font-semibold rounded-xl shadow-md
-                           hover:shadow-xl hover:shadow-blue-500/30 
-                           hover:scale-105 active:scale-95
-                           transition-all duration-300"
-                >
-                  <BarChart3 className="w-4 h-4" strokeWidth={2.5} />
-                  Analytics
-                </Link>
-              )}
-
-              <div className="relative" ref={exportDropdownRef}>
+            {/* Sous-menu Export - ULTRA ÉPURÉ */}
+            {isExportDropdownOpen && (
+              <div className="bg-neutral-50/50 py-1.5 px-2 mx-2 rounded-lg space-y-0.5">
                 <button
-                  onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                  disabled={isExporting}
-                  className={`
-                    flex items-center gap-2 px-5 py-2.5 
-                    border-2 border-neutral-200 text-neutral-700 font-semibold
-                    rounded-xl transition-all duration-300
-                    ${isExporting 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50'
-                    }
-                  `}
+                  onClick={() => handleExport('pdf')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2
+                           hover:bg-white rounded-md transition-colors text-left
+                           group"
                 >
-                  <Download className="w-4 h-4" strokeWidth={2.5} />
-                  {isExporting ? 'Export...' : 'Exporter'}
-                  <ChevronDown 
-                    className={`w-4 h-4 transition-transform duration-200 
-                              ${isExportDropdownOpen ? 'rotate-180' : ''}`} 
-                    strokeWidth={2.5}
-                  />
+                  <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-red-500 
+                                transition-colors flex-shrink-0" />
+                  <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
+                                 font-medium transition-colors">
+                    PDF Complet
+                  </span>
                 </button>
-
-                {isExportDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl 
-                                border-2 border-neutral-200 shadow-lg z-50 overflow-hidden">
-                    <button
-                      onClick={() => handleExport('pdf')}
-                      className="w-full px-4 py-3 text-left hover:bg-neutral-50 
-                               transition-colors flex items-center gap-3"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-neutral-900">PDF Complet</div>
-                        <div className="text-xs text-neutral-500">Rapport détaillé multi-pages</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handleExport('excel')}
-                      className="w-full px-4 py-3 text-left hover:bg-neutral-50 
-                               transition-colors flex items-center gap-3"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-neutral-900">Excel (6 onglets)</div>
-                        <div className="text-xs text-neutral-500">Données structurées et éditables</div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => handleExport('zip')}
-                      className="w-full px-4 py-3 text-left hover:bg-neutral-50 
-                               transition-colors flex items-center gap-3 rounded-b-xl"
-                    >
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-neutral-900">Archive ZIP</div>
-                        <div className="text-xs text-neutral-500">JSON + fichiers attachés</div>
-                      </div>
-                    </button>
-                  </div>
-                )}
+                <button
+                  onClick={() => handleExport('excel')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2
+                           hover:bg-white rounded-md transition-colors text-left
+                           group"
+                >
+                  <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-green-500 
+                                transition-colors flex-shrink-0" />
+                  <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
+                                 font-medium transition-colors">
+                    Excel (6 onglets)
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleExport('zip')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2
+                           hover:bg-white rounded-md transition-colors text-left
+                           group"
+                >
+                  <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-blue-500 
+                                transition-colors flex-shrink-0" />
+                  <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
+                                 font-medium transition-colors">
+                    Archive ZIP
+                  </span>
+                </button>
               </div>
-
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 
-                         border-2 border-neutral-200 text-neutral-700 font-semibold
-                         rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
-                         transition-all duration-300"
-              >
-                <Edit className="w-4 h-4" strokeWidth={2.5} />
-                Modifier
-              </button>
-
-              <button
-                onClick={() => setIsDeleteModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 
-                         border-2 border-red-200 text-red-600 font-semibold
-                         rounded-xl hover:border-red-600 hover:bg-red-50
-                         transition-all duration-300"
-              >
-                <Trash2 className="w-4 h-4" strokeWidth={2.5} />
-                Supprimer
-              </button>
-            </div>
+            )}
           </div>
+
+          {/* Séparateur */}
+          <div className="h-px bg-neutral-200 my-2 mx-4" />
+
+          {/* Modifier */}
+          <button
+            onClick={() => {
+              setIsEditModalOpen(true);
+              setIsActionsMenuOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3
+                     hover:bg-neutral-50 transition-all duration-200
+                     group"
+          >
+            <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
+                          transition-colors flex-shrink-0" strokeWidth={2} />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
+              <div className="text-xs text-neutral-500">Éditer les informations</div>
+            </div>
+          </button>
+
+          {/* Supprimer */}
+          <button
+            onClick={() => {
+              setIsDeleteModalOpen(true);
+              setIsActionsMenuOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3
+                     hover:bg-red-50/50 transition-all duration-200
+                     group"
+          >
+            <Trash2 className="w-5 h-5 text-neutral-400 group-hover:text-red-600 
+                            transition-colors flex-shrink-0" strokeWidth={2} />
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-neutral-900 group-hover:text-red-700 
+                           text-sm transition-colors">Supprimer</div>
+              <div className="text-xs text-neutral-500 group-hover:text-red-500 
+                           transition-colors">Action irréversible</div>
+            </div>
+          </button>
         </div>
+      )}
+    </div>
+  </div>
+</div>
+
+
+
 
         {/* 📄 CARTE INFO PROJET */}
         <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
           <div className="flex items-start gap-6 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
-                          flex items-center justify-center shadow-md shadow-neutral-900/20">
-              <Folder className="w-5 h-5 text-white" strokeWidth={2.5} />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                          flex items-center justify-center shadow-md shadow-neutral-900/20 flex-shrink-0">
+              <Folder className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-4xl font-bold text-neutral-900 mb-3">
                 {project.name}
               </h1>
@@ -567,7 +636,7 @@ export const ProjectDetail = () => {
           />
         </div>
 
-        {/* 📋 TÂCHES DU PROJET - CORRECTION ICI */}
+        {/* 📋 TÂCHES DU PROJET */}
         <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -602,7 +671,6 @@ export const ProjectDetail = () => {
             </div>
           ) : (
             <>
-              {/* 🔧 GRID AVEC AUTO-ROWS ET ITEMS-STRETCH */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-fr">
                 {tasks.slice(0, 6).map((task, index) => (
                   <TaskCard

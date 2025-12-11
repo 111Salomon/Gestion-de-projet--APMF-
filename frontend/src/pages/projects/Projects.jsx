@@ -509,9 +509,9 @@ export const Projects = () => {
                     </div>
                   </div>
 
-                  <p className="text-sm text-neutral-600 mb-5 line-clamp-2 leading-relaxed">
+                  {/* <p className="text-sm text-neutral-600 mb-5 line-clamp-2 leading-relaxed">
                     {project.description || 'Aucune description disponible'}
-                  </p>
+                  </p> */}
 
                   <div className="mb-5">
                     <div className="flex items-center justify-between mb-2">
