@@ -1,11 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate,Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Calendar, Users, UserPlus,BarChart3 } from 'lucide-react';
-// 🆕 AJOUTÉ : Imports pour l'export
-import { Download, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Edit, 
+  Trash2, 
+  Calendar, 
+  Users, 
+  UserPlus, 
+  BarChart3,
+  Download, 
+  ChevronDown,
+  Clock,
+  Target,
+  TrendingUp,
+  CheckCircle2,
+  Folder
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// ─── Imports avec chemins relatifs corrigés ───
 import { Layout } from '../../components/layout/Layout';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Button } from '../../components/common/Button';
@@ -14,24 +26,17 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { ProjectStats } from '../../components/projects/ProjectStats';
 import { TaskCard } from '../../components/tasks/TaskCard';
 import { ProjectForm } from '../../components/forms/ProjectForm';
-
-// 🆕 Imports pour la gestion des membres
 import { MemberList } from '../../components/projects/MemberList';
 import { AddMemberModal } from '../../components/projects/AddMemberModal';
-
-// Imports API
 import { projectsAPI } from '../../api/projects';
-
 import { useAuth } from '../../context/AuthContext';
 
 export const ProjectDetail = () => {
-  // ─── Récupère l'ID depuis l'URL ───
   const { id } = useParams();
   const navigate = useNavigate();
-  // 🆕 Récupère l'utilisateur depuis le contexte
   const { user: currentUser } = useAuth();
 
-  // ─── État local (existant) ───
+  // États
   const [project, setProject] = useState(null);
   const [stats, setStats] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -39,49 +44,39 @@ export const ProjectDetail = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
-
-  // 🆕 État local pour la gestion des membres
   const [members, setMembers] = useState([]);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
-
-  // 🆕 AJOUTÉ : États pour l'export
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // ─── Chargement au montage ───
+  // Ref pour le dropdown
+  const exportDropdownRef = useRef(null);
+
+  // Chargement
   useEffect(() => {
     loadProjectData();
     loadMembers();
     loadAvailableUsers();
   }, [id]);
 
-  // 🆕 AJOUTÉ : Fermer le dropdown d'export au clic en dehors
+  // Fermer dropdown au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const target = event.target;
-      const isExportElement = target.closest('[data-export-dropdown="true"]');
-      if (!isExportElement && isExportDropdownOpen) {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
         setIsExportDropdownOpen(false);
       }
     };
 
-    if (isExportDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isExportDropdownOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadProjectData = async () => {
     try {
       setLoading(true);
-
-      // Charge les 3 API en parallèle
       const [projectData, statsData, tasksData] = await Promise.all([
         projectsAPI.getById(id),
         projectsAPI.getStats(id),
@@ -91,11 +86,7 @@ export const ProjectDetail = () => {
       setProject(projectData);
       setStats(statsData);
 
-      // ✅ Gestion correcte des 2 formats possibles
-      const tasksList = Array.isArray(tasksData)
-        ? tasksData
-        : (tasksData.results || []);
-      
+      const tasksList = Array.isArray(tasksData) ? tasksData : (tasksData.results || []);
       setTasks(tasksList);
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
@@ -106,7 +97,6 @@ export const ProjectDetail = () => {
     }
   };
 
-  // 🆕 Charge la liste des membres du projet
   const loadMembers = async () => {
     try {
       setLoadingMembers(true);
@@ -120,7 +110,6 @@ export const ProjectDetail = () => {
     }
   };
 
-  // 🆕 Charge la liste des utilisateurs disponibles
   const loadAvailableUsers = async () => {
     try {
       const data = await projectsAPI.getAvailableUsers();
@@ -130,17 +119,12 @@ export const ProjectDetail = () => {
     }
   };
 
-  // 🆕 Ajoute un membre au projet
   const handleAddMember = async (userId, role) => {
     try {
       setAddingMember(true);
       await projectsAPI.addMember(id, userId, role);
       toast.success('Membre ajouté avec succès');
-      
-      // Recharge les membres
       await loadMembers();
-      
-      // Ferme le modal
       setIsAddMemberModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur ajout membre:', error);
@@ -150,13 +134,10 @@ export const ProjectDetail = () => {
     }
   };
 
-  // 🆕 Retire un membre du projet
   const handleRemoveMember = async (userId) => {
     try {
       await projectsAPI.removeMember(id, userId);
       toast.success('Membre retiré avec succès');
-      
-      // Recharge les membres
       await loadMembers();
     } catch (error) {
       console.error('❌ Erreur suppression membre:', error);
@@ -164,13 +145,10 @@ export const ProjectDetail = () => {
     }
   };
 
-  // 🆕 Change le rôle d'un membre
   const handleChangeRole = async (userId, newRole) => {
     try {
       await projectsAPI.updateMemberRole(id, userId, newRole);
       toast.success('Rôle modifié avec succès');
-      
-      // Recharge les membres
       await loadMembers();
     } catch (error) {
       console.error('❌ Erreur changement rôle:', error);
@@ -178,77 +156,61 @@ export const ProjectDetail = () => {
     }
   };
 
-// 🆕 CORRIGÉ : Fonction d'export simplifiée avec projectsAPI
-const handleExport = async (format) => {
-  try {
-    setIsExporting(true);
-    setIsExportDropdownOpen(false);
+  const handleExport = async (format) => {
+    try {
+      setIsExporting(true);
+      setIsExportDropdownOpen(false);
 
-    let blob;
-    let extension;
+      let blob;
+      let extension;
 
-    // ✅ Utilise les fonctions de projects.js (déjà configurées)
-    if (format === 'pdf') {
-      blob = await projectsAPI.exportProjectPDF(id);
-      extension = 'pdf';
-    } else if (format === 'excel') {
-      blob = await projectsAPI.exportProjectExcel(id);
-      extension = 'xlsx';
-    } else if (format === 'zip') {
-      blob = await projectsAPI.exportProjectArchive(id);
-      extension = 'zip';
+      if (format === 'pdf') {
+        blob = await projectsAPI.exportProjectPDF(id);
+        extension = 'pdf';
+      } else if (format === 'excel') {
+        blob = await projectsAPI.exportProjectExcel(id);
+        extension = 'xlsx';
+      } else if (format === 'zip') {
+        blob = await projectsAPI.exportProjectArchive(id);
+        extension = 'zip';
+      }
+
+      if (!blob || blob.size === 0) {
+        throw new Error('Fichier vide reçu');
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const safeName = project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      link.download = `projet_${safeName}_${Date.now()}.${extension}`;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      const formatLabels = { pdf: 'PDF', excel: 'Excel', zip: 'Archive ZIP' };
+      toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
+      
+    } catch (error) {
+      console.error('❌ Erreur export:', error);
+      if (error.response) {
+        toast.error(`Erreur serveur: ${error.response.status}`);
+      } else if (error.message === 'Fichier vide reçu') {
+        toast.error('Le fichier exporté est vide');
+      } else {
+        toast.error('Impossible d\'exporter le projet');
+      }
+    } finally {
+      setIsExporting(false);
     }
+  };
 
-    // Vérification que le blob est valide
-    if (!blob || blob.size === 0) {
-      throw new Error('Fichier vide reçu');
-    }
-
-    // Création du lien de téléchargement
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    
-    // Nom du fichier avec sanitization
-    const safeName = project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    link.download = `projet_${safeName}_${Date.now()}.${extension}`;
-    
-    // Ajout au DOM, clic, puis suppression
-    document.body.appendChild(link);
-    link.click();
-    
-    // Nettoyage
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 100);
-
-    const formatLabels = {
-      pdf: 'PDF',
-      excel: 'Excel',
-      zip: 'Archive ZIP',
-    };
-
-    toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
-    
-  } catch (error) {
-    console.error('❌ Erreur export:', error);
-    
-    // Message d'erreur plus spécifique
-    if (error.response) {
-      toast.error(`Erreur serveur: ${error.response.status}`);
-    } else if (error.message === 'Fichier vide reçu') {
-      toast.error('Le fichier exporté est vide');
-    } else {
-      toast.error('Impossible d\'exporter le projet');
-    }
-  } finally {
-    setIsExporting(false);
-  }
-};
-
-
-  // Mise à jour du projet
   const handleUpdate = async (values) => {
     try {
       setUpdating(true);
@@ -275,382 +237,326 @@ const handleExport = async (format) => {
     }
   };
 
-/**
- * 🔒 Vérifie si l'utilisateur peut voir les analytics du projet
- */
-const canViewProjectAnalytics = () => {
-  console.log('═══════════════════════════════════════');
-  console.log('🔍 DEBUG canViewProjectAnalytics');
-  console.log('═══════════════════════════════════════');
-  
-  // Vérifications de base
-  console.log('1️⃣ project existe ?', !!project);
-  console.log('2️⃣ currentUser existe ?', !!currentUser);
-  
-  if (!project || !currentUser) {
-    console.log('❌ Arrêt : project ou currentUser manquant');
-    return false;
-  }
-  
-  // Affiche les données
-  console.log('───────────────────────────────────────');
-  console.log('📊 DONNÉES:');
-  console.log('currentUser.id:', currentUser.id, typeof currentUser.id);
-  console.log('currentUser.role:', currentUser.role);
-  console.log('project.owner.id:', project?.owner?.id, typeof project?.owner?.id);
-  console.log('───────────────────────────────────────');
-  
-  // Test 1 : Admin ou Chef
-  const isAdminOrChef = currentUser?.role === 'admin' || currentUser?.role === 'chef';
-  console.log('3️⃣ Admin ou Chef ?', isAdminOrChef);
-  if (isAdminOrChef) {
-    console.log('✅ ACCÈS AUTORISÉ (Admin/Chef)');
-    return true;
-  }
-  
-  // Test 2 : Propriétaire
-  const isOwner = Number(project?.owner?.id) === Number(currentUser?.id);
-  console.log('4️⃣ Propriétaire ?', isOwner);
-  console.log('   Comparaison:', Number(project?.owner?.id), '===', Number(currentUser?.id));
-  if (isOwner) {
-    console.log('✅ ACCÈS AUTORISÉ (Propriétaire)');
-    return true;
-  }
-  
-  // Test 3 : Gestionnaire
-  console.log('5️⃣ Vérification dans members...');
-  console.log('   members:', members);
-  console.log('   members.length:', members?.length);
-  
-  if (members && members.length > 0) {
-    members.forEach((m, index) => {
-      console.log(`   membre[${index}]:`, {
-        userId: m.user?.id,
-        username: m.user?.username,
-        role: m.role,
-        isSameUser: Number(m.user?.id) === Number(currentUser.id)
-      });
-    });
-  }
-  
-  const myMembership = members?.find(m => Number(m.user?.id) === Number(currentUser.id));
-  console.log('6️⃣ Mon membership trouvé ?', !!myMembership);
-  if (myMembership) {
-    console.log('   Mon rôle dans le projet:', myMembership.role);
-  }
-  
-  const isManager = myMembership?.role === 'manager' || 
-                    myMembership?.role === 'gestionnaire' ||
-                    myMembership?.role === 'owner' ||
-                    myMembership?.role === 'proprietaire';
-  console.log('7️⃣ Est Manager/Gestionnaire/Owner ?', isManager);
-  
-  if (isManager) {
-    console.log('✅ ACCÈS AUTORISÉ (Gestionnaire)');
-  } else {
-    console.log('❌ ACCÈS REFUSÉ');
-  }
-  
-  console.log('═══════════════════════════════════════');
-  
-  return isManager;
-};
-
+  const canViewProjectAnalytics = () => {
+    if (!project || !currentUser) return false;
+    
+    const isAdminOrChef = currentUser?.role === 'admin' || currentUser?.role === 'chef';
+    if (isAdminOrChef) return true;
+    
+    const isOwner = Number(project?.owner?.id) === Number(currentUser?.id);
+    if (isOwner) return true;
+    
+    const myMembership = members?.find(m => Number(m.user?.id) === Number(currentUser.id));
+    const isManager = myMembership?.role === 'manager' || 
+                      myMembership?.role === 'gestionnaire' ||
+                      myMembership?.role === 'owner' ||
+                      myMembership?.role === 'proprietaire';
+    
+    return isManager;
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Non définie';
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
     });
   };
 
-  // Badge de statut avec couleurs
-  const getStatusBadge = (status) => {
-    const styles = {
-      planning: 'bg-gray-100 text-gray-700',
-      active: 'bg-blue-100 text-blue-700',
-      on_hold: 'bg-yellow-100 text-yellow-700',
-      completed: 'bg-green-100 text-green-700',
-      cancelled: 'bg-red-100 text-red-700',
+  const getStatusConfig = (status) => {
+    const configs = {
+      planning: {
+        color: 'bg-neutral-50 text-neutral-700',
+        label: 'En planification',
+        accent: 'bg-neutral-500',
+      },
+      active: {
+        color: 'bg-green-50 text-green-700',
+        label: 'Actif',
+        accent: 'bg-green-500',
+      },
+      on_hold: {
+        color: 'bg-amber-50 text-amber-700',
+        label: 'En pause',
+        accent: 'bg-amber-500',
+      },
+      completed: {
+        color: 'bg-blue-50 text-blue-700',
+        label: 'Terminé',
+        accent: 'bg-blue-500',
+      },
+      cancelled: {
+        color: 'bg-red-50 text-red-700',
+        label: 'Annulé',
+        accent: 'bg-red-500',
+      },
     };
-
-    const labels = {
-      planning: 'En planification',
-      active: 'Actif',
-      on_hold: 'En pause',
-      completed: 'Terminé',
-      cancelled: 'Annulé',
-    };
-
-
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status] || styles.active}`}>
-        {labels[status] || status}
-      </span>
-    );
+    return configs[status] || configs.active;
   };
 
-  // ═══════════════════════════════════════════════════════════════════
-  // 🔐 GESTION DES PERMISSIONS
-  // ═══════════════════════════════════════════════════════════════════
-
-  // 🔍 DEBUG : Affiche les membres avec leurs rôles
-  console.log('🔍 Membres du projet:', members.map(m => ({
-    username: m.user?.username,
-    role: m.role
-  })));
-
-  // ✅ CORRECTION COMPLÈTE : Vérifie tous les types de propriétaires
+  // Permissions
   const isProjectOwner = currentUser && Number(project?.owner?.id) === Number(currentUser?.id);
   const isAdmin = currentUser && currentUser.role === 'admin';
   const isChef = currentUser && currentUser.role === 'chef';
-
-  // 🆕 Vérifie si l'utilisateur a le rôle "owner" ou "proprietaire" dans ProjectMember
   const hasOwnerRole = currentUser && members.some(
     member => {
       const isSameUser = Number(member.user?.id) === Number(currentUser.id);
       const isOwnerRole = member.role === 'owner' || 
                           member.role === 'proprietaire' ||
                           member.role === 'Propriétaire';
-      
-      if (isSameUser) {
-        console.log(`🔍 Rôle de ${member.user?.username} dans le projet:`, member.role);
-      }
-      
       return isSameUser && isOwnerRole;
     }
   );
-
-  // Vérifie si gestionnaire
   const isManager = currentUser && members.some(
     member => Number(member.user?.id) === Number(currentUser.id) && 
               (member.role === 'manager' || member.role === 'gestionnaire')
   );
-
-  // ✅ isOwner = vrai si SOIT champ owner SOIT rôle owner dans members
   const isOwner = isProjectOwner || hasOwnerRole;
-
-  // ✅ Permission finale
   const canManageMembers = isOwner || isAdmin || isChef || isManager;
 
-  // 🔍 DEBUG : Affiche toutes les vérifications
-  console.log('═══════════════════════════════════════');
-  console.log('🔍 VÉRIFICATION PERMISSIONS:');
-  console.log('   project.owner.id:', project?.owner?.id);
-  console.log('   currentUser.id:', currentUser?.id);
-  console.log('   currentUser.role:', currentUser?.role);
-  console.log('   ─────────────────────────────────');
-  console.log('   isProjectOwner (champ DB):', isProjectOwner);
-  console.log('   hasOwnerRole (rôle membre):', hasOwnerRole);
-  console.log('   isAdmin:', isAdmin);
-  console.log('   isChef:', isChef);
-  console.log('   isManager:', isManager);
-  console.log('   ─────────────────────────────────');
-  console.log('   → isOwner final:', isOwner);
-  console.log('   → canManageMembers:', canManageMembers);
-  console.log('═══════════════════════════════════════');
-
-  // ─── Affichage pendant chargement ───
+  // Loading
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner />
-      </Layout>
-    );
-  }
-
-  // ─── Si projet introuvable ───
-  if (!project) {
-    return (
-      <Layout>
-        <div className="text-center py-12">
-          <p className="text-neutral-600">Projet introuvable</p>
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-neutral-600 text-sm font-medium">Chargement du projet...</p>
         </div>
       </Layout>
     );
   }
 
-  // ─── RENDU DE LA PAGE ───
+  if (!project) {
+    return (
+      <Layout>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Folder className="w-8 h-8 text-neutral-400" />
+          </div>
+          <p className="text-neutral-600 font-medium">Projet introuvable</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const statusConfig = getStatusConfig(project.status);
+
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         
-        {/* ═══════════════════════════════════════════ */}
-        {/* HEADER : Bouton retour + Actions */}
-        {/* ═══════════════════════════════════════════ */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate('/projects')}
-            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Retour aux projets</span>
-          </button>
-          
-{/* Bouton Analytics du Projet */}
-{canViewProjectAnalytics() && (
-  <Link
-    to={`/projects/${project.id}/analytics`}
-    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-  >
-    <BarChart3 className="w-4 h-4" />
-    <span className="font-medium">Analytics du Projet</span>
-  </Link>
-)}
+        {/* 🎯 HEADER PREMIUM */}
+        <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate('/projects')}
+              className="flex items-center gap-2 px-4 py-2.5 text-neutral-700 font-medium
+                       hover:text-neutral-900 hover:bg-neutral-100 rounded-xl
+                       transition-all duration-300"
+            >
+              <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
+              <span>Retour aux projets</span>
+            </button>
 
-          {/* 🆕 MODIFIÉ : Section des boutons avec Export */}
-          <div className="flex gap-2">
-            {/* 🆕 AJOUTÉ : BOUTON EXPORT AVEC DROPDOWN */}
-            <div className="relative" data-export-dropdown="true">
-              <Button
-                variant="outline"
-                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                disabled={isExporting}
-                icon={<Download className="w-4 h-4" />}
-              >
-                {isExporting ? 'Export en cours...' : 'Exporter'}
-                <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
+            <div className="flex items-center gap-3">
+              {canViewProjectAnalytics() && (
+                <Link
+                  to={`/projects/${project.id}/analytics`}
+                  className="flex items-center gap-2 px-5 py-2.5 
+                           bg-gradient-to-r from-blue-500 to-blue-600 text-white 
+                           font-semibold rounded-xl shadow-md
+                           hover:shadow-xl hover:shadow-blue-500/30 
+                           hover:scale-105 active:scale-95
+                           transition-all duration-300"
+                >
+                  <BarChart3 className="w-4 h-4" strokeWidth={2.5} />
+                  Analytics
+                </Link>
+              )}
 
-              {/* 🆕 AJOUTÉ : Dropdown des formats d'export */}
-              {isExportDropdownOpen && (
-                <div className="absolute left-0 mt-2 w-56 bg-white border border-neutral-200 rounded-lg shadow-lg z-20">
-                  <div className="py-1">
-                    {/* PDF */}
+              <div className="relative" ref={exportDropdownRef}>
+                <button
+                  onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                  disabled={isExporting}
+                  className={`
+                    flex items-center gap-2 px-5 py-2.5 
+                    border-2 border-neutral-200 text-neutral-700 font-semibold
+                    rounded-xl transition-all duration-300
+                    ${isExporting 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50'
+                    }
+                  `}
+                >
+                  <Download className="w-4 h-4" strokeWidth={2.5} />
+                  {isExporting ? 'Export...' : 'Exporter'}
+                  <ChevronDown 
+                    className={`w-4 h-4 transition-transform duration-200 
+                              ${isExportDropdownOpen ? 'rotate-180' : ''}`} 
+                    strokeWidth={2.5}
+                  />
+                </button>
+
+                {isExportDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl 
+                                border-2 border-neutral-200 shadow-lg z-50 overflow-hidden">
                     <button
-                      type="button"
                       onClick={() => handleExport('pdf')}
-                      className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group"
+                      className="w-full px-4 py-3 text-left hover:bg-neutral-50 
+                               transition-colors flex items-center gap-3"
                     >
-                      {/* <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
-                        <span className="text-xl">📄</span>
-                      </div> */}
-                      <Download className="w-4 h-4" />
-                      <div>
-                        <div className="font-medium text-neutral-900">PDF Complet</div>
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-neutral-900">PDF Complet</div>
                         <div className="text-xs text-neutral-500">Rapport détaillé multi-pages</div>
                       </div>
                     </button>
 
-                    {/* Excel */}
                     <button
-                      type="button"
                       onClick={() => handleExport('excel')}
-                      className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group"
+                      className="w-full px-4 py-3 text-left hover:bg-neutral-50 
+                               transition-colors flex items-center gap-3"
                     >
-                      {/* <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                        <span className="text-xl">📊</span>
-                      </div> */}
-                      <Download className="w-4 h-4" />
-                      <div>
-                        <div className="font-medium text-neutral-900">Excel (6 onglets)</div>
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-neutral-900">Excel (6 onglets)</div>
                         <div className="text-xs text-neutral-500">Données structurées et éditables</div>
                       </div>
                     </button>
 
-                    {/* Archive ZIP */}
                     <button
-                      type="button"
                       onClick={() => handleExport('zip')}
-                      className="w-full px-4 py-3 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-3 group rounded-b-lg"
+                      className="w-full px-4 py-3 text-left hover:bg-neutral-50 
+                               transition-colors flex items-center gap-3 rounded-b-xl"
                     >
-                      {/* <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                        <span className="text-xl">📦</span>
-                      </div> */}
-                      <Download className="w-4 h-4" />
-                      <div>
-                        <div className="font-medium text-neutral-900">Archive ZIP</div>
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-neutral-900">Archive ZIP</div>
                         <div className="text-xs text-neutral-500">JSON + fichiers attachés</div>
                       </div>
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-            {/* FIN 🆕 AJOUTÉ */}
+                )}
+              </div>
 
-            {/* Boutons existants */}
-            <Button
-              variant="outline"
-              onClick={() => setIsEditModalOpen(true)}
-              icon={<Edit className="w-4 h-4" />}
-            >
-              Modifier
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => setIsDeleteModalOpen(true)}
-              icon={<Trash2 className="w-4 h-4" />}
-            >
-              Supprimer
-            </Button>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 
+                         border-2 border-neutral-200 text-neutral-700 font-semibold
+                         rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
+                         transition-all duration-300"
+              >
+                <Edit className="w-4 h-4" strokeWidth={2.5} />
+                Modifier
+              </button>
+
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 
+                         border-2 border-red-200 text-red-600 font-semibold
+                         rounded-xl hover:border-red-600 hover:bg-red-50
+                         transition-all duration-300"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                Supprimer
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* INFO PROJET : Titre + Description + Dates */}
-        {/* ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-3">
-            {project.name}
-          </h1>
+        {/* 📄 CARTE INFO PROJET */}
+        <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
+          <div className="flex items-start gap-6 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                          flex items-center justify-center shadow-md shadow-neutral-900/20">
+              <Folder className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
 
-          {/* Badge de statut */}
-          <div className="mb-4">
-            {getStatusBadge(project.status)}
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-neutral-900 mb-3">
+                {project.name}
+              </h1>
+
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
+                             text-sm font-semibold rounded-lg ${statusConfig.color}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.accent}`} />
+                {statusConfig.label}
+              </span>
+            </div>
           </div>
 
-          <p className="text-neutral-600 mb-6">
-            {project.description || 'Aucune description'}
+          <p className="text-neutral-600 text-lg leading-relaxed mb-6">
+            {project.description || 'Aucune description disponible'}
           </p>
 
-          {/* Infos secondaires (dates + membres) */}
-          <div className="flex gap-4 text-sm text-neutral-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              Début : {formatDate(project.start_date)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              Fin : {formatDate(project.end_date)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              Équipe : {members.length} membre{members.length > 1 ? 's' : ''}
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-xs text-neutral-500 font-medium">Début</div>
+                <div className="text-sm font-bold text-neutral-900">{formatDate(project.start_date)}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200">
+              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <Target className="w-5 h-5 text-red-600" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-xs text-neutral-500 font-medium">Échéance</div>
+                <div className="text-sm font-bold text-neutral-900">{formatDate(project.end_date)}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200">
+              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
+              </div>
+              <div>
+                <div className="text-xs text-neutral-500 font-medium">Équipe</div>
+                <div className="text-sm font-bold text-neutral-900">
+                  {members.length} membre{members.length > 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* STATISTIQUES : Composant ProjectStats */}
-        {/* ═══════════════════════════════════════════ */}
+        {/* 📊 STATISTIQUES */}
         <ProjectStats stats={stats} />
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* 🆕 MEMBRES DU PROJET : Nouvelle Section */}
-        {/* ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
+        {/* 👥 MEMBRES DU PROJET */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Users className="w-6 h-6" />
-              Membres du Projet ({members.length})
-            </h2>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                            flex items-center justify-center shadow-md shadow-neutral-900/20">
+                <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-neutral-900">
+                Membres du Projet ({members.length})
+              </h2>
+            </div>
             
-            {/* Bouton ajouter (visible pour owner, admin, chef, manager) */}
             {canManageMembers && (
-              <Button
-                variant="primary"
+              <button
                 onClick={() => setIsAddMemberModalOpen(true)}
-                icon={<UserPlus className="w-4 h-4" />}
+                className="flex items-center gap-2 px-5 py-2.5 
+                         bg-gradient-to-r from-orange-500 to-orange-600 
+                         text-white font-semibold rounded-xl shadow-md
+                         hover:shadow-xl hover:shadow-orange-500/30 
+                         hover:scale-105 active:scale-95
+                         transition-all duration-300"
               >
+                <UserPlus className="w-4 h-4" strokeWidth={2.5} />
                 Ajouter un membre
-              </Button>
-            )}    
+              </button>
+            )}
           </div>
 
-          {/* Composant MemberList */}
           <MemberList
             members={members}
             canManageMembers={canManageMembers}
@@ -661,54 +567,69 @@ const canViewProjectAnalytics = () => {
           />
         </div>
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* TÂCHES DU PROJET : Grille de cartes */}
-        {/* ═══════════════════════════════════════════ */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
+        {/* 📋 TÂCHES DU PROJET - CORRECTION ICI */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">
-              Tâches du Projet ({tasks.length})
-            </h2>
-            <Button
-              variant="outline"
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                            flex items-center justify-center shadow-md shadow-neutral-900/20">
+                <CheckCircle2 className="w-5 h-5 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-neutral-900">
+                Tâches du Projet ({tasks.length})
+              </h2>
+            </div>
+            
+            <button
               onClick={() => navigate(`/tasks?project=${id}`)}
+              className="flex items-center gap-2 px-5 py-2.5 
+                       border-2 border-neutral-200 text-neutral-700 font-semibold
+                       rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
+                       transition-all duration-300"
             >
+              <TrendingUp className="w-4 h-4" strokeWidth={2.5} />
               Voir toutes les tâches
-            </Button>
+            </button>
           </div>
 
-          {/* Liste des tâches ou message vide */}
           {tasks.length === 0 ? (
-            <p className="text-neutral-500 text-center py-8">
-              Aucune tâche pour le moment
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Affiche seulement les 6 premières tâches */}
-              {tasks.slice(0, 6).map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onClick={() => navigate(`/tasks/${task.id}`)}
-                />
-              ))}
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-neutral-400" />
+              </div>
+              <p className="text-neutral-600 font-medium mb-2">Aucune tâche pour le moment</p>
+              <p className="text-neutral-400 text-sm">Les tâches apparaîtront ici une fois créées</p>
             </div>
-          )}
+          ) : (
+            <>
+              {/* 🔧 GRID AVEC AUTO-ROWS ET ITEMS-STRETCH */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-fr">
+                {tasks.slice(0, 6).map((task, index) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onEdit={() => {}}
+                    onDelete={() => {}}
+                    style={{
+                      animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
+                    }}
+                  />
+                ))}
+              </div>
 
-          {/* Message si + de 6 tâches */}
-          {tasks.length > 6 && (
-            <p className="text-neutral-500 text-center mt-4">
-              Et {tasks.length - 6} autre{tasks.length - 6 > 1 ? 's' : ''} tâche
-              {tasks.length - 6 > 1 ? 's' : ''}...
-            </p>
+              {tasks.length > 6 && (
+                <div className="mt-6 pt-6 border-t border-neutral-200 text-center">
+                  <p className="text-neutral-500 text-sm">
+                    Et <span className="font-bold text-neutral-700">{tasks.length - 6}</span> autre
+                    {tasks.length - 6 > 1 ? 's' : ''} tâche{tasks.length - 6 > 1 ? 's' : ''}...
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* MODALS : Édition + Suppression + Membres */}
-        {/* ═══════════════════════════════════════════ */}
-
-        {/* Modal d'édition du projet */}
+        {/* MODALS */}
         <Modal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
@@ -722,7 +643,6 @@ const canViewProjectAnalytics = () => {
           />
         </Modal>
 
-        {/* Modal de confirmation suppression */}
         <ConfirmModal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
@@ -733,7 +653,6 @@ const canViewProjectAnalytics = () => {
           variant="danger"
         />
 
-        {/* 🆕 Modal d'ajout de membre */}
         <AddMemberModal
           isOpen={isAddMemberModalOpen}
           onClose={() => setIsAddMemberModalOpen(false)}
@@ -743,6 +662,19 @@ const canViewProjectAnalytics = () => {
           loading={addingMember}
         />
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(15px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </Layout>
   );
 };

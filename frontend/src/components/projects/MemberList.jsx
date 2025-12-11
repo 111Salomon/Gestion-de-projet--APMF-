@@ -1,51 +1,64 @@
 import { useState } from 'react';
-import { Users, Crown, Trash2, Edit2 } from 'lucide-react';
-import { Button } from '../common/Button';
+import { Users, Crown, Trash2, Edit2, Check, X, Shield, Eye, User } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
-import toast from 'react-hot-toast';
 
-// 🆕 Liste des rôles (synchronisée avec le backend)
 const ROLES = [
-  { value: 'owner', label: 'Propriétaire' },
-  { value: 'manager', label: 'Gestionnaire' },
-  { value: 'member', label: 'Membre' },
-  { value: 'viewer', label: 'Observateur' },
+  { 
+    value: 'owner', 
+    label: 'Propriétaire', 
+    icon: Crown, 
+    color: 'text-orange-600', 
+    bg: 'bg-orange-50', 
+    badge: 'bg-orange-50 text-orange-700',
+    dot: 'bg-orange-500'
+  },
+  { 
+    value: 'manager', 
+    label: 'Gestionnaire', 
+    icon: Shield, 
+    color: 'text-blue-600', 
+    bg: 'bg-blue-50', 
+    badge: 'bg-blue-50 text-blue-700',
+    dot: 'bg-blue-500'
+  },
+  { 
+    value: 'member', 
+    label: 'Membre', 
+    icon: User, 
+    color: 'text-green-600', 
+    bg: 'bg-green-50', 
+    badge: 'bg-green-50 text-green-700',
+    dot: 'bg-green-500'
+  },
+  { 
+    value: 'viewer', 
+    label: 'Observateur', 
+    icon: Eye, 
+    color: 'text-neutral-600', 
+    bg: 'bg-neutral-50', 
+    badge: 'bg-neutral-50 text-neutral-700',
+    dot: 'bg-neutral-400'
+  },
 ];
 
-/**
- * Composant pour afficher la liste des membres d'un projet
- * 
- * Props:
- *   - members: Array des membres (avec user, role, joined_at)
- *   - isOwner: Boolean - L'utilisateur connecté est-il le propriétaire ?
- *   - onRemoveMember: Function(userId) - Callback pour retirer un membre
- *   - onChangeRole: Function(userId, newRole) - Callback pour changer le rôle
- *   - loading: Boolean - Affichage du loading
- */
 export const MemberList = ({ 
   members = [], 
+  canManageMembers = false,
   isOwner = false,
   onRemoveMember,
   onChangeRole,
   loading = false
 }) => {
-  // États locaux
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState(null); // ID du membre dont on édite le rôle
+  const [editingRole, setEditingRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
 
-  /**
-   * Ouvre le modal de confirmation de suppression
-   */
   const handleRemoveClick = (member) => {
     setMemberToRemove(member);
     setIsRemoveModalOpen(true);
   };
 
-  /**
-   * Confirme la suppression d'un membre
-   */
   const confirmRemove = () => {
     if (memberToRemove) {
       onRemoveMember(memberToRemove.user.id);
@@ -54,17 +67,11 @@ export const MemberList = ({
     }
   };
 
-  /**
-   * Active le mode édition du rôle
-   */
   const startEditRole = (member) => {
     setEditingRole(member.id);
     setSelectedRole(member.role);
   };
 
-  /**
-   * Sauvegarde le nouveau rôle
-   */
   const saveRole = (member) => {
     if (selectedRole !== member.role) {
       onChangeRole(member.user.id, selectedRole);
@@ -72,160 +79,164 @@ export const MemberList = ({
     setEditingRole(null);
   };
 
-  /**
-   * Annule l'édition du rôle
-   */
   const cancelEditRole = () => {
     setEditingRole(null);
     setSelectedRole('');
   };
 
-  /**
-   * Retourne le badge de couleur selon le rôle
-   */
-  const getRoleBadge = (role) => {
-    const badges = {
-      owner: 'bg-purple-100 text-purple-700',
-      manager: 'bg-blue-100 text-blue-700',
-      member: 'bg-neutral-100 text-neutral-700',
-      viewer: 'bg-gray-100 text-gray-700',
-    };
-    return badges[role] || badges.member;
+  const getRoleConfig = (role) => {
+    return ROLES.find(r => r.value === role) || ROLES[2];
   };
 
-  /**
-   * Retourne le libellé français du rôle
-   */
-  const getRoleLabel = (role) => {
-    const labels = {
-      owner: 'Propriétaire',
-      manager: 'Gestionnaire',
-      member: 'Membre',
-      viewer: 'Observateur',
-    };
-    return labels[role] || 'Membre';
-  };
-
-  // Affichage du loading
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+        <p className="text-neutral-600 text-sm font-medium">Chargement des membres...</p>
       </div>
     );
   }
 
-  // Affichage si aucun membre
   if (members.length === 0) {
     return (
-      <div className="text-center py-8 text-neutral-500">
-        <Users className="w-12 h-12 mx-auto mb-2 text-neutral-400" />
-        <p>Aucun membre dans ce projet</p>
+      <div className="text-center py-12">
+        <div className="w-14 h-14 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Users className="w-7 h-7 text-neutral-400" />
+        </div>
+        <p className="text-neutral-600 font-medium text-sm">Aucun membre dans ce projet</p>
+        <p className="text-neutral-400 text-xs mt-1">Ajoutez des membres pour collaborer</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="space-y-3">
-        {members.map((member) => (
-          <div
-            key={member.id}
-            className="flex items-center justify-between p-4 bg-white border border-neutral-200 rounded-lg hover:shadow-sm transition-shadow"
-          >
-            {/* Infos du membre */}
-            <div className="flex items-center gap-4 flex-1">
-              {/* Avatar */}
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg">
-                {member.user.username?.charAt(0).toUpperCase() || '?'}
-              </div>
+      <div className="space-y-2">
+        {members.map((member, index) => {
+          const roleConfig = getRoleConfig(member.role);
+          const RoleIcon = roleConfig.icon;
+          const isEditing = editingRole === member.id;
+          
+          return (
+            <div
+              key={member.id}
+              className="group bg-white rounded-lg border border-neutral-200 
+                       hover:border-neutral-300 hover:shadow-sm 
+                       transition-all duration-200"
+              style={{
+                animation: `fadeInUp 0.3s ease-out ${index * 0.05}s both`
+              }}
+            >
+              <div className="p-3">
+                <div className="flex items-center gap-3">
+                  {/* Avatar ROND */}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-300 to-neutral-400
+                               flex items-center justify-center text-white font-bold text-sm 
+                               shadow-sm flex-shrink-0">
+                    {member.user.username?.charAt(0).toUpperCase() || '?'}
+                  </div>
 
-              {/* Nom et email */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-neutral-900">
-                    {member.user.full_name || member.user.username}
-                  </h4>
-                  {member.role === 'owner' && (
-                    <Crown className="w-4 h-4 text-yellow-500" />
+                  {/* Infos membre */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-semibold text-neutral-900 text-sm truncate">
+                        {member.user.full_name || member.user.username}
+                      </h4>
+                      {member.role === 'owner' && (
+                        <Crown className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-neutral-500 truncate">
+                      {member.user.email}
+                    </p>
+                  </div>
+
+                  {/* Rôle - Version épurée */}
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      // Mode édition
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={selectedRole}
+                          onChange={(e) => setSelectedRole(e.target.value)}
+                          className="px-2.5 py-1.5 text-xs font-medium border-2 border-orange-500 
+                                   rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/20
+                                   bg-white text-neutral-900"
+                        >
+                          {ROLES.map(role => (
+                            <option 
+                              key={role.value} 
+                              value={role.value}
+                              disabled={role.value === 'owner'}
+                            >
+                              {role.label}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        <button
+                          onClick={() => saveRole(member)}
+                          className="p-1.5 bg-green-100 text-green-700 hover:bg-green-200 
+                                   rounded-md transition-colors"
+                          title="Sauvegarder"
+                        >
+                          <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </button>
+                        
+                        <button
+                          onClick={cancelEditRole}
+                          className="p-1.5 bg-red-100 text-red-700 hover:bg-red-200 
+                                   rounded-md transition-colors"
+                          title="Annuler"
+                        >
+                          <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    ) : (
+                      // Mode affichage - Minimaliste avec dot
+                      <div className="flex items-center gap-2">
+                        {/* Dot coloré */}
+                        <div className={`w-1.5 h-1.5 rounded-full ${roleConfig.dot}`} />
+                        
+                        {/* Badge discret */}
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 
+                                       text-xs font-medium rounded-md ${roleConfig.badge}`}>
+                          <RoleIcon className="w-3 h-3" strokeWidth={2.5} />
+                          {roleConfig.label}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions - Cachées par défaut */}
+                  {canManageMembers && member.role !== 'owner' && !isEditing && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => startEditRole(member)}
+                        className="p-1.5 text-neutral-600 hover:bg-neutral-100 
+                                 rounded-md transition-colors"
+                        title="Changer le rôle"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" strokeWidth={2.5} />
+                      </button>
+
+                      <button
+                        onClick={() => handleRemoveClick(member)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 
+                                 rounded-md transition-colors"
+                        title="Retirer du projet"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
+                      </button>
+                    </div>
                   )}
                 </div>
-                <p className="text-sm text-neutral-500">{member.user.email}</p>
-              </div>
-
-              {/* Rôle (éditable ou badge) */}
-              <div className="min-w-[150px]">
-                {editingRole === member.id ? (
-                  // Mode édition
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value)}
-                      className="px-3 py-1 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      {ROLES.map(role => (
-                        <option 
-                          key={role.value} 
-                          value={role.value}
-                          disabled={role.value === 'owner'} // Empêche de changer quelqu'un en propriétaire
-                        >
-                          {role.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => saveRole(member)}
-                      className="text-green-600 hover:text-green-700 text-sm font-medium"
-                    >
-                      ✓
-                    </button>
-                    <button
-                      onClick={cancelEditRole}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  // Mode affichage
-                  <span
-                    className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${getRoleBadge(
-                      member.role
-                    )}`}
-                  >
-                    {getRoleLabel(member.role)}
-                  </span>
-                )}
               </div>
             </div>
-
-            {/* Actions (si owner et pas le owner du projet) */}
-            {isOwner && member.role !== 'owner' && (
-              <div className="flex items-center gap-2 ml-4">
-                {/* Bouton changer le rôle */}
-                <button
-                  onClick={() => startEditRole(member)}
-                  className="p-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
-                  title="Changer le rôle"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-
-                {/* Bouton retirer */}
-                <button
-                  onClick={() => handleRemoveClick(member)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Retirer du projet"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Modal de confirmation de suppression */}
       <ConfirmModal
         isOpen={isRemoveModalOpen}
         onClose={() => setIsRemoveModalOpen(false)}
@@ -238,6 +249,19 @@ export const MemberList = ({
         cancelText="Annuler"
         variant="danger"
       />
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </>
   );
 };

@@ -267,7 +267,7 @@ return (
       </div>
 
       {/* Bouton Voir détails */}
-      <button
+      {/* <button
         onClick={(e) => {
           e.stopPropagation();
           handleViewDetails();
@@ -280,7 +280,7 @@ return (
       >
         <Eye className="w-4 h-4" />
         Voir détails
-      </button>
+      </button> */}
     </div>
   </div>
 );

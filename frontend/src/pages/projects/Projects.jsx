@@ -563,7 +563,7 @@ export const Projects = () => {
                       })}
                     </div>
                   </div>
-
+{/* 
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -577,7 +577,7 @@ export const Projects = () => {
                   >
                     <Eye className="w-4 h-4" />
                     Voir détails
-                  </button>
+                  </button> */}
                 </div>
               </div>
             );
