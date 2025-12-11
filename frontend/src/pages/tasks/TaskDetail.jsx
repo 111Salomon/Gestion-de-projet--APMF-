@@ -258,7 +258,7 @@ export const TaskDetail = () => {
           
           {/* Titre + Badges */}
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-3">
+            <h1 className="text-3xl font-bold text-neutral-900 mb-3 break-words">
               {task.title}
             </h1>
             <div className="flex gap-2">

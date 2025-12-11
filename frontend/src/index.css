@@ -436,3 +436,13 @@
 .animate-fadeIn {
   animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Fix pour line-clamp qui ne fonctionne pas avec certaines classes Tailwind */
+.line-clamp-fix {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 1 !important;
+  overflow: hidden !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}

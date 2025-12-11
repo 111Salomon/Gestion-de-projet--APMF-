@@ -26,10 +26,10 @@ export const projectsAPI = {
    *   }
    * ]
    */
-  getAll: async () => {
-    const response = await axiosInstance.get('/projects/');
-    return response.data;
-  },
+getAll: async (params = {}) => {
+  const response = await axiosInstance.get('/projects/', { params });
+  return response.data;
+},
 
   /**
    * Récupère les projets de l'utilisateur connecté

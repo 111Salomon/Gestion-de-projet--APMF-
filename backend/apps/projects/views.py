@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 
 
 from .models import Project, ProjectMember
@@ -104,6 +106,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """
     
     permission_classes = [IsAuthenticated]
+    # 🆕 AJOUT NÉCESSAIRE
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['status']  # Permet ?status=active
+    search_fields = ['name', 'description']  # Permet ?search=text
     
     def get_queryset(self):
         """

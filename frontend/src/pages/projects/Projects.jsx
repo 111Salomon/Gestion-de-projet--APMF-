@@ -22,6 +22,7 @@ import { projectsAPI } from '../../api/projects';
 import { toast } from 'react-hot-toast';
 import { useStats } from '../../context/StatsContext';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { Pagination } from '../../components/common/Pagination';
 import { useAuth } from '../../context/AuthContext';
 import { canCreateProject } from '../../utils/permissions';
 
@@ -49,13 +50,25 @@ export const Projects = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
   const filterDropdownRef = useRef(null);
 
+
+  // États - Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     loadProjects();
   }, []);
+
+
+  // 🆕 AJOUT : Recharge à la page 1 quand les filtres changent
+useEffect(() => {
+  if (loading) return;
+  loadProjects(1);
+}, [statusFilter, searchQuery]);
+
 
   // Fermeture du dropdown au clic extérieur
   useEffect(() => {
@@ -70,19 +83,41 @@ export const Projects = () => {
   }, []);
 
 
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const data = await projectsAPI.getAll();
-      const projectsList = Array.isArray(data) ? data : (data.results || []);
-      setProjects(projectsList);
-    } catch (error) {
-      toast.error('Erreur lors du chargement des projets');
-      console.error('Erreur:', error);
-    } finally {
-      setLoading(false);
+const loadProjects = async (page = 1) => {
+  try {
+    setLoading(true);
+    
+    const params = { page };
+    if (statusFilter !== 'all') params.status = statusFilter;
+    if (searchQuery.trim()) params.search = searchQuery.trim();
+    
+    console.log('📡 Requête API projets:', params);
+    
+    const data = await projectsAPI.getAll(params);
+    
+    if (data.results) {
+      const validProjects = data.results.filter(p => p && p.name);
+      setProjects(validProjects);
+      setTotalCount(data.count);
+      setTotalPages(Math.ceil(data.count / 20));
+      setCurrentPage(page);
+    } else {
+      const validProjects = data.filter(p => p && p.name);
+      setProjects(validProjects);
+      setTotalCount(validProjects.length);
+      setTotalPages(1);
+      setCurrentPage(1);
     }
-  };
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement:', error);
+    toast.error('Erreur lors du chargement des projets');
+    setProjects([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
   const handleCreate = () => {
@@ -165,19 +200,13 @@ export const Projects = () => {
     setProjectToDelete(null);
   };
 
+  // 🆕 AJOUT : Gestion du changement de page
+const handlePageChange = (newPage) => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  loadProjects(newPage);
+};
 
-  const filteredProjects = projects.filter((project) => {
-    if (!project || !project.name) return false;
-    
-    const name = project.name.toLowerCase();
-    const description = (project.description || '').toLowerCase();
-    const query = searchQuery.toLowerCase().trim();
-    
-    const matchesSearch = query === '' || name.includes(query) || description.includes(query);
-    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+
 
 
   /**
@@ -251,7 +280,7 @@ export const Projects = () => {
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
-                    {filteredProjects.length} projet{filteredProjects.length > 1 ? 's' : ''}
+                    {totalCount} projet{totalCount > 1 ? 's' : ''}
                   </span>
                   
                   {statusFilter !== 'all' && (
@@ -395,7 +424,7 @@ export const Projects = () => {
           <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-neutral-600 text-sm font-medium">Chargement des projets...</p>
         </div>
-      ) : filteredProjects.length === 0 ? (
+      ) : projects.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-neutral-400" />
@@ -420,7 +449,7 @@ export const Projects = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredProjects.map((project, index) => {
+          {projects.map((project, index) => {
             const statusConfig = getStatusConfig(project.status);
             const isDropdownOpen = activeDropdown === project.id;
             
@@ -442,7 +471,7 @@ export const Projects = () => {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 pr-2">
-                      <h3 className="text-lg font-bold text-neutral-900 mb-3 line-clamp-1">
+                      <h3 className="text-lg font-bold text-neutral-900 mb-3 line-clamp-fix">
                         {project.name}
                       </h3>
                       
@@ -584,6 +613,19 @@ export const Projects = () => {
           })}
         </div>
       )}
+
+
+{/* PAGINATION */}
+{!loading && projects.length > 0 && (
+  <Pagination
+    currentPage={currentPage}
+    totalPages={totalPages}
+    totalItems={totalCount}
+    itemsPerPage={20}
+    onPageChange={handlePageChange}
+  />
+)}
+
 
       <Modal
         isOpen={isModalOpen}

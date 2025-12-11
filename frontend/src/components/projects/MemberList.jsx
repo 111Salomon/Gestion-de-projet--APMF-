@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Crown, Trash2, Edit2, Check, X, Shield, Eye, User } from 'lucide-react';
+import { Users, Crown, Trash2, Edit2, Check, X, Shield, Eye, User, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 
 const ROLES = [
@@ -53,6 +53,13 @@ export const MemberList = ({
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
+  const [showAll, setShowAll] = useState(false); // 🆕 État pour collapse/expand
+
+  // 🆕 Limite d'affichage
+  const DISPLAY_LIMIT = 4;
+  const hasMore = members.length > DISPLAY_LIMIT;
+  const displayedMembers = showAll ? members : members.slice(0, DISPLAY_LIMIT);
+  const remainingCount = members.length - DISPLAY_LIMIT;
 
   const handleRemoveClick = (member) => {
     setMemberToRemove(member);
@@ -112,7 +119,7 @@ export const MemberList = ({
   return (
     <>
       <div className="space-y-2">
-        {members.map((member, index) => {
+        {displayedMembers.map((member, index) => {
           const roleConfig = getRoleConfig(member.role);
           const RoleIcon = roleConfig.icon;
           const isEditing = editingRole === member.id;
@@ -236,6 +243,31 @@ export const MemberList = ({
           );
         })}
       </div>
+
+      {/* 🆕 BOUTON VOIR PLUS / VOIR MOINS */}
+      {hasMore && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="w-full mt-3 py-2.5 px-4 
+                   border-2 border-neutral-200 text-neutral-700 
+                   font-medium text-sm rounded-xl
+                   hover:border-neutral-300 hover:bg-neutral-50
+                   transition-all duration-200
+                   flex items-center justify-center gap-2"
+        >
+          {showAll ? (
+            <>
+              <ChevronDown className="w-4 h-4 rotate-180 transition-transform" strokeWidth={2.5} />
+              <span>Voir moins</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4 transition-transform" strokeWidth={2.5} />
+              <span>Voir {remainingCount} autre{remainingCount > 1 ? 's' : ''} membre{remainingCount > 1 ? 's' : ''}</span>
+            </>
+          )}
+        </button>
+      )}
 
       <ConfirmModal
         isOpen={isRemoveModalOpen}

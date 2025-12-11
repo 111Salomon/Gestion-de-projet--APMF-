@@ -129,7 +129,7 @@ return (
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1 pr-2">
-          <h3 className="text-lg font-bold text-neutral-900 mb-3 line-clamp-1">
+          <h3 className="text-lg font-bold text-neutral-900 mb-3 line-clamp-fix">
             {task.title}
           </h3>
 

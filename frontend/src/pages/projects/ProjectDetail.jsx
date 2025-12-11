@@ -15,7 +15,8 @@ import {
   TrendingUp,
   CheckCircle2,
   Folder,
-  MoreVertical  // 🆕 Icône menu 3 points
+  MoreVertical, // 🆕 Icône menu 3 points
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -53,6 +54,7 @@ export const ProjectDetail = () => {
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false); // 🆕 Menu contextuel
+  const [showAllTasks, setShowAllTasks] = useState(false); // 🆕 AJOUT
 
   // Refs
   const exportDropdownRef = useRef(null);
@@ -636,66 +638,94 @@ export const ProjectDetail = () => {
           />
         </div>
 
-        {/* 📋 TÂCHES DU PROJET */}
-        <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
-                            flex items-center justify-center shadow-md shadow-neutral-900/20">
-                <CheckCircle2 className="w-5 h-5 text-white" strokeWidth={2.5} />
-              </div>
-              <h2 className="text-2xl font-bold text-neutral-900">
-                Tâches du Projet ({tasks.length})
-              </h2>
-            </div>
-            
-            <button
-              onClick={() => navigate(`/tasks?project=${id}`)}
-              className="flex items-center gap-2 px-5 py-2.5 
-                       border-2 border-neutral-200 text-neutral-700 font-semibold
-                       rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
-                       transition-all duration-300"
-            >
-              <TrendingUp className="w-4 h-4" strokeWidth={2.5} />
-              Voir toutes les tâches
-            </button>
-          </div>
+{/* 📋 TÂCHES DU PROJET */}
+<div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                    flex items-center justify-center shadow-md shadow-neutral-900/20">
+        <CheckCircle2 className="w-5 h-5 text-white" strokeWidth={2.5} />
+      </div>
+      <h2 className="text-2xl font-bold text-neutral-900">
+        Tâches du Projet ({tasks.length})
+      </h2>
+    </div>
+    
+    <button
+      onClick={() => navigate(`/tasks?project=${id}`)}
+      className="flex items-center gap-2 px-5 py-2.5 
+               border-2 border-neutral-200 text-neutral-700 font-semibold
+               rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
+               transition-all duration-300"
+    >
+      <TrendingUp className="w-4 h-4" strokeWidth={2.5} />
+      Voir toutes les tâches
+    </button>
+  </div>
 
-          {tasks.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-neutral-400" />
-              </div>
-              <p className="text-neutral-600 font-medium mb-2">Aucune tâche pour le moment</p>
-              <p className="text-neutral-400 text-sm">Les tâches apparaîtront ici une fois créées</p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-fr">
-                {tasks.slice(0, 6).map((task, index) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onEdit={() => {}}
-                    onDelete={() => {}}
-                    style={{
-                      animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
-                    }}
-                  />
-                ))}
-              </div>
+  {tasks.length === 0 ? (
+    <div className="text-center py-12">
+      <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <CheckCircle2 className="w-8 h-8 text-neutral-400" />
+      </div>
+      <p className="text-neutral-600 font-medium mb-2">Aucune tâche pour le moment</p>
+      <p className="text-neutral-400 text-sm">Les tâches apparaîtront ici une fois créées</p>
+    </div>
+  ) : (
+    <>
+      {/* 🆕 LOGIQUE COLLAPSE/EXPAND */}
+      {(() => {
+        const DISPLAY_LIMIT = 6;
+        const hasMore = tasks.length > DISPLAY_LIMIT;
+        const displayedTasks = showAllTasks ? tasks : tasks.slice(0, DISPLAY_LIMIT);
+        const remainingCount = tasks.length - DISPLAY_LIMIT;
 
-              {tasks.length > 6 && (
-                <div className="mt-6 pt-6 border-t border-neutral-200 text-center">
-                  <p className="text-neutral-500 text-sm">
-                    Et <span className="font-bold text-neutral-700">{tasks.length - 6}</span> autre
-                    {tasks.length - 6 > 1 ? 's' : ''} tâche{tasks.length - 6 > 1 ? 's' : ''}...
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-fr">
+              {displayedTasks.map((task, index) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  style={{
+                    animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* 🆕 BOUTON VOIR PLUS / VOIR MOINS */}
+            {hasMore && (
+              <button
+                onClick={() => setShowAllTasks(!showAllTasks)}
+                className="w-full mt-6 py-2.5 px-4 
+                         border-2 border-neutral-200 text-neutral-700 
+                         font-medium text-sm rounded-xl
+                         hover:border-neutral-300 hover:bg-neutral-50
+                         transition-all duration-200
+                         flex items-center justify-center gap-2"
+              >
+                {showAllTasks ? (
+                  <>
+                    <ChevronDown className="w-4 h-4 rotate-180 transition-transform" strokeWidth={2.5} />
+                    <span>Voir moins</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 transition-transform" strokeWidth={2.5} />
+                    <span>Voir {remainingCount} autre{remainingCount > 1 ? 's' : ''} tâche{remainingCount > 1 ? 's' : ''}</span>
+                  </>
+                )}
+              </button>
+            )}
+          </>
+        );
+      })()}
+    </>
+  )}
+</div>
 
         {/* MODALS */}
         <Modal
@@ -729,6 +759,28 @@ export const ProjectDetail = () => {
           existingMembers={members}
           loading={addingMember}
         />
+
+      {/* 🆕 FAB - FLOATING ACTION BUTTON */}
+      <button
+        onClick={() => navigate(`/tasks?create=true&project=${id}`)}
+        className="fixed bottom-8 right-8 z-50
+                 w-14 h-14 
+                 bg-gradient-to-br from-orange-500 to-orange-600
+                 text-white rounded-full
+                 shadow-2xl shadow-orange-500/40
+                 hover:shadow-3xl hover:shadow-orange-500/50
+                 hover:scale-110 active:scale-95
+                 transition-all duration-300
+                 flex items-center justify-center
+                 group"
+        title="Créer une nouvelle tâche"
+        aria-label="Créer une nouvelle tâche"
+      >
+        <Plus 
+          className="w-7 h-7 group-hover:rotate-90 transition-transform duration-300" 
+          strokeWidth={3} 
+        />
+      </button>
       </div>
 
       <style jsx>{`

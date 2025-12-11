@@ -21,6 +21,7 @@ import { useStats } from '../../context/StatsContext';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { canCreateTaskGlobal } from '../../utils/permissions';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 
 /**
@@ -30,6 +31,8 @@ import { canCreateTaskGlobal } from '../../utils/permissions';
 export const Tasks = () => {
   const { user } = useAuth();
   const canCreate = canCreateTaskGlobal(user);
+  const navigate = useNavigate(); // ← Déjà existant
+  const location = useLocation(); // 🆕 AJOUT
   
   // États - Données
   const [tasks, setTasks] = useState([]);
@@ -41,6 +44,7 @@ export const Tasks = () => {
   // États - Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [initialFormData, setInitialFormData] = useState(null); // 🆕 AJOUT
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
@@ -62,6 +66,32 @@ export const Tasks = () => {
   // Context
   const { refreshStats } = useStats();
 
+
+
+   // 🆕 AJOUT : Détection des query params pour auto-ouverture
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const shouldCreate = searchParams.get('create');
+    const projectId = searchParams.get('project');
+    
+    if (shouldCreate === 'true') {
+      // Si un projet est spécifié, pré-rempli le formulaire
+    if (projectId) {
+      setInitialFormData({ project: projectId }); // ✅ Utilise le nouvel état
+    } else {
+      setInitialFormData(null);
+    }
+
+      // Important : on ne touche PAS à editingTask (reste null = mode création)
+      setEditingTask(null);
+        
+      // Ouvre le modal
+      setIsModalOpen(true);
+      
+      // Nettoie l'URL (retire ?create=true&project=X)
+      navigate('/tasks', { replace: true });
+    }
+  }, [location.search, navigate]);
 
   // Chargement initial
   useEffect(() => {
@@ -171,6 +201,7 @@ export const Tasks = () => {
       refreshStats();
       setIsModalOpen(false);
       setEditingTask(null);
+      setInitialFormData(null); // 🆕 AJOUT : Réinitialise après création
       
     } catch (error) {
       console.error('❌ Erreur soumission:', error);
@@ -556,22 +587,23 @@ export const Tasks = () => {
         </div>
         
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tasks.map((task, index) => (
-            <div
-              key={task.id}
-              style={{
-                animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
-              }}
-            >
-              <TaskCard
-                task={task}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {tasks.map((task, index) => (
+                <div
+                  key={task.id}
+                  className="min-w-0"
+                  style={{
+                    animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
+                  }}
+                >
+                  <TaskCard
+                    task={task}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
       )}
 
       {/* PAGINATION */}
@@ -588,14 +620,22 @@ export const Tasks = () => {
       {/* MODALS */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+  setIsModalOpen(false);
+  setEditingTask(null);
+  setInitialFormData(null); // 🆕 AJOUT : Nettoie à la fermeture
+}}
         title={editingTask ? 'Modifier la Tâche' : 'Nouvelle Tâche'}
         size="lg"
       >
         <TaskForm
           onSubmit={handleSubmit}
-          onCancel={() => setIsModalOpen(false)}
-          initialData={editingTask}
+    onCancel={() => {
+      setIsModalOpen(false);
+      setEditingTask(null);
+      setInitialFormData(null); // 🆕 AJOUT : Nettoie à l'annulation
+    }}
+          initialData={editingTask || initialFormData}
           isLoading={isSubmitting}
         />
       </Modal>
