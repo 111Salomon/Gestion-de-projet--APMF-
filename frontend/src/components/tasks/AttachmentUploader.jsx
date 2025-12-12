@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Upload, X, File, Image, Paperclip } from 'lucide-react';
 import { uploadAttachment } from '../../api/attachments';
-import { Button } from '../common/Button';
-
+import toast from 'react-hot-toast';
 
 const AttachmentUploader = ({ taskId, onUploadSuccess }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
-  const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   // Gérer la sélection de fichiers
   const handleFileSelect = (e) => {
@@ -16,14 +16,18 @@ const AttachmentUploader = ({ taskId, onUploadSuccess }) => {
     // Validation : taille max 10 MB par fichier
     const validFiles = files.filter(file => {
       if (file.size > 10 * 1024 * 1024) {
-        setError(`${file.name} dépasse 10 MB`);
+        toast.error(`${file.name} dépasse 10 MB`);
         return false;
       }
       return true;
     });
     
-    setSelectedFiles(validFiles);
-    setError('');
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+  };
+
+  // Supprimer un fichier de la sélection
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Uploader les fichiers
@@ -31,7 +35,6 @@ const AttachmentUploader = ({ taskId, onUploadSuccess }) => {
     if (selectedFiles.length === 0) return;
 
     setUploading(true);
-    setError('');
 
     try {
       // Upload chaque fichier séparément
@@ -54,127 +57,156 @@ const AttachmentUploader = ({ taskId, onUploadSuccess }) => {
       await Promise.all(uploadPromises);
 
       // Succès
+      toast.success(`${selectedFiles.length} fichier${selectedFiles.length > 1 ? 's' : ''} ajouté${selectedFiles.length > 1 ? 's' : ''} !`);
       setSelectedFiles([]);
       setUploadProgress({});
+      if (fileInputRef.current) fileInputRef.current.value = '';
       onUploadSuccess && onUploadSuccess();
       
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de l\'upload');
+      console.error('Erreur upload:', err);
+      toast.error(err.response?.data?.message || 'Impossible d\'ajouter les fichiers');
     } finally {
       setUploading(false);
     }
   };
 
-  // Supprimer un fichier de la sélection
-  const removeFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
+  const isImage = (fileName) => {
+    const ext = fileName.split('.').pop().toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
   };
 
   return (
     <div className="space-y-4">
-      {/* Zone de sélection de fichiers */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+      {/* Zone de sélection */}
+      <div 
+        className="border-2 border-dashed border-neutral-200 rounded-xl p-6 
+                  hover:border-orange-300 hover:bg-orange-50/50 
+                  transition-all duration-200 cursor-pointer group"
+        onClick={() => fileInputRef.current?.click()}
+      >
         <input
+          ref={fileInputRef}
           type="file"
-          id="file-upload"
           multiple
           onChange={handleFileSelect}
           className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar"
           disabled={uploading}
         />
-        <label
-          htmlFor="file-upload"
-          className="cursor-pointer text-blue-600 hover:text-blue-700"
-        >
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            stroke="currentColor"
-            fill="none"
-            viewBox="0 0 48 48"
-          >
-            <path
-              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="mt-2 block text-sm font-medium">
+        
+        <div className="text-center">
+          <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3
+                        group-hover:scale-110 transition-transform">
+            <Upload className="w-6 h-6 text-orange-600" strokeWidth={2} />
+          </div>
+          <p className="text-sm font-semibold text-neutral-900 mb-1">
             Cliquez pour sélectionner des fichiers
-          </span>
-          <span className="mt-1 block text-xs text-gray-500">
+          </p>
+          <p className="text-xs text-neutral-500">
             ou glissez-déposez (max 10 MB par fichier)
-          </span>
-        </label>
-      </div>
-
-      {/* Affichage des erreurs */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
+          </p>
         </div>
-      )}
+      </div>
 
       {/* Liste des fichiers sélectionnés */}
       {selectedFiles.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm text-gray-700">
-            Fichiers sélectionnés ({selectedFiles.length})
-          </h4>
-          {selectedFiles.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between bg-gray-50 p-3 rounded"
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-neutral-700">
+              {selectedFiles.length} fichier{selectedFiles.length > 1 ? 's' : ''} sélectionné{selectedFiles.length > 1 ? 's' : ''}
+            </p>
+            <button
+              onClick={() => setSelectedFiles([])}
+              className="text-xs text-neutral-500 hover:text-neutral-900 font-medium"
+              disabled={uploading}
             >
-              <div className="flex items-center space-x-3 flex-1">
-                <span className="text-sm text-gray-600">{file.name}</span>
-                <span className="text-xs text-gray-400">
-                  ({(file.size / 1024).toFixed(2)} KB)
-                </span>
-              </div>
+              Tout effacer
+            </button>
+          </div>
 
-              {/* Barre de progression */}
-              {uploading && uploadProgress[index] !== undefined && (
-                <div className="w-32 bg-gray-200 rounded-full h-2 mx-3">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${uploadProgress[index]}%` }}
-                  />
+          <div className="max-h-48 overflow-y-auto space-y-2">
+            {selectedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 px-3 py-2.5 bg-neutral-50 rounded-lg
+                         border border-neutral-200 hover:border-neutral-300
+                         transition-all group"
+              >
+                {/* Icône */}
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                              ${isImage(file.name) ? 'bg-blue-100' : 'bg-neutral-200'}`}>
+                  {isImage(file.name) ? (
+                    <Image className="w-4 h-4 text-blue-600" strokeWidth={2} />
+                  ) : (
+                    <File className="w-4 h-4 text-neutral-600" strokeWidth={2} />
+                  )}
                 </div>
-              )}
 
-              {/* Bouton supprimer */}
-              {!uploading && (
-                <button
-                  onClick={() => removeFile(index)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
+                {/* Infos */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-neutral-900 truncate">
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    {formatFileSize(file.size)}
+                  </p>
+                </div>
+
+                {/* Barre de progression */}
+                {uploading && uploadProgress[index] !== undefined ? (
+                  <div className="w-24 bg-neutral-200 rounded-full h-1.5">
+                    <div
+                      className="bg-orange-500 h-1.5 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress[index]}%` }}
                     />
-                  </svg>
-                </button>
-              )}
-            </div>
-          ))}
+                  </div>
+                ) : (
+                  /* Bouton supprimer */
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="p-1.5 hover:bg-red-50 rounded-lg transition-colors 
+                             opacity-0 group-hover:opacity-100"
+                  >
+                    <X className="w-4 h-4 text-red-500" strokeWidth={2} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
 
-          {/* Bouton Upload */}
-          <Button
+          {/* Bouton upload */}
+          <button
             onClick={handleUpload}
             disabled={uploading}
-            className="w-full"
+            className="w-full py-2.5 px-4 
+                     bg-gradient-to-r from-orange-500 to-orange-600 
+                     text-white font-semibold rounded-lg text-sm
+                     hover:shadow-lg hover:shadow-orange-500/30 
+                     transition-all duration-300
+                     disabled:opacity-50 disabled:cursor-not-allowed
+                     flex items-center justify-center gap-2"
           >
-            {uploading ? 'Upload en cours...' : `Uploader ${selectedFiles.length} fichier(s)`}
-          </Button>
+            {uploading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Upload en cours...</span>
+              </>
+            ) : (
+              <>
+                <Paperclip className="w-4 h-4" strokeWidth={2} />
+                <span>Ajouter {selectedFiles.length} fichier{selectedFiles.length > 1 ? 's' : ''}</span>
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>

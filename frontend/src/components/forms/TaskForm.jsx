@@ -1,21 +1,4 @@
-/**
- * ═══════════════════════════════════════════════════════════
- * TASKFORM - Formulaire de Création/Modification de Tâche
- * ═══════════════════════════════════════════════════════════
- * 
- * RESPONSABILITÉ : Capturer et valider les données d'une tâche
- * 
- * PRINCIPE : Controlled Form (Formulaire Contrôlé)
- * - React contrôle la valeur de chaque input
- * - Validation en temps réel
- * - Feedback utilisateur immédiat
- * 
- * RÉUTILISABILITÉ : Utilisé pour créer ET modifier
- * - Si initialData est null → Mode création
- * - Si initialData existe → Mode édition (pré-rempli)
- */
-
-
+// TaskForm.jsx - Formulaire de création/modification de tâche (Controlled Form)
 import { useState, useEffect } from 'react';
 import { Input } from '../common/Input';
 import { Button } from '../common/Button';
@@ -23,231 +6,87 @@ import { useForm } from '../../hooks/useForm';
 import { required, minLength } from '../../utils/validators';
 import { projectsAPI } from '../../api/projects';
 import AttachmentUploader from '../tasks/AttachmentUploader';
-import AttachmentList from '../tasks/AttachmentList';
+import toast from 'react-hot-toast';
 
-
-/**
- * ───────────────────────────────────────────────────────────
- * COMPOSANT TASKFORM
- * ───────────────────────────────────────────────────────────
- * 
- * @param {Function} onSubmit - Appelé quand le formulaire est valide
- * @param {Function} onCancel - Appelé quand l'utilisateur annule
- * @param {Object} initialData - Données initiales (pour édition)
- * @param {boolean} isLoading - État de chargement pendant la soumission
- * 
- * FLUX DE DONNÉES :
- * 
- *   User tape "Design UI" dans le champ titre
- *           ↓
- *   onChange déclenché
- *           ↓
- *   handleChange() appelé
- *           ↓
- *   setValues({ ...values, title: "Design UI" })
- *           ↓
- *   React re-rend le composant avec la nouvelle valeur
- *           ↓
- *   Le champ affiche "Design UI"
- */
 export const TaskForm = ({ 
   onSubmit, 
   onCancel, 
   initialData = null, 
   isLoading = false 
 }) => {
-
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * ÉTAT LOCAL : Liste des Projets
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : Chargement de données pour un select
-   * 
-   * On a besoin de la liste des projets pour que l'utilisateur
-   * puisse choisir à quel projet appartient la tâche.
-   * 
-   * PATTERN : Fetch on Mount (charger au montage)
-   */
+  // États locaux
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
-
-  // 🆕 AJOUT : État pour les membres du projet (pour assignation)
   const [projectMembers, setProjectMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-
-  // 🆕 AJOUT : État pour forcer le refresh des attachments
-  const [refreshAttachments, setRefreshAttachments] = useState(0);
-
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * VALEURS INITIALES DU FORMULAIRE
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : Valeurs par défaut
-   * 
-   * Si initialData existe (mode édition), on pré-remplit.
-   * Sinon, on met des valeurs vides (mode création).
-   */
+  // Valeurs par défaut
   const defaultValues = {
     title: '',
     description: '',
-    status: 'todo',          // Statut par défaut
-    priority: 'medium',      // Priorité par défaut
-    project: '',             // ID du projet
-    assigned_to: '',         // ID de l'utilisateur assigné
-    due_date: '',            // Date d'échéance
+    status: 'todo',
+    priority: 'medium',
+    project: '',
+    assigned_to: '',
+    due_date: '',
   };
 
+  // Merge avec initialData (extraction des IDs si nécessaire)
+  const formData = initialData 
+    ? {
+        ...defaultValues,
+        ...initialData,
+        project: initialData.project?.id || initialData.project || '',
+        assigned_to: initialData.assigned_to?.id || initialData.assigned_to || '',
+      }
+    : defaultValues;
 
-  /**
-   * Merge des valeurs par défaut avec initialData
-   * 
-   * PRINCIPE : Object Spread (...)
-   * 
-   * { ...defaultValues, ...initialData }
-   * 
-   * Étape 1 : Copie defaultValues
-   * Étape 2 : Écrase avec les valeurs de initialData si elles existent
-   * 
-   * Exemple :
-   * defaultValues = { title: '', status: 'todo' }
-   * initialData = { title: 'Design', status: 'done' }
-   * Résultat = { title: 'Design', status: 'done' }
-   */
-// 🔧 CORRECTION : Extrait les IDs des objets en mode édition
-const formData = initialData 
-  ? {
-      ...defaultValues,
-      ...initialData,
-      project: initialData.project?.id || initialData.project || '',         // Extrait l'ID
-      assigned_to: initialData.assigned_to?.id || initialData.assigned_to || '',  // Extrait l'ID
-    }
-  : defaultValues;
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * HOOK USEFORM (Gestion du formulaire)
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : Abstraction de la logique de formulaire
-   * 
-   * Ce hook custom gère :
-   * - L'état des valeurs (values)
-   * - L'état des erreurs (errors)
-   * - Les champs touchés (touched)
-   * - La validation
-   * 
-   * RÈGLES DE VALIDATION :
-   * - title : obligatoire + minimum 3 caractères
-   * - description : obligatoire + minimum 10 caractères
-   * - status, priority, due_date : obligatoires
-   */
+  // Hook de gestion du formulaire
   const { 
-    values,       // { title: "...", description: "...", ... }
-    errors,       // { title: "Ce champ est obligatoire", ... }
-    touched,      // { title: true, description: false, ... }
-    handleChange, // Fonction pour gérer onChange
-    handleBlur,   // Fonction pour gérer onBlur
-    validateAll   // Fonction pour tout valider
-  } = useForm(
-    formData,     // ← Valeurs initiales
-    {
-      // Règles de validation (tableau de fonctions)
-      title: [required, minLength(3)],
-      description: [required, minLength(10)],
-      status: [required],
-      priority: [required],
-      due_date: [required],
-    }
-  );
+    values,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll
+  } = useForm(formData, {
+    title: [required, minLength(3)],
+    description: [required, minLength(10)],
+    status: [required],
+    priority: [required],
+    due_date: [required],
+  });
 
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * EFFET : Charger les Projets au Montage
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : useEffect avec dépendances vides []
-   * 
-   * useEffect(() => { ... }, [])
-   *                           ↑
-   *                  [] = s'exécute UNE SEULE FOIS au montage
-   * 
-   * FLOW :
-   * 1. Composant monte (s'affiche pour la première fois)
-   * 2. useEffect s'exécute
-   * 3. loadProjects() fait un appel API
-   * 4. Django retourne les projets
-   * 5. setProjects(data) met à jour l'état
-   * 6. React re-rend le composant avec les projets
-   * 7. Le <select> affiche la liste
-   */
+  // Charger les projets au montage
   useEffect(() => {
     loadProjects();
-  }, []); // ← Dépendances vides = une seule fois
+  }, []);
 
-
-  /**
-   * 🆕 AJOUT : EFFET : Charger les Membres Quand le Projet Change
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : useEffect avec dépendance values.project
-   * 
-   * Quand values.project change :
-   * 1. Si un projet est sélectionné → charge ses membres
-   * 2. Si aucun projet → vide la liste des membres
-   */
+  // Charger les membres quand le projet change
   useEffect(() => {
     if (values.project) {
       loadProjectMembers(values.project);
     } else {
       setProjectMembers([]);
     }
-  }, [values.project]); // ← Se déclenche quand values.project change
+  }, [values.project]);
 
-
-  /**
-   * Charge la liste des projets depuis l'API
-   * 
-   * PRINCIPE : Async/Await dans useEffect
-   * 
-   * On ne peut pas faire useEffect(async () => { ... })
-   * directement. On crée une fonction async à l'intérieur.
-   */
+  // Chargement des projets
   const loadProjects = async () => {
     try {
       setLoadingProjects(true);
-      
-      // Appel API (on a déjà créé cette fonction)
       const data = await projectsAPI.getAll();
-      
-      // Gère le format paginé de Django REST Framework
       const projectsList = Array.isArray(data) ? data : (data.results || []);
-      
       setProjects(projectsList);
     } catch (error) {
       console.error('Erreur chargement projets:', error);
-      setProjects([]); // Tableau vide en cas d'erreur
+      setProjects([]);
     } finally {
       setLoadingProjects(false);
     }
   };
 
-
-  /**
-   * 🆕 AJOUT : Charger les Membres du Projet Sélectionné
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : Charger dynamiquement les membres quand un projet est sélectionné
-   * 
-   * Cette fonction est appelée quand :
-   * - L'utilisateur sélectionne un projet dans le select
-   * - Le formulaire s'ouvre en mode édition avec un projet déjà assigné
-   */
+  // Chargement des membres du projet
   const loadProjectMembers = async (projectId) => {
     if (!projectId) {
       setProjectMembers([]);
@@ -256,17 +95,12 @@ const formData = initialData
 
     try {
       setLoadingMembers(true);
-      
-      // Appel à l'API pour récupérer les membres du projet
       const data = await projectsAPI.getMembers(projectId);
-      
-      // Transforme les membres en format utilisable pour le select
       const membersList = data.map(member => ({
         id: member.user.id,
         name: member.user.full_name || member.user.username,
         email: member.user.email,
       }));
-      
       setProjectMembers(membersList);
     } catch (error) {
       console.error('Erreur chargement membres:', error);
@@ -276,97 +110,25 @@ const formData = initialData
     }
   };
 
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * CALLBACK : Après Upload Réussi
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : Forcer le refresh de AttachmentList
-   * 
-   * Quand un fichier est uploadé, on incrémente refreshAttachments
-   * AttachmentList reçoit cette valeur comme prop et se recharge
-   */
+  // Callback après upload réussi
   const handleUploadSuccess = () => {
-    setRefreshAttachments(prev => prev + 1);
+    toast.success('Fichiers ajoutés avec succès !');
   };
 
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * GESTIONNAIRE DE SOUMISSION
-   * ─────────────────────────────────────────────────────────
-   * 
-   * PRINCIPE : Validation avant soumission
-   * 
-   * FLOW :
-   * 1. User clique sur "Créer la tâche"
-   * 2. handleSubmit() est appelé
-   * 3. e.preventDefault() empêche le rechargement de la page
-   * 4. validateAll() vérifie tous les champs
-   * 5. Si invalide → return (affiche les erreurs)
-   * 6. Si valide → onSubmit(values) remonte au parent
-   */
+  // Soumission du formulaire
   const handleSubmit = (e) => {
-    // Empêche le comportement par défaut du formulaire
-    // (qui rechargerait la page)
     e.preventDefault();
-    
-    // Valide tous les champs
-    // validateAll() retourne true si tout est valide
     if (!validateAll()) {
       console.log('Formulaire invalide:', errors);
-      return; // Stop ici si invalide
+      return;
     }
-
-
-    // Formulaire valide → on soumet
-    // values contient toutes les données du formulaire
     onSubmit(values);
   };
 
-
-  /**
-   * ─────────────────────────────────────────────────────────
-   * RENDU JSX (Interface du Formulaire)
-   * ─────────────────────────────────────────────────────────
-   * 
-   * STRUCTURE :
-   * <form>
-   *   <Input title />
-   *   <textarea description />
-   *   <select status />
-   *   <select priority />
-   *   <select project />
-   *   <select assigned_to /> 🆕 AJOUT
-   *   <Input date />
-   *   <Buttons />
-   * </form>
-   */
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       
-      {/* ───────────────────────────────────────────────── */}
-      {/* CHAMP : Titre de la Tâche                         */}
-      {/* ───────────────────────────────────────────────── */}
-      {/* 
-        PRINCIPE : Composant Input Réutilisable
-        
-        On a créé un composant Input qui gère :
-        - Le label
-        - L'input
-        - Le message d'erreur
-        - Les styles
-        
-        Props passées :
-        - label : Texte affiché au-dessus
-        - name : Nom du champ (doit correspondre à la clé dans values)
-        - value : Valeur actuelle (depuis values)
-        - onChange : Fonction appelée quand l'user tape
-        - onBlur : Fonction appelée quand l'user quitte le champ
-        - error : Message d'erreur (depuis errors)
-        - touched : Si l'user a touché ce champ (depuis touched)
-      */}
+      {/* Titre */}
       <Input
         label="Titre de la Tâche"
         name="title"
@@ -379,19 +141,7 @@ const formData = initialData
         placeholder="Ex: Créer les maquettes UI"
       />
 
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* CHAMP : Description                               */}
-      {/* ───────────────────────────────────────────────── */}
-      {/*
-        PRINCIPE : Textarea vs Input
-        
-        textarea = champ multi-lignes
-        Input = champ une ligne
-        
-        On n'utilise pas le composant Input ici car c'est un textarea.
-        On doit gérer manuellement les classes et les erreurs.
-      */}
+      {/* Description */}
       <div>
         <label htmlFor="description" className="label label-required">
           Description
@@ -404,34 +154,15 @@ const formData = initialData
           onBlur={handleBlur}
           rows={4}
           placeholder="Décrivez la tâche en détail..."
-          className={`
-            input-field
-            ${touched.description && errors.description ? 'input-error' : ''}
-          `}
+          className={`input-field ${touched.description && errors.description ? 'input-error' : ''}`}
         />
-        {/* Affiche l'erreur seulement si le champ a été touché ET qu'il y a une erreur */}
         {touched.description && errors.description && (
           <p className="error-message">{errors.description}</p>
         )}
       </div>
 
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* LIGNE : Statut + Priorité (2 colonnes)            */}
-      {/* ───────────────────────────────────────────────── */}
-      {/*
-        PRINCIPE : Grid Layout avec Tailwind
-        
-        grid grid-cols-1 md:grid-cols-2 gap-4
-        
-        - grid : Active le système de grille CSS
-        - grid-cols-1 : 1 colonne sur mobile
-        - md:grid-cols-2 : 2 colonnes sur écrans moyens (≥768px)
-        - gap-4 : Espace de 1rem entre les colonnes
-      */}
+      {/* Statut + Priorité */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* SELECT : Statut */}
         <div>
           <label htmlFor="status" className="label label-required">
             Statut
@@ -444,12 +175,6 @@ const formData = initialData
             onBlur={handleBlur}
             className="input-field"
           >
-            {/*
-              PRINCIPE : Options d'un select
-              
-              value = valeur technique (envoyée au backend)
-              Texte = valeur affichée à l'utilisateur
-            */}
             <option value="todo">À faire</option>
             <option value="in_progress">En cours</option>
             <option value="done">Terminé</option>
@@ -460,8 +185,6 @@ const formData = initialData
           )}
         </div>
 
-
-        {/* SELECT : Priorité */}
         <div>
           <label htmlFor="priority" className="label label-required">
             Priorité
@@ -484,22 +207,7 @@ const formData = initialData
         </div>
       </div>
 
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* SELECT : Projet                                    */}
-      {/* ───────────────────────────────────────────────── */}
-      {/*
-        PRINCIPE : Select Dynamique (chargé depuis l'API)
-        
-        Les options ne sont pas codées en dur, elles viennent
-        de la base de données via l'API.
-        
-        FLOW :
-        1. useEffect charge les projets
-        2. setProjects(data) met à jour l'état
-        3. React re-rend avec projects rempli
-        4. .map() génère les <option>
-      */}
+      {/* Projet */}
       <div>
         <label htmlFor="project" className="label">
           Projet (optionnel)
@@ -511,21 +219,9 @@ const formData = initialData
           onChange={handleChange}
           onBlur={handleBlur}
           className="input-field"
-          disabled={loadingProjects} // Désactivé pendant le chargement
+          disabled={loadingProjects}
         >
           <option value="">Aucun projet</option>
-          
-          {/*
-            PRINCIPE : .map() pour générer des éléments React
-            
-            projects.map((proj) => <option key={proj.id} .../>)
-            
-            Pour chaque projet, on crée un <option>
-            
-            IMPORTANT : key={proj.id}
-            React a besoin d'une clé unique pour identifier
-            chaque élément et optimiser le rendu.
-          */}
           {projects.map((proj) => (
             <option key={proj.id} value={proj.id}>
               {proj.name}
@@ -534,21 +230,7 @@ const formData = initialData
         </select>
       </div>
 
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* 🆕 AJOUT : SELECT : Assigner à                     */}
-      {/* ───────────────────────────────────────────────── */}
-      {/*
-        PRINCIPE : Select Conditionnel
-        
-        Ce select n'apparaît QUE si un projet est sélectionné.
-        On ne peut assigner une tâche qu'aux membres du projet.
-        
-        FLOW :
-        1. User sélectionne un projet
-        2. useEffect charge les membres du projet
-        3. Ce select devient disponible avec la liste des membres
-      */}
+      {/* Assigner à (conditionnel) */}
       {values.project && (
         <div>
           <label htmlFor="assigned_to" className="label">
@@ -564,14 +246,12 @@ const formData = initialData
             disabled={loadingMembers}
           >
             <option value="">Non assigné</option>
-            
             {projectMembers.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.name} ({member.email})
               </option>
             ))}
           </select>
-          
           {loadingMembers && (
             <p className="text-sm text-neutral-500 mt-1">
               Chargement des membres...
@@ -580,18 +260,7 @@ const formData = initialData
         </div>
       )}
 
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* INPUT : Date d'Échéance                           */}
-      {/* ───────────────────────────────────────────────── */}
-      {/*
-        PRINCIPE : Input de type date
-        
-        type="date" affiche un date picker natif du navigateur
-        
-        Format de la valeur : "YYYY-MM-DD" (ISO 8601)
-        Ex: "2025-11-20"
-      */}
+      {/* Date d'échéance */}
       <Input
         label="Date d'Échéance"
         name="due_date"
@@ -604,58 +273,23 @@ const formData = initialData
         required
       />
 
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* SECTION : PIÈCES JOINTES (Seulement en mode édition) */}
-      {/* ───────────────────────────────────────────────── */}
-      {/*
-        PRINCIPE : Conditional Rendering (Rendu Conditionnel)
-        
-        On affiche les pièces jointes SEULEMENT si :
-        - initialData existe (mode édition)
-        - ET initialData.id existe (tâche déjà créée)
-        
-        Pourquoi ?
-        - On ne peut pas uploader de fichiers vers une tâche
-          qui n'existe pas encore en base de données
-        - L'API a besoin du taskId pour lier les fichiers
-        
-        FLOW :
-        1. User crée une tâche → formulaire en mode création
-        2. Pas d'initialData.id → section cachée
-        3. User clique "Créer" → tâche créée en DB
-        4. User ouvre la tâche → formulaire en mode édition
-        5. initialData.id existe → section visible
-      */}
+      {/* Pièces jointes (mode édition uniquement) */}
       {initialData && initialData.id && (
-        <div className="border-t border-gray-200 pt-6 mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            📎 Pièces jointes
+        <div className="border-t border-neutral-200 pt-6 mt-6">
+          <h3 className="text-lg font-semibold text-neutral-900 mb-4">
+            📎 Ajouter des pièces jointes
           </h3>
-          
-          {/* Uploader */}
-          <div className="mb-6">
-            <AttachmentUploader
-              taskId={initialData.id}
-              onUploadSuccess={handleUploadSuccess}
-            />
-          </div>
-          
-          {/* Liste des fichiers */}
-          <div>
-            <AttachmentList
-              taskId={initialData.id}
-              refresh={refreshAttachments}
-            />
-          </div>
+          <AttachmentUploader
+            taskId={initialData.id}
+            onUploadSuccess={handleUploadSuccess}
+          />
+          <p className="mt-3 text-xs text-neutral-500">
+            💡 Les fichiers uploadés seront visibles dans la page de détail de la tâche
+          </p>
         </div>
       )}
 
-
-
-      {/* ───────────────────────────────────────────────── */}
-      {/* BOUTONS : Soumettre + Annuler                     */}
-      {/* ───────────────────────────────────────────────── */}
+      {/* Boutons */}
       <div className="flex items-center gap-3 pt-4">
         <Button
           type="submit"
@@ -666,7 +300,6 @@ const formData = initialData
         >
           {initialData ? 'Mettre à Jour' : 'Créer la Tâche'}
         </Button>
-        
         <Button
           type="button"
           variant="secondary"
@@ -680,46 +313,3 @@ const formData = initialData
     </form>
   );
 };
-
-
-
-/**
- * ═══════════════════════════════════════════════════════════
- * CONCEPTS REACT UTILISÉS
- * ═══════════════════════════════════════════════════════════
- * 
- * 1. CONTROLLED COMPONENTS
- *    - value={values.title}
- *    - onChange={handleChange}
- *    - React contrôle la valeur
- * 
- * 2. useEffect
- *    - Charger les projets au montage
- *    - Dépendances vides [] = une seule fois
- *    - 🆕 Charger les membres quand le projet change
- * 
- * 3. CONDITIONAL RENDERING
- *    - {touched.title && errors.title && <p>...</p>}
- *    - Affiche l'erreur seulement si conditions vraies
- *    - 🆕 {values.project && <select>...</select>}
- * 
- * 4. ARRAY.MAP()
- *    - projects.map(p => <option>...)
- *    - Génère des éléments React à partir d'un tableau
- * 
- * 5. EVENT.PREVENTDEFAULT()
- *    - e.preventDefault()
- *    - Empêche le rechargement de la page
- * 
- * 6. SPREAD OPERATOR
- *    - { ...defaultValues, ...initialData }
- *    - Fusionne deux objets
- * 
- * 7. TERNARY OPERATOR
- *    - condition ? valeurSiVrai : valeurSiFaux
- *    - Pour les conditions inline
- * 
- * 8. DISABLED STATE
- *    - disabled={isLoading}
- *    - Désactive les interactions pendant le chargement
- */

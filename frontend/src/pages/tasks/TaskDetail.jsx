@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Edit, Trash2, Calendar, User, 
-  FolderOpen, Flag, Clock,Paperclip
+  FolderOpen, Flag, Clock, Paperclip,
+  MoreVertical, ChevronDown, CheckCircle2,
+  FileText, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 
 // Imports composants
 import { Layout } from '../../components/layout/Layout';
@@ -17,39 +18,48 @@ import { TaskForm } from '../../components/forms/TaskForm';
 import { CommentSection } from '../../components/tasks/CommentSection';
 import AttachmentList from '../../components/tasks/AttachmentList';
 
-
 // Import API
 import { tasksAPI } from '../../api/tasks';
 
-// ✅ CHANGEMENT 1 : Import des permissions et du contexte Auth
+// Import des permissions et du contexte Auth
 import { canModifyTask, canDeleteTask, canChangeTaskStatus } from '../../utils/permissions';
 import { useAuth } from '../../context/AuthContext';
 
-
 export const TaskDetail = () => {
-  // Récupère l'ID depuis l'URL (ex: /tasks/15)
   const { id } = useParams();
   const navigate = useNavigate();
-  
-  // ✅ CHANGEMENT 2 : Récupère l'utilisateur connecté
   const { user } = useAuth();
 
-  // États locaux
+  // États
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); 
-  const [updating, setUpdating] = useState(false); // 🆕 AJOUTÉ
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  
 
+  // Refs
+  const actionsMenuRef = useRef(null);
 
-  // Chargement de la tâche au montage du composant
+  // Chargement
   useEffect(() => {
     loadTask();
   }, [id]);
 
+  // Fermer menu au clic extérieur
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
+        setIsActionsMenuOpen(false);
+      }
+    };
 
-  // Fonction de chargement des données
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const loadTask = async () => {
     try {
       setLoading(true);
@@ -64,14 +74,12 @@ export const TaskDetail = () => {
     }
   };
 
-
-  // 🆕 FONCTION AJOUTÉE : Mise à jour de la tâche
   const handleUpdate = async (values) => {
     try {
       setUpdating(true);
       await tasksAPI.update(id, values);
       toast.success('Tâche mise à jour');
-      await loadTask(); // Recharge les données
+      await loadTask();
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur mise à jour:', error);
@@ -85,8 +93,6 @@ export const TaskDetail = () => {
     }
   };
 
-
-  // Suppression de la tâche
   const handleDelete = async () => {
     try {
       await tasksAPI.delete(id);
@@ -102,13 +108,10 @@ export const TaskDetail = () => {
     }
   };
 
-    // Ajoute après handleDelete() (ligne 115 environ)
-
-  // ✅ NOUVELLE FONCTION : Changer le statut
   const handleChangeStatus = async (newStatus) => {
     try {
       setUpdating(true);
-      await tasksAPI.changeStatus(id, newStatus);  // ✅ Bon endpoint
+      await tasksAPI.changeStatus(id, newStatus);
       toast.success('Statut mis à jour');
       await loadTask();
       setIsStatusModalOpen(false);
@@ -124,274 +127,422 @@ export const TaskDetail = () => {
     }
   };
 
-
-
-  // Formatage de date
   const formatDate = (dateString) => {
     if (!dateString) return 'Non définie';
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
     });
   };
 
-
-  // Badge de statut avec couleurs
-  const getStatusBadge = (status) => {
-    const styles = {
-      todo: 'bg-neutral-100 text-neutral-700',
-      in_progress: 'bg-primary-100 text-primary-700',
-      done: 'bg-green-100 text-green-700',
-      blocked: 'bg-red-100 text-red-700',
+  const getStatusConfig = (status) => {
+    const configs = {
+      todo: {
+        color: 'bg-neutral-50 text-neutral-700',
+        label: 'À faire',
+        accent: 'bg-neutral-500',
+      },
+      in_progress: {
+        color: 'bg-blue-50 text-blue-700',
+        label: 'En cours',
+        accent: 'bg-blue-500',
+      },
+      in_review: {
+        color: 'bg-amber-50 text-amber-700',
+        label: 'En révision',
+        accent: 'bg-amber-500',
+      },
+      done: {
+        color: 'bg-green-50 text-green-700',
+        label: 'Terminé',
+        accent: 'bg-green-500',
+      },
     };
-    const labels = {
-      todo: 'À faire',
-      in_progress: 'En cours',
-      done: 'Terminé',
-      blocked: 'Bloqué',
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[status]}`}>
-        {labels[status]}
-      </span>
-    );
+    return configs[status] || configs.todo;
   };
 
-
-  // Badge de priorité avec couleurs
-  const getPriorityBadge = (priority) => {
-    const styles = {
-      low: 'bg-green-100 text-green-700',
-      medium: 'bg-amber-100 text-amber-700',
-      high: 'bg-red-100 text-red-700',
+  const getPriorityConfig = (priority) => {
+    const configs = {
+      low: {
+        color: 'bg-green-50 text-green-700',
+        label: 'Faible',
+        accent: 'bg-green-500',
+      },
+      medium: {
+        color: 'bg-amber-50 text-amber-700',
+        label: 'Moyenne',
+        accent: 'bg-amber-500',
+      },
+      high: {
+        color: 'bg-red-50 text-red-700',
+        label: 'Urgente',
+        accent: 'bg-red-500',
+      },
     };
-    const labels = { low: 'Faible', medium: 'Moyen', high: 'Urgent' };
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[priority]}`}>
-        <Flag className="w-3 h-3 inline mr-1" />
-        {labels[priority]}
-      </span>
-    );
+    return configs[priority] || configs.medium;
   };
 
-
-  // Affichage pendant chargement
+  // Loading
   if (loading) {
     return (
       <Layout>
-        <LoadingSpinner />
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-neutral-600 text-sm font-medium">Chargement de la tâche...</p>
+        </div>
       </Layout>
     );
   }
 
-
-  // Si tâche introuvable
   if (!task) {
     return (
       <Layout>
-        <div className="text-center py-12">
-          <p className="text-neutral-600">Tâche introuvable</p>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8 text-neutral-400" />
+          </div>
+          <p className="text-neutral-600 font-medium">Tâche introuvable</p>
         </div>
       </Layout>
     );
   }
 
+  const statusConfig = getStatusConfig(task.status);
+  const priorityConfig = getPriorityConfig(task.priority);
 
-  // Rendu principal de la page
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         
-        {/* ═══ HEADER : Bouton retour + Actions ═══ */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)} // Retour à la page précédente
-            className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
-          </button>
+        {/* 🧭 HEADER STICKY AVEC BREADCRUMBS */}
+        <div className="sticky top-0 z-40 -mx-6 px-6 py-4 
+                      bg-white/70 backdrop-blur-xl 
+                      border-b border-neutral-200/50 
+                      rounded-b-2xl shadow-sm mb-6">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            
+            {/* Breadcrumbs */}
+            <nav className="flex items-center gap-2 text-sm">
+              <button
+                onClick={() => navigate('/tasks')}
+                className="text-neutral-600 hover:text-neutral-900 font-medium
+                         transition-colors duration-200"
+              >
+                Tâches
+              </button>
+              <span className="text-neutral-400 select-none">/</span>
+              <span className="text-neutral-900 font-semibold truncate max-w-[300px] md:max-w-[500px]">
+                {task?.title}
+              </span>
+            </nav>
 
+            {/* Menu Actions (3 points) */}
+            <div className="relative" ref={actionsMenuRef}>
+              <button
+                onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                className="p-2.5 hover:bg-white/60 rounded-xl transition-all duration-200
+                         group relative"
+                aria-label="Actions de la tâche"
+              >
+                <MoreVertical className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900" strokeWidth={2.5} />
+              </button>
 
-  {/* ✅ CORRIGÉ : Boutons d'action selon les permissions */}
-  <div className="flex gap-2">
-    {/* Bouton "Modifier" pour Manager+ */}
-    {canModifyTask(user, task) && (
-      <Button
-        variant="outline"
-        onClick={() => setIsEditModalOpen(true)}
-        icon={<Edit className="w-4 h-4" />}
-      >
-        Modifier
-      </Button>
-    )}
-    
-    {/* ✅ NOUVEAU : Bouton "Changer le statut" pour assigné (si pas Manager+) */}
-    {canChangeTaskStatus(user, task) && !canModifyTask(user, task) && (
-      <Button
-        variant="primary"
-        onClick={() => setIsStatusModalOpen(true)}
-        icon={<Flag className="w-4 h-4" />}
-      >
-        Changer le statut
-      </Button>
-    )}
-    
-    {/* Bouton "Supprimer" pour Manager+ */}
-    {canDeleteTask(user, task) && (
-      <Button
-        variant="danger"
-        onClick={() => setIsDeleteModalOpen(true)}
-        icon={<Trash2 className="w-4 h-4" />}
-      >
-        Supprimer
-      </Button>
-    )}
-  </div>
+              {/* Dropdown Actions */}
+              {isActionsMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 
+                              bg-white/95 backdrop-blur-xl
+                              rounded-2xl border border-neutral-200/50
+                              shadow-xl shadow-neutral-900/10
+                              z-50 overflow-hidden py-2
+                              animate-in fade-in slide-in-from-top-2 duration-200">
+                  
+                  {/* Modifier */}
+                  {canModifyTask(user, task) && (
+                    <button
+                      onClick={() => {
+                        setIsEditModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3
+                               hover:bg-neutral-50 transition-all duration-200
+                               group"
+                    >
+                      <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
+                                    transition-colors flex-shrink-0" strokeWidth={2} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
+                        <div className="text-xs text-neutral-500">Éditer la tâche</div>
+                      </div>
+                    </button>
+                  )}
 
+                  {/* Changer le statut */}
+                  {canChangeTaskStatus(user, task) && (
+                    <button
+                      onClick={() => {
+                        setIsStatusModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3
+                               hover:bg-neutral-50 transition-all duration-200
+                               group"
+                    >
+                      <Flag className="w-5 h-5 text-neutral-400 group-hover:text-blue-600 
+                                    transition-colors flex-shrink-0" strokeWidth={2} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-neutral-900 text-sm">Changer le statut</div>
+                        <div className="text-xs text-neutral-500">Mettre à jour l'avancement</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Séparateur */}
+                  <div className="h-px bg-neutral-200 my-2 mx-4" />
+
+                  {/* Supprimer */}
+                  {canDeleteTask(user, task) && (
+                    <button
+                      onClick={() => {
+                        setIsDeleteModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3
+                               hover:bg-red-50/50 transition-all duration-200
+                               group"
+                    >
+                      <Trash2 className="w-5 h-5 text-neutral-400 group-hover:text-red-600 
+                                      transition-colors flex-shrink-0" strokeWidth={2} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-neutral-900 group-hover:text-red-700 
+                                     text-sm transition-colors">Supprimer</div>
+                        <div className="text-xs text-neutral-500 group-hover:text-red-500 
+                                     transition-colors">Action irréversible</div>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-
-        {/* ═══ CONTENU PRINCIPAL ═══ */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6 space-y-6">
+        {/* 📄 CARTE INFO TÂCHE */}
+        <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
           
-          {/* Titre + Badges */}
-          <div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-3 break-words">
-              {task.title}
-            </h1>
-            <div className="flex gap-2">
-              {getStatusBadge(task.status)}
-              {getPriorityBadge(task.priority)}
+          <div className="flex items-start gap-6 mb-6">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              {/* Icône tâche */}
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                            flex items-center justify-center shadow-md shadow-neutral-900/20 flex-shrink-0
+                            group-hover:scale-110 transition-transform duration-300">
+                <CheckCircle2 className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+
+              {/* Titre + Badges */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-4xl font-bold text-neutral-900 mb-3 break-words">
+                  {task.title}
+                </h1>
+
+                {/* Badges Status + Priorité */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
+                                 text-sm font-semibold rounded-lg ${statusConfig.color}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.accent}`} />
+                    {statusConfig.label}
+                  </span>
+
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
+                                 text-sm font-semibold rounded-lg ${priorityConfig.color}`}>
+                    <Flag className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    {priorityConfig.label}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-
           {/* Description */}
-          <div>
-            <h2 className="text-sm font-semibold text-neutral-700 mb-2">Description</h2>
-            <p className="text-neutral-600 whitespace-pre-wrap">
-              {task.description || 'Aucune description'}
+          <div className="mb-6">
+            <h2 className="text-sm font-semibold text-neutral-500 mb-2">Description</h2>
+            <p className="text-neutral-800 text-base leading-relaxed whitespace-pre-wrap">
+              {task.description || 'Aucune description disponible'}
             </p>
           </div>
 
-
-          {/* 🆕 SECTION PIÈCES JOINTES À AJOUTER ICI */}
-          <div className="pt-4 border-t">
-            <div className="flex items-center gap-2 mb-3">
-              <Paperclip className="w-5 h-5 text-neutral-500" />
-              <h2 className="text-sm font-semibold text-neutral-700">
-                Pièces jointes
-              </h2>
-            </div>
-            <AttachmentList taskId={id} />
-          </div>
-
-          {/* Métadonnées (Projet, Assigné, Dates) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+          {/* Grid infos : Projet, Assigné, Dates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Projet */}
-            <div className="flex items-center gap-3">
-              <FolderOpen className="w-5 h-5 text-neutral-500" />
-              <div>
-                <p className="text-sm text-neutral-500">Projet</p>
-                <p className="font-medium text-neutral-900">
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                          hover:border-orange-200 hover:shadow-sm transition-all duration-300 group">
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center
+                            group-hover:scale-110 transition-transform duration-300">
+                <FolderOpen className="w-5 h-5 text-orange-600" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-neutral-500 font-medium">Projet</div>
+                <div className="text-sm font-bold text-neutral-900">
                   {task.project?.name || 'Non assigné'}
-                </p>
+                </div>
               </div>
             </div>
 
-
-{/* Assigné à */}
-{task.assigned_to ? (
-  <div className="flex items-center gap-3">
-    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold">
-      {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
-    </div>
-    <div>
-      <p className="text-sm text-neutral-500">Assigné à</p>
-      <p className="font-medium text-neutral-900">
-        {task.assigned_to.full_name || task.assigned_to.username}
-      </p>
-      <p className="text-xs text-neutral-500">
-        {task.assigned_to.email}
-      </p>
-    </div>
-  </div>
-) : (
-  <div className="flex items-center gap-3">
-    <User className="w-5 h-5 text-neutral-400" />
-    <div>
-      <p className="text-sm text-neutral-500">Assigné à</p>
-      <p className="font-medium text-neutral-400 italic">
-        Non assigné
-      </p>
-    </div>
-  </div>
-)}
-
-
+            {/* Assigné à */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                          hover:border-blue-200 hover:shadow-sm transition-all duration-300 group">
+              {task.assigned_to ? (
+                <>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600
+                               flex items-center justify-center text-white text-sm font-bold 
+                               border-2 border-white shadow-sm
+                               group-hover:scale-110 transition-transform duration-300">
+                    {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-neutral-500 font-medium">Assigné à</div>
+                    <div className="text-sm font-bold text-neutral-900 truncate">
+                      {task.assigned_to.full_name || task.assigned_to.username}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center
+                               group-hover:scale-110 transition-transform duration-300">
+                    <User className="w-5 h-5 text-neutral-400" strokeWidth={2.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-neutral-500 font-medium">Assigné à</div>
+                    <div className="text-sm font-bold text-neutral-400 italic">Non assigné</div>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Date de début */}
             {task.start_date && (
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-neutral-500" />
-                <div>
-                  <p className="text-sm text-neutral-500">Date de début</p>
-                  <p className="font-medium text-neutral-900">
+              <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                            hover:border-green-200 hover:shadow-sm transition-all duration-300 group">
+                <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center
+                              group-hover:scale-110 transition-transform duration-300">
+                  <Calendar className="w-5 h-5 text-green-600" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-neutral-500 font-medium">Début</div>
+                  <div className="text-sm font-bold text-neutral-900">
                     {formatDate(task.start_date)}
-                  </p>
+                  </div>
                 </div>
               </div>
             )}
 
-
-            {/* Date limite */}
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-neutral-500" />
-              <div>
-                <p className="text-sm text-neutral-500">Date limite</p>
-                <p className="font-medium text-neutral-900">
+            {/* Date limite avec alerte */}
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group
+                           ${(() => {
+                             if (!task.due_date) return 'bg-white border-neutral-200 hover:border-red-200';
+                             const dueDate = new Date(task.due_date);
+                             const now = new Date();
+                             const diffDays = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+                             
+                             if (diffDays < 0 && task.status !== 'done') return 'bg-red-50 border-red-200 hover:border-red-300';
+                             if (diffDays <= 3 && task.status !== 'done') return 'bg-amber-50 border-amber-200 hover:border-amber-300';
+                             return 'bg-white border-neutral-200 hover:border-red-200';
+                           })()}`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center
+                             group-hover:scale-110 transition-transform duration-300
+                             ${(() => {
+                               if (!task.due_date) return 'bg-red-50';
+                               const dueDate = new Date(task.due_date);
+                               const now = new Date();
+                               const diffDays = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+                               
+                               if (diffDays < 0 && task.status !== 'done') return 'bg-red-100';
+                               if (diffDays <= 3 && task.status !== 'done') return 'bg-amber-100';
+                               return 'bg-red-50';
+                             })()}`}>
+                <Clock className={`w-5 h-5 ${(() => {
+                  if (!task.due_date) return 'text-red-600';
+                  const dueDate = new Date(task.due_date);
+                  const now = new Date();
+                  const diffDays = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+                  
+                  if (diffDays < 0 && task.status !== 'done') return 'text-red-700';
+                  if (diffDays <= 3 && task.status !== 'done') return 'text-amber-700';
+                  return 'text-red-600';
+                })()}`} strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-neutral-500 font-medium">Échéance</div>
+                <div className="text-sm font-bold text-neutral-900">
                   {formatDate(task.due_date)}
-                </p>
+                </div>
+                {task.due_date && task.status !== 'done' && (
+                  <div className={`text-xs mt-0.5 font-medium ${(() => {
+                    const dueDate = new Date(task.due_date);
+                    const now = new Date();
+                    const diffDays = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) return 'text-red-600';
+                    if (diffDays <= 3) return 'text-amber-600';
+                    return 'text-neutral-400';
+                  })()}`}>
+                    {(() => {
+                      const dueDate = new Date(task.due_date);
+                      const now = new Date();
+                      const diffDays = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+                      
+                      if (diffDays < 0) return `⚠️ En retard de ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
+                      if (diffDays === 0) return "⏰ Aujourd'hui !";
+                      if (diffDays <= 3) return `⚡ Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                      return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                    })()}
+                  </div>
+                )}
               </div>
             </div>
-
-
           </div>
 
-
-          {/* Dates de création/modification */}
-          <div className="pt-4 border-t text-xs text-neutral-500">
+          {/* Métadonnées création/modification */}
+          <div className="mt-6 pt-6 border-t border-neutral-200 text-xs text-neutral-500 space-y-1">
             <p>Tâche créée le {formatDate(task.created_at)}</p>
-            {task.updated_at && (
+            {task.updated_at && task.updated_at !== task.created_at && (
               <p>Dernière modification le {formatDate(task.updated_at)}</p>
             )}
           </div>
-
-
         </div>
 
+        {/* 📎 PIÈCES JOINTES */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                          flex items-center justify-center shadow-md shadow-neutral-900/20">
+              <Paperclip className="w-5 h-5 text-white" strokeWidth={2.5} />
+            </div>
+            <h2 className="text-2xl font-bold text-neutral-900">Pièces jointes</h2>
+          </div>
+          
+          <AttachmentList taskId={id} />
+        </div>
 
-        {/* ═══ MODALS ═══ */}
-        
-        {/* 🔧 Modal d'édition CORRIGÉ */}
+        {/* 💬 COMMENTAIRES */}
+        <CommentSection taskId={id} />
+
+        {/* MODALS */}
         <Modal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           title="Modifier la tâche"
         >
           <TaskForm
-            initialData={task}           // ✅ CHANGÉ : task → initialData
-            onSubmit={handleUpdate}      // ✅ AJOUTÉ
-            onCancel={() => setIsEditModalOpen(false)} // ✅ AJOUTÉ
-            isLoading={updating}         // ✅ CHANGÉ
+            initialData={task}
+            onSubmit={handleUpdate}
+            onCancel={() => setIsEditModalOpen(false)}
+            isLoading={updating}
           />
         </Modal>
 
-
-        {/* Modal de confirmation suppression */}
         <ConfirmModal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
@@ -402,7 +553,6 @@ export const TaskDetail = () => {
           variant="danger"
         />
 
-        {/* ✅ NOUVELLE MODAL : Changer le statut */}
         <Modal
           isOpen={isStatusModalOpen}
           onClose={() => setIsStatusModalOpen(false)}
@@ -432,12 +582,12 @@ export const TaskDetail = () => {
                 disabled={updating}
                 className={`p-4 border-2 rounded-lg text-left transition-all ${
                   task.status === 'in_progress'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-neutral-200 hover:border-primary-300'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-neutral-200 hover:border-blue-300'
                 }`}
               >
-                <div className="font-semibold text-primary-900">En cours</div>
-                <div className="text-xs text-primary-600 mt-1">En cours de réalisation</div>
+                <div className="font-semibold text-blue-900">En cours</div>
+                <div className="text-xs text-blue-600 mt-1">En cours de réalisation</div>
               </button>
               
               <button
@@ -474,16 +624,9 @@ export const TaskDetail = () => {
             )}
           </div>
         </Modal>
-
-
-        {/* Section commentaires - Style réseaux sociaux */}
-        <CommentSection taskId={id} />
-
-
       </div>
     </Layout>
   );
 };
-
 
 export default TaskDetail;

@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   Folder,
   MoreVertical, // 🆕 Icône menu 3 points
-  Plus
+  Plus,
+  Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -56,9 +57,15 @@ export const ProjectDetail = () => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false); // 🆕 Menu contextuel
   const [showAllTasks, setShowAllTasks] = useState(false); // 🆕 AJOUT
 
+
+    // 🆕 AJOUT : États pour le dropdown de statut
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
   // Refs
   const exportDropdownRef = useRef(null);
   const actionsMenuRef = useRef(null); // 🆕
+  const statusDropdownRef = useRef(null);
 
   // Chargement
   useEffect(() => {
@@ -66,6 +73,21 @@ export const ProjectDetail = () => {
     loadMembers();
     loadAvailableUsers();
   }, [id]);
+
+  // useEffect existants...
+
+// 🆕 AJOUT : Fermeture du dropdown statut au clic extérieur
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
+      setIsStatusDropdownOpen(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
 
   // Fermer dropdowns au clic extérieur
   useEffect(() => {
@@ -163,6 +185,40 @@ export const ProjectDetail = () => {
       toast.error('Impossible de modifier le rôle');
     }
   };
+
+  /**
+ * Change le statut du projet rapidement
+ */
+const handleStatusChange = async (newStatus) => {
+  if (newStatus === project.status) {
+    setIsStatusDropdownOpen(false);
+    return;
+  }
+
+  try {
+    setIsUpdatingStatus(true);
+    
+    await projectsAPI.update(project.id, {
+      ...project,
+      status: newStatus
+    });
+    
+    toast.success('Statut mis à jour avec succès !');
+    
+    // Recharge le projet
+    const updatedProject = await projectsAPI.getById(project.id);
+    setProject(updatedProject);
+    
+    setIsStatusDropdownOpen(false);
+    
+  } catch (error) {
+    console.error('❌ Erreur changement statut:', error);
+    toast.error('Impossible de changer le statut');
+  } finally {
+    setIsUpdatingStatus(false);
+  }
+};
+
 
   const handleExport = async (format) => {
     try {
@@ -534,67 +590,240 @@ export const ProjectDetail = () => {
 </div>
 
 
+{/* 📄 CARTE INFO PROJET - VERSION MINIMALISTE */}
+<div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
+  
+  {/* Header avec bouton statut minimaliste */}
+  <div className="flex items-start justify-between gap-6 mb-6">
+    <div className="flex items-start gap-4 flex-1 min-w-0">
+      {/* Icône projet */}
+      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                    flex items-center justify-center shadow-md shadow-neutral-900/20 flex-shrink-0
+                    group-hover:scale-110 transition-transform duration-300">
+        <Folder className="w-6 h-6 text-white" strokeWidth={2.5} />
+      </div>
 
+      {/* Titre + Status */}
+      <div className="flex-1 min-w-0">
+        <h1 className="text-4xl font-bold text-neutral-900 mb-3 break-words">
+          {project.name}
+        </h1>
 
-        {/* 📄 CARTE INFO PROJET */}
-        <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
-          <div className="flex items-start gap-6 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
-                          flex items-center justify-center shadow-md shadow-neutral-900/20 flex-shrink-0">
-              <Folder className="w-6 h-6 text-white" strokeWidth={2.5} />
-            </div>
+        {/* Status badge seul */}
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
+                       text-sm font-semibold rounded-lg ${statusConfig.color}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.accent}`} />
+          {statusConfig.label}
+        </span>
+      </div>
+    </div>
 
-            <div className="flex-1 min-w-0">
-              <h1 className="text-4xl font-bold text-neutral-900 mb-3">
-                {project.name}
-              </h1>
+    {/* 🎨 Bouton Minimaliste Subtile */}
+    <div className="relative flex-shrink-0" ref={statusDropdownRef}>
+      <button
+        onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+        className="px-3 py-2 text-sm font-medium text-neutral-600
+                 hover:text-neutral-900 hover:bg-neutral-50
+                 rounded-lg transition-all duration-200
+                 flex items-center gap-2 border border-transparent
+                 hover:border-neutral-200"
+      >
+        <span>Statut</span>
+        <ChevronDown 
+          className={`w-4 h-4 transition-transform duration-200 ${isStatusDropdownOpen ? 'rotate-180' : ''}`}
+          strokeWidth={2} 
+        />
+      </button>
 
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
-                             text-sm font-semibold rounded-lg ${statusConfig.color}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.accent}`} />
-                {statusConfig.label}
-              </span>
-            </div>
+      {/* Dropdown minimaliste avec 3 statuts uniquement */}
+      {isStatusDropdownOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-40"
+            onClick={() => setIsStatusDropdownOpen(false)}
+          />
+          <div className="absolute right-0 mt-2 w-48 
+                        bg-white
+                        rounded-xl border border-neutral-200
+                        shadow-lg
+                        z-50 overflow-hidden py-1
+                        animate-in fade-in slide-in-from-top-2 duration-150">
+            
+            {[
+              { value: 'active', label: 'Actif', color: 'bg-green-500' },
+              { value: 'on_hold', label: 'En pause', color: 'bg-amber-500' },
+              { value: 'completed', label: 'Terminé', color: 'bg-blue-500' },
+            ].map((status) => (
+              <button
+                key={status.value}
+                onClick={() => handleStatusChange(status.value)}
+                disabled={isUpdatingStatus}
+                className={`w-full flex items-center gap-3 px-3 py-2
+                         transition-all duration-150 text-left
+                         hover:bg-neutral-50
+                         ${project.status === status.value ? 'bg-neutral-50' : ''}
+                         disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${status.color}`} />
+                <span className={`flex-1 text-sm
+                               ${project.status === status.value ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-700'}`}>
+                  {status.label}
+                </span>
+                {project.status === status.value && (
+                  <Check className="w-3.5 h-3.5 text-neutral-400" strokeWidth={2.5} />
+                )}
+              </button>
+            ))}
           </div>
+        </>
+      )}
+    </div>
+  </div>
 
-          <p className="text-neutral-600 text-lg leading-relaxed mb-6">
-            {project.description || 'Aucune description disponible'}
-          </p>
+  {/* Description */}
+  <p className="text-neutral-800 text-base leading-relaxed mb-6">
+    {project.description || 'Aucune description disponible'}
+  </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 font-medium">Début</div>
-                <div className="text-sm font-bold text-neutral-900">{formatDate(project.start_date)}</div>
-              </div>
-            </div>
+  {/* Grid infos avec contexte temporel et avatars */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    
+    {/* Carte Début avec contexte temporel */}
+    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                  hover:border-blue-200 hover:shadow-sm transition-all duration-300 group">
+      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center
+                    group-hover:scale-110 transition-transform duration-300">
+        <Clock className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-neutral-500 font-medium">Début</div>
+        <div className="text-sm font-bold text-neutral-900">{formatDate(project.start_date)}</div>
+        {project.start_date && (
+          <div className="text-xs text-neutral-400 mt-0.5">
+            {(() => {
+              const startDate = new Date(project.start_date);
+              const now = new Date();
+              const diffTime = startDate - now;
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              
+              if (diffDays > 0) return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+              if (diffDays === 0) return "Aujourd'hui";
+              return `Il y a ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
 
-            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200">
-              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                <Target className="w-5 h-5 text-red-600" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 font-medium">Échéance</div>
-                <div className="text-sm font-bold text-neutral-900">{formatDate(project.end_date)}</div>
-              </div>
-            </div>
+    {/* Carte Échéance avec contexte temporel et alerte */}
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group
+                   ${(() => {
+                     if (!project.end_date) return 'bg-white border-neutral-200 hover:border-red-200';
+                     const endDate = new Date(project.end_date);
+                     const now = new Date();
+                     const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                     
+                     if (diffDays < 0) return 'bg-red-50 border-red-200 hover:border-red-300';
+                     if (diffDays <= 7) return 'bg-amber-50 border-amber-200 hover:border-amber-300';
+                     return 'bg-white border-neutral-200 hover:border-red-200';
+                   })()}`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center
+                     group-hover:scale-110 transition-transform duration-300
+                     ${(() => {
+                       if (!project.end_date) return 'bg-red-50';
+                       const endDate = new Date(project.end_date);
+                       const now = new Date();
+                       const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                       
+                       if (diffDays < 0) return 'bg-red-100';
+                       if (diffDays <= 7) return 'bg-amber-100';
+                       return 'bg-red-50';
+                     })()}`}>
+        <Target className={`w-5 h-5 ${(() => {
+          if (!project.end_date) return 'text-red-600';
+          const endDate = new Date(project.end_date);
+          const now = new Date();
+          const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays < 0) return 'text-red-700';
+          if (diffDays <= 7) return 'text-amber-700';
+          return 'text-red-600';
+        })()}`} strokeWidth={2.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-neutral-500 font-medium">Échéance</div>
+        <div className="text-sm font-bold text-neutral-900">{formatDate(project.end_date)}</div>
+        {project.end_date && (
+          <div className={`text-xs mt-0.5 font-medium ${(() => {
+            const endDate = new Date(project.end_date);
+            const now = new Date();
+            const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) return 'text-red-600';
+            if (diffDays <= 7) return 'text-amber-600';
+            return 'text-neutral-400';
+          })()}`}>
+            {(() => {
+              const endDate = new Date(project.end_date);
+              const now = new Date();
+              const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+              
+              if (diffDays < 0) return `⚠️ En retard de ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
+              if (diffDays === 0) return "⏰ Aujourd'hui !";
+              if (diffDays <= 7) return `⚡ Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+              return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
 
-            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200">
-              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
-                <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
-              </div>
-              <div>
-                <div className="text-xs text-neutral-500 font-medium">Équipe</div>
-                <div className="text-sm font-bold text-neutral-900">
-                  {members.length} membre{members.length > 1 ? 's' : ''}
+    {/* Carte Équipe avec avatars visibles */}
+    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                  hover:border-green-200 hover:shadow-sm transition-all duration-300 group">
+      <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center
+                    group-hover:scale-110 transition-transform duration-300">
+        <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-neutral-500 font-medium mb-1">Équipe</div>
+        
+        {/* Avatars empilés */}
+        {members.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2">
+              {members.slice(0, 4).map((member, idx) => (
+                <div
+                  key={member.user?.id || idx}
+                  className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600
+                           flex items-center justify-center text-white text-xs font-bold 
+                           border-2 border-white shadow-sm
+                           hover:scale-110 hover:z-10 transition-transform duration-200 cursor-pointer"
+                  title={member.user?.full_name || member.user?.username}
+                >
+                  {(member.user?.full_name || member.user?.username || '?').charAt(0).toUpperCase()}
                 </div>
-              </div>
+              ))}
+              {members.length > 4 && (
+                <div className="w-7 h-7 rounded-full bg-neutral-200
+                             flex items-center justify-center text-neutral-600 text-xs font-bold 
+                             border-2 border-white shadow-sm">
+                  +{members.length - 4}
+                </div>
+              )}
             </div>
+            <span className="text-xs text-neutral-600 font-semibold">
+              {members.length} membre{members.length > 1 ? 's' : ''}
+            </span>
           </div>
-        </div>
+        ) : (
+          <div className="text-sm font-bold text-neutral-400">Aucun membre</div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+
 
         {/* 📊 STATISTIQUES */}
         <ProjectStats stats={stats} />
