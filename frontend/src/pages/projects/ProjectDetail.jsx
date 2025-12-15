@@ -15,7 +15,7 @@ import {
   TrendingUp,
   CheckCircle2,
   Folder,
-  MoreVertical, // 🆕 Icône menu 3 points
+  MoreVertical,
   Plus,
   Check
 } from 'lucide-react';
@@ -54,17 +54,14 @@ export const ProjectDetail = () => {
   const [addingMember, setAddingMember] = useState(false);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false); // 🆕 Menu contextuel
-  const [showAllTasks, setShowAllTasks] = useState(false); // 🆕 AJOUT
-
-
-    // 🆕 AJOUT : États pour le dropdown de statut
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const [showAllTasks, setShowAllTasks] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Refs
   const exportDropdownRef = useRef(null);
-  const actionsMenuRef = useRef(null); // 🆕
+  const actionsMenuRef = useRef(null);
   const statusDropdownRef = useRef(null);
 
   // Chargement
@@ -74,21 +71,6 @@ export const ProjectDetail = () => {
     loadAvailableUsers();
   }, [id]);
 
-  // useEffect existants...
-
-// 🆕 AJOUT : Fermeture du dropdown statut au clic extérieur
-useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
-      setIsStatusDropdownOpen(false);
-    }
-  };
-
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
-
-
   // Fermer dropdowns au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -97,6 +79,9 @@ useEffect(() => {
       }
       if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
         setIsActionsMenuOpen(false);
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
+        setIsStatusDropdownOpen(false);
       }
     };
 
@@ -186,45 +171,40 @@ useEffect(() => {
     }
   };
 
-  /**
- * Change le statut du projet rapidement
- */
-const handleStatusChange = async (newStatus) => {
-  if (newStatus === project.status) {
-    setIsStatusDropdownOpen(false);
-    return;
-  }
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === project.status) {
+      setIsStatusDropdownOpen(false);
+      return;
+    }
 
-  try {
-    setIsUpdatingStatus(true);
-    
-    await projectsAPI.update(project.id, {
-      ...project,
-      status: newStatus
-    });
-    
-    toast.success('Statut mis à jour avec succès !');
-    
-    // Recharge le projet
-    const updatedProject = await projectsAPI.getById(project.id);
-    setProject(updatedProject);
-    
-    setIsStatusDropdownOpen(false);
-    
-  } catch (error) {
-    console.error('❌ Erreur changement statut:', error);
-    toast.error('Impossible de changer le statut');
-  } finally {
-    setIsUpdatingStatus(false);
-  }
-};
-
+    try {
+      setIsUpdatingStatus(true);
+      
+      await projectsAPI.update(project.id, {
+        ...project,
+        status: newStatus
+      });
+      
+      toast.success('Statut mis à jour');
+      
+      const updatedProject = await projectsAPI.getById(project.id);
+      setProject(updatedProject);
+      
+      setIsStatusDropdownOpen(false);
+      
+    } catch (error) {
+      console.error('❌ Erreur changement statut:', error);
+      toast.error('Impossible de changer le statut');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const handleExport = async (format) => {
     try {
       setIsExporting(true);
       setIsExportDropdownOpen(false);
-      setIsActionsMenuOpen(false); // 🆕 Fermer le menu
+      setIsActionsMenuOpen(false);
 
       let blob;
       let extension;
@@ -332,29 +312,39 @@ const handleStatusChange = async (newStatus) => {
   const getStatusConfig = (status) => {
     const configs = {
       planning: {
-        color: 'bg-neutral-50 text-neutral-700',
         label: 'En planification',
-        accent: 'bg-neutral-500',
+        dotColor: 'bg-neutral-500',
+        textColor: 'text-neutral-700',
+        badgeColor: 'bg-neutral-50 text-neutral-700',
+        badgeAccent: 'bg-neutral-500',
       },
       active: {
-        color: 'bg-green-50 text-green-700',
         label: 'Actif',
-        accent: 'bg-green-500',
+        dotColor: 'bg-green-500',
+        textColor: 'text-green-700',
+        badgeColor: 'bg-green-50 text-green-700',
+        badgeAccent: 'bg-green-500',
       },
       on_hold: {
-        color: 'bg-amber-50 text-amber-700',
         label: 'En pause',
-        accent: 'bg-amber-500',
+        dotColor: 'bg-amber-500',
+        textColor: 'text-amber-700',
+        badgeColor: 'bg-amber-50 text-amber-700',
+        badgeAccent: 'bg-amber-500',
       },
       completed: {
-        color: 'bg-blue-50 text-blue-700',
         label: 'Terminé',
-        accent: 'bg-blue-500',
+        dotColor: 'bg-blue-500',
+        textColor: 'text-blue-700',
+        badgeColor: 'bg-blue-50 text-blue-700',
+        badgeAccent: 'bg-blue-500',
       },
       cancelled: {
-        color: 'bg-red-50 text-red-700',
         label: 'Annulé',
-        accent: 'bg-red-500',
+        dotColor: 'bg-red-500',
+        textColor: 'text-red-700',
+        badgeColor: 'bg-red-50 text-red-700',
+        badgeAccent: 'bg-red-500',
       },
     };
     return configs[status] || configs.active;
@@ -407,423 +397,423 @@ const handleStatusChange = async (newStatus) => {
 
   const statusConfig = getStatusConfig(project.status);
 
+  // Liste des statuts pour le dropdown
+  const allStatuses = [
+    { value: 'active', ...getStatusConfig('active') },
+    { value: 'on_hold', ...getStatusConfig('on_hold') },
+    { value: 'completed', ...getStatusConfig('completed') },
+  ];
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         
-{/* 🧭 HEADER STICKY AVEC BREADCRUMBS */}
-<div className="sticky top-0 z-40 -mx-6 px-6 py-4 
-              bg-white/70 backdrop-blur-xl 
-              border-b border-neutral-200/50 
-              rounded-b-2xl
-              shadow-sm mb-6">
-  <div className="max-w-7xl mx-auto flex items-center justify-between">
-    
-    {/* Breadcrumbs GitHub Style */}
-    <nav className="flex items-center gap-2 text-sm">
-      <button
-        onClick={() => navigate('/projects')}
-        className="text-neutral-600 hover:text-neutral-900 font-medium
-                 transition-colors duration-200"
-      >
-        Projets
-      </button>
-      <span className="text-neutral-400 select-none">/</span>
-      <span className="text-neutral-900 font-semibold truncate max-w-[300px] md:max-w-[500px]">
-        {project?.name}
-      </span>
-    </nav>
-
-    {/* Menu Actions (3 points) */}
-    <div className="relative" ref={actionsMenuRef}>
-      <button
-        onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-        className="p-2.5 hover:bg-white/60 rounded-xl transition-all duration-200
-                 group relative"
-        aria-label="Actions du projet"
-      >
-        <MoreVertical className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900" strokeWidth={2.5} />
-      </button>
-
-      {/* 🎨 DROPDOWN PROFESSIONNEL MINIMALISTE */}
-      {isActionsMenuOpen && (
-        <div className="absolute right-0 mt-2 w-64 
-                      bg-white/95 backdrop-blur-xl
-                      rounded-2xl border border-neutral-200/50
-                      shadow-xl shadow-neutral-900/10
-                      z-50 overflow-hidden py-2
-                      animate-in fade-in slide-in-from-top-2 duration-200">
-          
-          {/* Analytics */}
-          {canViewProjectAnalytics() && (
-            <Link
-              to={`/projects/${project.id}/analytics`}
-              className="flex items-center gap-3 px-4 py-3
-                       hover:bg-neutral-50 transition-all duration-200
-                       group"
-              onClick={() => setIsActionsMenuOpen(false)}
-            >
-              <BarChart3 className="w-5 h-5 text-neutral-400 group-hover:text-blue-600 
-                                  transition-colors flex-shrink-0" strokeWidth={2} />
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-neutral-900 text-sm">Analytics</div>
-                <div className="text-xs text-neutral-500">Statistiques avancées</div>
-              </div>
-            </Link>
-          )}
-
-          {/* Exporter (avec sous-menu) */}
-          <div className="relative" ref={exportDropdownRef}>
-            <button
-              onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-              disabled={isExporting}
-              className="w-full flex items-center gap-3 px-4 py-3
-                       hover:bg-neutral-50 transition-all duration-200 text-left
-                       group"
-            >
-              <Download className="w-5 h-5 text-neutral-400 group-hover:text-green-600 
-                                transition-colors flex-shrink-0" strokeWidth={2} />
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-neutral-900 text-sm">
-                  {isExporting ? 'Export en cours...' : 'Exporter'}
-                </div>
-                <div className="text-xs text-neutral-500">PDF, Excel ou ZIP</div>
-              </div>
-              <ChevronDown 
-                className={`w-4 h-4 text-neutral-400 flex-shrink-0
-                          transition-transform duration-200
-                          ${isExportDropdownOpen ? 'rotate-180' : ''}`}
-                strokeWidth={2}
-              />
-            </button>
-
-            {/* Sous-menu Export - ULTRA ÉPURÉ */}
-            {isExportDropdownOpen && (
-              <div className="bg-neutral-50/50 py-1.5 px-2 mx-2 rounded-lg space-y-0.5">
-                <button
-                  onClick={() => handleExport('pdf')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2
-                           hover:bg-white rounded-md transition-colors text-left
-                           group"
-                >
-                  <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-red-500 
-                                transition-colors flex-shrink-0" />
-                  <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
-                                 font-medium transition-colors">
-                    PDF Complet
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleExport('excel')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2
-                           hover:bg-white rounded-md transition-colors text-left
-                           group"
-                >
-                  <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-green-500 
-                                transition-colors flex-shrink-0" />
-                  <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
-                                 font-medium transition-colors">
-                    Excel (6 onglets)
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleExport('zip')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2
-                           hover:bg-white rounded-md transition-colors text-left
-                           group"
-                >
-                  <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-blue-500 
-                                transition-colors flex-shrink-0" />
-                  <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
-                                 font-medium transition-colors">
-                    Archive ZIP
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Séparateur */}
-          <div className="h-px bg-neutral-200 my-2 mx-4" />
-
-          {/* Modifier */}
-          <button
-            onClick={() => {
-              setIsEditModalOpen(true);
-              setIsActionsMenuOpen(false);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3
-                     hover:bg-neutral-50 transition-all duration-200
-                     group"
-          >
-            <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
-                          transition-colors flex-shrink-0" strokeWidth={2} />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
-              <div className="text-xs text-neutral-500">Éditer les informations</div>
-            </div>
-          </button>
-
-          {/* Supprimer */}
-          <button
-            onClick={() => {
-              setIsDeleteModalOpen(true);
-              setIsActionsMenuOpen(false);
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3
-                     hover:bg-red-50/50 transition-all duration-200
-                     group"
-          >
-            <Trash2 className="w-5 h-5 text-neutral-400 group-hover:text-red-600 
-                            transition-colors flex-shrink-0" strokeWidth={2} />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-neutral-900 group-hover:text-red-700 
-                           text-sm transition-colors">Supprimer</div>
-              <div className="text-xs text-neutral-500 group-hover:text-red-500 
-                           transition-colors">Action irréversible</div>
-            </div>
-          </button>
-        </div>
-      )}
-    </div>
-  </div>
-</div>
-
-
-{/* 📄 CARTE INFO PROJET - VERSION MINIMALISTE */}
-<div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
-  
-  {/* Header avec bouton statut minimaliste */}
-  <div className="flex items-start justify-between gap-6 mb-6">
-    <div className="flex items-start gap-4 flex-1 min-w-0">
-      {/* Icône projet */}
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
-                    flex items-center justify-center shadow-md shadow-neutral-900/20 flex-shrink-0
-                    group-hover:scale-110 transition-transform duration-300">
-        <Folder className="w-6 h-6 text-white" strokeWidth={2.5} />
-      </div>
-
-      {/* Titre + Status */}
-      <div className="flex-1 min-w-0">
-        <h1 className="text-4xl font-bold text-neutral-900 mb-3 break-words">
-          {project.name}
-        </h1>
-
-        {/* Status badge seul */}
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
-                       text-sm font-semibold rounded-lg ${statusConfig.color}`}>
-          <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.accent}`} />
-          {statusConfig.label}
-        </span>
-      </div>
-    </div>
-
-    {/* 🎨 Bouton Minimaliste Subtile */}
-    <div className="relative flex-shrink-0" ref={statusDropdownRef}>
-      <button
-        onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-        className="px-3 py-2 text-sm font-medium text-neutral-600
-                 hover:text-neutral-900 hover:bg-neutral-50
-                 rounded-lg transition-all duration-200
-                 flex items-center gap-2 border border-transparent
-                 hover:border-neutral-200"
-      >
-        <span>Statut</span>
-        <ChevronDown 
-          className={`w-4 h-4 transition-transform duration-200 ${isStatusDropdownOpen ? 'rotate-180' : ''}`}
-          strokeWidth={2} 
-        />
-      </button>
-
-      {/* Dropdown minimaliste avec 3 statuts uniquement */}
-      {isStatusDropdownOpen && (
-        <>
-          <div 
-            className="fixed inset-0 z-40"
-            onClick={() => setIsStatusDropdownOpen(false)}
-          />
-          <div className="absolute right-0 mt-2 w-48 
-                        bg-white
-                        rounded-xl border border-neutral-200
-                        shadow-lg
-                        z-50 overflow-hidden py-1
-                        animate-in fade-in slide-in-from-top-2 duration-150">
+        {/* 🧭 HEADER STICKY AVEC BREADCRUMBS */}
+        <div className="sticky top-0 z-40 -mx-6 px-6 py-4 
+                      bg-white/70 backdrop-blur-xl 
+                      border-b border-neutral-200/50 
+                      rounded-b-2xl shadow-sm mb-6">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             
-            {[
-              { value: 'active', label: 'Actif', color: 'bg-green-500' },
-              { value: 'on_hold', label: 'En pause', color: 'bg-amber-500' },
-              { value: 'completed', label: 'Terminé', color: 'bg-blue-500' },
-            ].map((status) => (
+            {/* Breadcrumbs */}
+            <nav className="flex items-center gap-2 text-sm flex-1 min-w-0">
               <button
-                key={status.value}
-                onClick={() => handleStatusChange(status.value)}
-                disabled={isUpdatingStatus}
-                className={`w-full flex items-center gap-3 px-3 py-2
-                         transition-all duration-150 text-left
-                         hover:bg-neutral-50
-                         ${project.status === status.value ? 'bg-neutral-50' : ''}
-                         disabled:opacity-50 disabled:cursor-not-allowed`}
+                onClick={() => navigate('/projects')}
+                className="text-neutral-600 hover:text-neutral-900 font-medium
+                         transition-colors duration-200"
               >
-                <div className={`w-1.5 h-1.5 rounded-full ${status.color}`} />
-                <span className={`flex-1 text-sm
-                               ${project.status === status.value ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-700'}`}>
-                  {status.label}
-                </span>
-                {project.status === status.value && (
-                  <Check className="w-3.5 h-3.5 text-neutral-400" strokeWidth={2.5} />
-                )}
+                Projets
               </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  </div>
+              <span className="text-neutral-400 select-none">/</span>
+              <span className="text-neutral-900 font-semibold truncate">
+                {project?.name}
+              </span>
+            </nav>
 
-  {/* Description */}
-  <p className="text-neutral-800 text-base leading-relaxed mb-6">
-    {project.description || 'Aucune description disponible'}
-  </p>
-
-  {/* Grid infos avec contexte temporel et avatars */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    
-    {/* Carte Début avec contexte temporel */}
-    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
-                  hover:border-blue-200 hover:shadow-sm transition-all duration-300 group">
-      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center
-                    group-hover:scale-110 transition-transform duration-300">
-        <Clock className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs text-neutral-500 font-medium">Début</div>
-        <div className="text-sm font-bold text-neutral-900">{formatDate(project.start_date)}</div>
-        {project.start_date && (
-          <div className="text-xs text-neutral-400 mt-0.5">
-            {(() => {
-              const startDate = new Date(project.start_date);
-              const now = new Date();
-              const diffTime = startDate - now;
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            {/* Quick Actions: Dropdown Statut + Menu 3 points */}
+            <div className="flex items-center gap-2">
               
-              if (diffDays > 0) return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
-              if (diffDays === 0) return "Aujourd'hui";
-              return `Il y a ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
-            })()}
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* Carte Échéance avec contexte temporel et alerte */}
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group
-                   ${(() => {
-                     if (!project.end_date) return 'bg-white border-neutral-200 hover:border-red-200';
-                     const endDate = new Date(project.end_date);
-                     const now = new Date();
-                     const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-                     
-                     if (diffDays < 0) return 'bg-red-50 border-red-200 hover:border-red-300';
-                     if (diffDays <= 7) return 'bg-amber-50 border-amber-200 hover:border-amber-300';
-                     return 'bg-white border-neutral-200 hover:border-red-200';
-                   })()}`}>
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center
-                     group-hover:scale-110 transition-transform duration-300
-                     ${(() => {
-                       if (!project.end_date) return 'bg-red-50';
-                       const endDate = new Date(project.end_date);
-                       const now = new Date();
-                       const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-                       
-                       if (diffDays < 0) return 'bg-red-100';
-                       if (diffDays <= 7) return 'bg-amber-100';
-                       return 'bg-red-50';
-                     })()}`}>
-        <Target className={`w-5 h-5 ${(() => {
-          if (!project.end_date) return 'text-red-600';
-          const endDate = new Date(project.end_date);
-          const now = new Date();
-          const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-          
-          if (diffDays < 0) return 'text-red-700';
-          if (diffDays <= 7) return 'text-amber-700';
-          return 'text-red-600';
-        })()}`} strokeWidth={2.5} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs text-neutral-500 font-medium">Échéance</div>
-        <div className="text-sm font-bold text-neutral-900">{formatDate(project.end_date)}</div>
-        {project.end_date && (
-          <div className={`text-xs mt-0.5 font-medium ${(() => {
-            const endDate = new Date(project.end_date);
-            const now = new Date();
-            const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays < 0) return 'text-red-600';
-            if (diffDays <= 7) return 'text-amber-600';
-            return 'text-neutral-400';
-          })()}`}>
-            {(() => {
-              const endDate = new Date(project.end_date);
-              const now = new Date();
-              const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-              
-              if (diffDays < 0) return `⚠️ En retard de ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
-              if (diffDays === 0) return "⏰ Aujourd'hui !";
-              if (diffDays <= 7) return `⚡ Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
-              return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
-            })()}
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* Carte Équipe avec avatars visibles */}
-    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
-                  hover:border-green-200 hover:shadow-sm transition-all duration-300 group">
-      <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center
-                    group-hover:scale-110 transition-transform duration-300">
-        <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs text-neutral-500 font-medium mb-1">Équipe</div>
-        
-        {/* Avatars empilés */}
-        {members.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <div className="flex -space-x-2">
-              {members.slice(0, 4).map((member, idx) => (
-                <div
-                  key={member.user?.id || idx}
-                  className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600
-                           flex items-center justify-center text-white text-xs font-bold 
-                           border-2 border-white shadow-sm
-                           hover:scale-110 hover:z-10 transition-transform duration-200 cursor-pointer"
-                  title={member.user?.full_name || member.user?.username}
+              {/* 🎯 DROPDOWN STATUT (Quick Action) */}
+              <div className="relative" ref={statusDropdownRef}>
+                <button
+                  onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                  disabled={isUpdatingStatus}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg 
+                             text-sm font-medium text-neutral-700
+                             bg-white border border-neutral-200
+                             hover:bg-neutral-50 hover:border-neutral-300
+                             transition-all duration-200
+                             ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}
+                             group`}
                 >
-                  {(member.user?.full_name || member.user?.username || '?').charAt(0).toUpperCase()}
-                </div>
-              ))}
-              {members.length > 4 && (
-                <div className="w-7 h-7 rounded-full bg-neutral-200
-                             flex items-center justify-center text-neutral-600 text-xs font-bold 
-                             border-2 border-white shadow-sm">
-                  +{members.length - 4}
-                </div>
-              )}
-            </div>
-            <span className="text-xs text-neutral-600 font-semibold">
-              {members.length} membre{members.length > 1 ? 's' : ''}
-            </span>
-          </div>
-        ) : (
-          <div className="text-sm font-bold text-neutral-400">Aucun membre</div>
-        )}
-      </div>
-    </div>
-  </div>
-</div>
+                  <span>Statut</span>
+                  <ChevronDown 
+                    className={`w-4 h-4 text-neutral-500 transition-transform duration-200 
+                             ${isStatusDropdownOpen ? 'rotate-180' : ''}`} 
+                    strokeWidth={2} 
+                  />
+                </button>
 
+                {/* Dropdown Menu */}
+                {isStatusDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 
+                                bg-white
+                                rounded-lg border border-neutral-200
+                                shadow-lg
+                                z-50 overflow-hidden py-1
+                                animate-in fade-in slide-in-from-top-2 duration-200">
+                    
+                    {allStatuses.map((status) => (
+                      <button
+                        key={status.value}
+                        onClick={() => handleStatusChange(status.value)}
+                        disabled={project.status === status.value || isUpdatingStatus}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5
+                                 transition-colors duration-150
+                                 ${project.status === status.value 
+                                   ? 'bg-neutral-50' 
+                                   : 'hover:bg-neutral-50'}
+                                 ${isUpdatingStatus ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${status.dotColor}`} />
+                        <span className={`flex-1 text-left text-sm font-medium ${status.textColor}`}>
+                          {status.label}
+                        </span>
+                        {project.status === status.value && (
+                          <CheckCircle2 className="w-4 h-4 text-green-600" strokeWidth={2} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Actions (3 points) */}
+              <div className="relative" ref={actionsMenuRef}>
+                <button
+                  onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                  className="p-2.5 hover:bg-white/60 rounded-xl transition-all duration-200
+                           group relative"
+                  aria-label="Actions du projet"
+                >
+                  <MoreVertical className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900" strokeWidth={2.5} />
+                </button>
+
+                {/* Dropdown Actions */}
+                {isActionsMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 
+                                bg-white/95 backdrop-blur-xl
+                                rounded-2xl border border-neutral-200/50
+                                shadow-xl shadow-neutral-900/10
+                                z-50 overflow-hidden py-2
+                                animate-in fade-in slide-in-from-top-2 duration-200">
+                    
+                    {/* Analytics */}
+                    {canViewProjectAnalytics() && (
+                      <Link
+                        to={`/projects/${project.id}/analytics`}
+                        className="flex items-center gap-3 px-4 py-3
+                                 hover:bg-neutral-50 transition-all duration-200
+                                 group"
+                        onClick={() => setIsActionsMenuOpen(false)}
+                      >
+                        <BarChart3 className="w-5 h-5 text-neutral-400 group-hover:text-blue-600 
+                                            transition-colors flex-shrink-0" strokeWidth={2} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-neutral-900 text-sm">Analytics</div>
+                          <div className="text-xs text-neutral-500">Statistiques avancées</div>
+                        </div>
+                      </Link>
+                    )}
+
+                    {/* Exporter */}
+                    <div className="relative" ref={exportDropdownRef}>
+                      <button
+                        onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                        disabled={isExporting}
+                        className="w-full flex items-center gap-3 px-4 py-3
+                                 hover:bg-neutral-50 transition-all duration-200 text-left
+                                 group"
+                      >
+                        <Download className="w-5 h-5 text-neutral-400 group-hover:text-green-600 
+                                          transition-colors flex-shrink-0" strokeWidth={2} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-neutral-900 text-sm">
+                            {isExporting ? 'Export en cours...' : 'Exporter'}
+                          </div>
+                          <div className="text-xs text-neutral-500">PDF, Excel ou ZIP</div>
+                        </div>
+                        <ChevronDown 
+                          className={`w-4 h-4 text-neutral-400 flex-shrink-0
+                                    transition-transform duration-200
+                                    ${isExportDropdownOpen ? 'rotate-180' : ''}`}
+                          strokeWidth={2}
+                        />
+                      </button>
+
+                      {/* Sous-menu Export */}
+                      {isExportDropdownOpen && (
+                        <div className="bg-neutral-50/50 py-1.5 px-2 mx-2 rounded-lg space-y-0.5">
+                          <button
+                            onClick={() => handleExport('pdf')}
+                            className="w-full flex items-center gap-2.5 px-3 py-2
+                                     hover:bg-white rounded-md transition-colors text-left
+                                     group"
+                          >
+                            <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-red-500 
+                                          transition-colors flex-shrink-0" />
+                            <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
+                                           font-medium transition-colors">
+                              PDF Complet
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleExport('excel')}
+                            className="w-full flex items-center gap-2.5 px-3 py-2
+                                     hover:bg-white rounded-md transition-colors text-left
+                                     group"
+                          >
+                            <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-green-500 
+                                          transition-colors flex-shrink-0" />
+                            <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
+                                           font-medium transition-colors">
+                              Excel (6 onglets)
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleExport('zip')}
+                            className="w-full flex items-center gap-2.5 px-3 py-2
+                                     hover:bg-white rounded-md transition-colors text-left
+                                     group"
+                          >
+                            <div className="w-1 h-1 rounded-full bg-neutral-300 group-hover:bg-blue-500 
+                                          transition-colors flex-shrink-0" />
+                            <span className="text-sm text-neutral-600 group-hover:text-neutral-900 
+                                           font-medium transition-colors">
+                              Archive ZIP
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Séparateur */}
+                    <div className="h-px bg-neutral-200 my-2 mx-4" />
+
+                    {/* Modifier */}
+                    <button
+                      onClick={() => {
+                        setIsEditModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3
+                               hover:bg-neutral-50 transition-all duration-200
+                               group"
+                    >
+                      <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
+                                    transition-colors flex-shrink-0" strokeWidth={2} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
+                        <div className="text-xs text-neutral-500">Éditer les informations</div>
+                      </div>
+                    </button>
+
+                    {/* Supprimer */}
+                    <button
+                      onClick={() => {
+                        setIsDeleteModalOpen(true);
+                        setIsActionsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3
+                               hover:bg-red-50/50 transition-all duration-200
+                               group"
+                    >
+                      <Trash2 className="w-5 h-5 text-neutral-400 group-hover:text-red-600 
+                                      transition-colors flex-shrink-0" strokeWidth={2} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-neutral-900 group-hover:text-red-700 
+                                     text-sm transition-colors">Supprimer</div>
+                        <div className="text-xs text-neutral-500 group-hover:text-red-500 
+                                     transition-colors">Action irréversible</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 📄 CARTE INFO PROJET */}
+        <div className="bg-gradient-to-br from-neutral-50 via-white to-neutral-50 rounded-2xl border border-neutral-200 p-8 shadow-sm">
+          
+          <div className="flex items-start gap-6 mb-6">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              {/* Icône projet */}
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                            flex items-center justify-center shadow-md shadow-neutral-900/20 flex-shrink-0
+                            group-hover:scale-110 transition-transform duration-300">
+                <Folder className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+
+              {/* Titre + Badge */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-4xl font-bold text-neutral-900 mb-3 break-words">
+                  {project.name}
+                </h1>
+
+                {/* Badge statut */}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
+                               text-sm font-semibold rounded-lg ${statusConfig.badgeColor}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.badgeAccent}`} />
+                  {statusConfig.label}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          <p className="text-neutral-800 text-base leading-relaxed mb-6">
+            {project.description || 'Aucune description disponible'}
+          </p>
+
+          {/* Grid infos */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* Carte Début */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                          hover:border-blue-200 hover:shadow-sm transition-all duration-300 group">
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center
+                            group-hover:scale-110 transition-transform duration-300">
+                <Clock className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-neutral-500 font-medium">Début</div>
+                <div className="text-sm font-bold text-neutral-900">{formatDate(project.start_date)}</div>
+                {project.start_date && (
+                  <div className="text-xs text-neutral-400 mt-0.5">
+                    {(() => {
+                      const startDate = new Date(project.start_date);
+                      const now = new Date();
+                      const diffTime = startDate - now;
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      
+                      if (diffDays > 0) return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                      if (diffDays === 0) return "Aujourd'hui";
+                      return `Il y a ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Carte Échéance */}
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group
+                           ${(() => {
+                             if (!project.end_date) return 'bg-white border-neutral-200 hover:border-red-200';
+                             const endDate = new Date(project.end_date);
+                             const now = new Date();
+                             const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                             
+                             if (diffDays < 0) return 'bg-red-50 border-red-200 hover:border-red-300';
+                             if (diffDays <= 7) return 'bg-amber-50 border-amber-200 hover:border-amber-300';
+                             return 'bg-white border-neutral-200 hover:border-red-200';
+                           })()}`}>
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center
+                             group-hover:scale-110 transition-transform duration-300
+                             ${(() => {
+                               if (!project.end_date) return 'bg-red-50';
+                               const endDate = new Date(project.end_date);
+                               const now = new Date();
+                               const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                               
+                               if (diffDays < 0) return 'bg-red-100';
+                               if (diffDays <= 7) return 'bg-amber-100';
+                               return 'bg-red-50';
+                             })()}`}>
+                <Target className={`w-5 h-5 ${(() => {
+                  if (!project.end_date) return 'text-red-600';
+                  const endDate = new Date(project.end_date);
+                  const now = new Date();
+                  const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                  
+                  if (diffDays < 0) return 'text-red-700';
+                  if (diffDays <= 7) return 'text-amber-700';
+                  return 'text-red-600';
+                })()}`} strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-neutral-500 font-medium">Échéance</div>
+                <div className="text-sm font-bold text-neutral-900">{formatDate(project.end_date)}</div>
+                {project.end_date && (
+                  <div className={`text-xs mt-0.5 font-medium ${(() => {
+                    const endDate = new Date(project.end_date);
+                    const now = new Date();
+                    const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) return 'text-red-600';
+                    if (diffDays <= 7) return 'text-amber-600';
+                    return 'text-neutral-400';
+                  })()}`}>
+                    {(() => {
+                      const endDate = new Date(project.end_date);
+                      const now = new Date();
+                      const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+                      
+                      if (diffDays < 0) return `⚠️ En retard de ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
+                      if (diffDays === 0) return "⏰ Aujourd'hui !";
+                      if (diffDays <= 7) return `⚡ Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                      return `Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Carte Équipe */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+                          hover:border-green-200 hover:shadow-sm transition-all duration-300 group">
+              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center
+                            group-hover:scale-110 transition-transform duration-300">
+                <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-neutral-500 font-medium mb-1">Équipe</div>
+                
+                {members.length > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {members.slice(0, 4).map((member, idx) => (
+                        <div
+                          key={member.user?.id || idx}
+                          className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600
+                                   flex items-center justify-center text-white text-xs font-bold 
+                                   border-2 border-white shadow-sm
+                                   hover:scale-110 hover:z-10 transition-transform duration-200 cursor-pointer"
+                          title={member.user?.full_name || member.user?.username}
+                        >
+                          {(member.user?.full_name || member.user?.username || '?').charAt(0).toUpperCase()}
+                        </div>
+                      ))}
+                      {members.length > 4 && (
+                        <div className="w-7 h-7 rounded-full bg-neutral-200
+                                     flex items-center justify-center text-neutral-600 text-xs font-bold 
+                                     border-2 border-white shadow-sm">
+                          +{members.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-neutral-600 font-semibold">
+                      {members.length} membre{members.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-sm font-bold text-neutral-400">Aucun membre</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* 📊 STATISTIQUES */}
         <ProjectStats stats={stats} />
@@ -867,94 +857,92 @@ const handleStatusChange = async (newStatus) => {
           />
         </div>
 
-{/* 📋 TÂCHES DU PROJET */}
-<div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
-  <div className="flex items-center justify-between mb-6">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
-                    flex items-center justify-center shadow-md shadow-neutral-900/20">
-        <CheckCircle2 className="w-5 h-5 text-white" strokeWidth={2.5} />
-      </div>
-      <h2 className="text-2xl font-bold text-neutral-900">
-        Tâches du Projet ({tasks.length})
-      </h2>
-    </div>
-    
-    <button
-      onClick={() => navigate(`/tasks?project=${id}`)}
-      className="flex items-center gap-2 px-5 py-2.5 
-               border-2 border-neutral-200 text-neutral-700 font-semibold
-               rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
-               transition-all duration-300"
-    >
-      <TrendingUp className="w-4 h-4" strokeWidth={2.5} />
-      Voir toutes les tâches
-    </button>
-  </div>
-
-  {tasks.length === 0 ? (
-    <div className="text-center py-12">
-      <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <CheckCircle2 className="w-8 h-8 text-neutral-400" />
-      </div>
-      <p className="text-neutral-600 font-medium mb-2">Aucune tâche pour le moment</p>
-      <p className="text-neutral-400 text-sm">Les tâches apparaîtront ici une fois créées</p>
-    </div>
-  ) : (
-    <>
-      {/* 🆕 LOGIQUE COLLAPSE/EXPAND */}
-      {(() => {
-        const DISPLAY_LIMIT = 6;
-        const hasMore = tasks.length > DISPLAY_LIMIT;
-        const displayedTasks = showAllTasks ? tasks : tasks.slice(0, DISPLAY_LIMIT);
-        const remainingCount = tasks.length - DISPLAY_LIMIT;
-
-        return (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-fr">
-              {displayedTasks.map((task, index) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
-                  style={{
-                    animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
-                  }}
-                />
-              ))}
+        {/* 📋 TÂCHES DU PROJET */}
+        <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                            flex items-center justify-center shadow-md shadow-neutral-900/20">
+                <CheckCircle2 className="w-5 h-5 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-bold text-neutral-900">
+                Tâches du Projet ({tasks.length})
+              </h2>
             </div>
+            
+            <button
+              onClick={() => navigate(`/tasks?project=${id}`)}
+              className="flex items-center gap-2 px-5 py-2.5 
+                       border-2 border-neutral-200 text-neutral-700 font-semibold
+                       rounded-xl hover:border-neutral-900 hover:text-neutral-900 hover:bg-neutral-50
+                       transition-all duration-300"
+            >
+              <TrendingUp className="w-4 h-4" strokeWidth={2.5} />
+              Voir toutes les tâches
+            </button>
+          </div>
 
-            {/* 🆕 BOUTON VOIR PLUS / VOIR MOINS */}
-            {hasMore && (
-              <button
-                onClick={() => setShowAllTasks(!showAllTasks)}
-                className="w-full mt-6 py-2.5 px-4 
-                         border-2 border-neutral-200 text-neutral-700 
-                         font-medium text-sm rounded-xl
-                         hover:border-neutral-300 hover:bg-neutral-50
-                         transition-all duration-200
-                         flex items-center justify-center gap-2"
-              >
-                {showAllTasks ? (
+          {tasks.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-neutral-400" />
+              </div>
+              <p className="text-neutral-600 font-medium mb-2">Aucune tâche pour le moment</p>
+              <p className="text-neutral-400 text-sm">Les tâches apparaîtront ici une fois créées</p>
+            </div>
+          ) : (
+            <>
+              {(() => {
+                const DISPLAY_LIMIT = 6;
+                const hasMore = tasks.length > DISPLAY_LIMIT;
+                const displayedTasks = showAllTasks ? tasks : tasks.slice(0, DISPLAY_LIMIT);
+                const remainingCount = tasks.length - DISPLAY_LIMIT;
+
+                return (
                   <>
-                    <ChevronDown className="w-4 h-4 rotate-180 transition-transform" strokeWidth={2.5} />
-                    <span>Voir moins</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 auto-rows-fr">
+                      {displayedTasks.map((task, index) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                          style={{
+                            animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    {hasMore && (
+                      <button
+                        onClick={() => setShowAllTasks(!showAllTasks)}
+                        className="w-full mt-6 py-2.5 px-4 
+                                 border-2 border-neutral-200 text-neutral-700 
+                                 font-medium text-sm rounded-xl
+                                 hover:border-neutral-300 hover:bg-neutral-50
+                                 transition-all duration-200
+                                 flex items-center justify-center gap-2"
+                      >
+                        {showAllTasks ? (
+                          <>
+                            <ChevronDown className="w-4 h-4 rotate-180 transition-transform" strokeWidth={2.5} />
+                            <span>Voir moins</span>
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4 transition-transform" strokeWidth={2.5} />
+                            <span>Voir {remainingCount} autre{remainingCount > 1 ? 's' : ''} tâche{remainingCount > 1 ? 's' : ''}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4 transition-transform" strokeWidth={2.5} />
-                    <span>Voir {remainingCount} autre{remainingCount > 1 ? 's' : ''} tâche{remainingCount > 1 ? 's' : ''}</span>
-                  </>
-                )}
-              </button>
-            )}
-          </>
-        );
-      })()}
-    </>
-  )}
-</div>
+                );
+              })()}
+            </>
+          )}
+        </div>
 
         {/* MODALS */}
         <Modal
@@ -989,27 +977,27 @@ const handleStatusChange = async (newStatus) => {
           loading={addingMember}
         />
 
-      {/* 🆕 FAB - FLOATING ACTION BUTTON */}
-      <button
-        onClick={() => navigate(`/tasks?create=true&project=${id}`)}
-        className="fixed bottom-8 right-8 z-50
-                 w-14 h-14 
-                 bg-gradient-to-br from-orange-500 to-orange-600
-                 text-white rounded-full
-                 shadow-2xl shadow-orange-500/40
-                 hover:shadow-3xl hover:shadow-orange-500/50
-                 hover:scale-110 active:scale-95
-                 transition-all duration-300
-                 flex items-center justify-center
-                 group"
-        title="Créer une nouvelle tâche"
-        aria-label="Créer une nouvelle tâche"
-      >
-        <Plus 
-          className="w-7 h-7 group-hover:rotate-90 transition-transform duration-300" 
-          strokeWidth={3} 
-        />
-      </button>
+        {/* FAB - FLOATING ACTION BUTTON */}
+        <button
+          onClick={() => navigate(`/tasks?create=true&project=${id}`)}
+          className="fixed bottom-8 right-8 z-50
+                   w-14 h-14 
+                   bg-gradient-to-br from-orange-500 to-orange-600
+                   text-white rounded-full
+                   shadow-2xl shadow-orange-500/40
+                   hover:shadow-3xl hover:shadow-orange-500/50
+                   hover:scale-110 active:scale-95
+                   transition-all duration-300
+                   flex items-center justify-center
+                   group"
+          title="Créer une nouvelle tâche"
+          aria-label="Créer une nouvelle tâche"
+        >
+          <Plus 
+            className="w-7 h-7 group-hover:rotate-90 transition-transform duration-300" 
+            strokeWidth={3} 
+          />
+        </button>
       </div>
 
       <style jsx>{`

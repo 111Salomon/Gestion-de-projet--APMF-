@@ -35,24 +35,27 @@ export const TaskDetail = () => {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
-  
 
   // Refs
   const actionsMenuRef = useRef(null);
+  const statusDropdownRef = useRef(null);
 
   // Chargement
   useEffect(() => {
     loadTask();
   }, [id]);
 
-  // Fermer menu au clic extérieur
+  // Fermer menus au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target)) {
         setIsActionsMenuOpen(false);
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
+        setIsStatusDropdownOpen(false);
       }
     };
 
@@ -114,7 +117,7 @@ export const TaskDetail = () => {
       await tasksAPI.changeStatus(id, newStatus);
       toast.success('Statut mis à jour');
       await loadTask();
-      setIsStatusModalOpen(false);
+      setIsStatusDropdownOpen(false);
     } catch (error) {
       console.error('❌ Erreur changement statut:', error);
       if (error.response?.status === 403) {
@@ -136,27 +139,36 @@ export const TaskDetail = () => {
     });
   };
 
+  // Configuration pour le dropdown statut (minimaliste)
   const getStatusConfig = (status) => {
     const configs = {
       todo: {
-        color: 'bg-neutral-50 text-neutral-700',
         label: 'À faire',
-        accent: 'bg-neutral-500',
+        dotColor: 'bg-neutral-500',
+        textColor: 'text-neutral-700',
+        badgeColor: 'bg-neutral-50 text-neutral-700',
+        badgeAccent: 'bg-neutral-500',
       },
       in_progress: {
-        color: 'bg-blue-50 text-blue-700',
         label: 'En cours',
-        accent: 'bg-blue-500',
+        dotColor: 'bg-blue-500',
+        textColor: 'text-blue-700',
+        badgeColor: 'bg-blue-50 text-blue-700',
+        badgeAccent: 'bg-blue-500',
       },
       in_review: {
-        color: 'bg-amber-50 text-amber-700',
         label: 'En révision',
-        accent: 'bg-amber-500',
+        dotColor: 'bg-amber-500',
+        textColor: 'text-amber-700',
+        badgeColor: 'bg-amber-50 text-amber-700',
+        badgeAccent: 'bg-amber-500',
       },
       done: {
-        color: 'bg-green-50 text-green-700',
         label: 'Terminé',
-        accent: 'bg-green-500',
+        dotColor: 'bg-green-500',
+        textColor: 'text-green-700',
+        badgeColor: 'bg-green-50 text-green-700',
+        badgeAccent: 'bg-green-500',
       },
     };
     return configs[status] || configs.todo;
@@ -211,6 +223,13 @@ export const TaskDetail = () => {
   const statusConfig = getStatusConfig(task.status);
   const priorityConfig = getPriorityConfig(task.priority);
 
+  const allStatuses = [
+    { value: 'todo', ...getStatusConfig('todo') },
+    { value: 'in_progress', ...getStatusConfig('in_progress') },
+    { value: 'in_review', ...getStatusConfig('in_review') },
+    { value: 'done', ...getStatusConfig('done') },
+  ];
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -220,10 +239,10 @@ export const TaskDetail = () => {
                       bg-white/70 backdrop-blur-xl 
                       border-b border-neutral-200/50 
                       rounded-b-2xl shadow-sm mb-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-2 text-sm">
+            <nav className="flex items-center gap-2 text-sm flex-1 min-w-0">
               <button
                 onClick={() => navigate('/tasks')}
                 className="text-neutral-600 hover:text-neutral-900 font-medium
@@ -232,97 +251,140 @@ export const TaskDetail = () => {
                 Tâches
               </button>
               <span className="text-neutral-400 select-none">/</span>
-              <span className="text-neutral-900 font-semibold truncate max-w-[300px] md:max-w-[500px]">
+              <span className="text-neutral-900 font-semibold truncate">
                 {task?.title}
               </span>
             </nav>
 
-            {/* Menu Actions (3 points) */}
-            <div className="relative" ref={actionsMenuRef}>
-              <button
-                onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
-                className="p-2.5 hover:bg-white/60 rounded-xl transition-all duration-200
-                         group relative"
-                aria-label="Actions de la tâche"
-              >
-                <MoreVertical className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900" strokeWidth={2.5} />
-              </button>
+            {/* Quick Actions: Dropdown Statut + Menu 3 points */}
+            <div className="flex items-center gap-2">
+              
+              {/* 🎯 DROPDOWN STATUT (Quick Action) */}
+              {canChangeTaskStatus(user, task) && (
+                <div className="relative" ref={statusDropdownRef}>
+                  <button
+                    onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                    disabled={updating}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg 
+                               text-sm font-medium text-neutral-700
+                               bg-white border border-neutral-200
+                               hover:bg-neutral-50 hover:border-neutral-300
+                               transition-all duration-200
+                               ${updating ? 'opacity-50 cursor-not-allowed' : ''}
+                               group`}
+                  >
+                    <span>Statut</span>
+                    <ChevronDown 
+                      className={`w-4 h-4 text-neutral-500 transition-transform duration-200 
+                               ${isStatusDropdownOpen ? 'rotate-180' : ''}`} 
+                      strokeWidth={2} 
+                    />
+                  </button>
 
-              {/* Dropdown Actions */}
-              {isActionsMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 
-                              bg-white/95 backdrop-blur-xl
-                              rounded-2xl border border-neutral-200/50
-                              shadow-xl shadow-neutral-900/10
-                              z-50 overflow-hidden py-2
-                              animate-in fade-in slide-in-from-top-2 duration-200">
-                  
-                  {/* Modifier */}
-                  {canModifyTask(user, task) && (
-                    <button
-                      onClick={() => {
-                        setIsEditModalOpen(true);
-                        setIsActionsMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3
-                               hover:bg-neutral-50 transition-all duration-200
-                               group"
-                    >
-                      <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
-                                    transition-colors flex-shrink-0" strokeWidth={2} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
-                        <div className="text-xs text-neutral-500">Éditer la tâche</div>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Changer le statut */}
-                  {canChangeTaskStatus(user, task) && (
-                    <button
-                      onClick={() => {
-                        setIsStatusModalOpen(true);
-                        setIsActionsMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3
-                               hover:bg-neutral-50 transition-all duration-200
-                               group"
-                    >
-                      <Flag className="w-5 h-5 text-neutral-400 group-hover:text-blue-600 
-                                    transition-colors flex-shrink-0" strokeWidth={2} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-neutral-900 text-sm">Changer le statut</div>
-                        <div className="text-xs text-neutral-500">Mettre à jour l'avancement</div>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Séparateur */}
-                  <div className="h-px bg-neutral-200 my-2 mx-4" />
-
-                  {/* Supprimer */}
-                  {canDeleteTask(user, task) && (
-                    <button
-                      onClick={() => {
-                        setIsDeleteModalOpen(true);
-                        setIsActionsMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3
-                               hover:bg-red-50/50 transition-all duration-200
-                               group"
-                    >
-                      <Trash2 className="w-5 h-5 text-neutral-400 group-hover:text-red-600 
-                                      transition-colors flex-shrink-0" strokeWidth={2} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-neutral-900 group-hover:text-red-700 
-                                     text-sm transition-colors">Supprimer</div>
-                        <div className="text-xs text-neutral-500 group-hover:text-red-500 
-                                     transition-colors">Action irréversible</div>
-                      </div>
-                    </button>
+                  {/* Dropdown Menu */}
+                  {isStatusDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 
+                                  bg-white
+                                  rounded-lg border border-neutral-200
+                                  shadow-lg
+                                  z-50 overflow-hidden py-1
+                                  animate-in fade-in slide-in-from-top-2 duration-200">
+                      
+                      {allStatuses.map((status) => (
+                        <button
+                          key={status.value}
+                          onClick={() => handleChangeStatus(status.value)}
+                          disabled={task.status === status.value || updating}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5
+                                   transition-colors duration-150
+                                   ${task.status === status.value 
+                                     ? 'bg-neutral-50' 
+                                     : 'hover:bg-neutral-50'}
+                                   ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${status.dotColor}`} />
+                          <span className={`flex-1 text-left text-sm font-medium ${status.textColor}`}>
+                            {status.label}
+                          </span>
+                          {task.status === status.value && (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" strokeWidth={2} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
+
+              {/* Menu Actions (3 points) */}
+              <div className="relative" ref={actionsMenuRef}>
+                <button
+                  onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+                  className="p-2.5 hover:bg-white/60 rounded-xl transition-all duration-200
+                           group relative"
+                  aria-label="Actions de la tâche"
+                >
+                  <MoreVertical className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900" strokeWidth={2.5} />
+                </button>
+
+                {/* Dropdown Actions */}
+                {isActionsMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 
+                                bg-white/95 backdrop-blur-xl
+                                rounded-2xl border border-neutral-200/50
+                                shadow-xl shadow-neutral-900/10
+                                z-50 overflow-hidden py-2
+                                animate-in fade-in slide-in-from-top-2 duration-200">
+                    
+                    {/* Modifier */}
+                    {canModifyTask(user, task) && (
+                      <button
+                        onClick={() => {
+                          setIsEditModalOpen(true);
+                          setIsActionsMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3
+                                 hover:bg-neutral-50 transition-all duration-200
+                                 group"
+                      >
+                        <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
+                                      transition-colors flex-shrink-0" strokeWidth={2} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
+                          <div className="text-xs text-neutral-500">Éditer la tâche</div>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Séparateur */}
+                    {canModifyTask(user, task) && canDeleteTask(user, task) && (
+                      <div className="h-px bg-neutral-200 my-2 mx-4" />
+                    )}
+
+                    {/* Supprimer */}
+                    {canDeleteTask(user, task) && (
+                      <button
+                        onClick={() => {
+                          setIsDeleteModalOpen(true);
+                          setIsActionsMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3
+                                 hover:bg-red-50/50 transition-all duration-200
+                                 group"
+                      >
+                        <Trash2 className="w-5 h-5 text-neutral-400 group-hover:text-red-600 
+                                        transition-colors flex-shrink-0" strokeWidth={2} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-neutral-900 group-hover:text-red-700 
+                                       text-sm transition-colors">Supprimer</div>
+                          <div className="text-xs text-neutral-500 group-hover:text-red-500 
+                                       transition-colors">Action irréversible</div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -348,8 +410,8 @@ export const TaskDetail = () => {
                 {/* Badges Status + Priorité */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 
-                                 text-sm font-semibold rounded-lg ${statusConfig.color}`}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.accent}`} />
+                                 text-sm font-semibold rounded-lg ${statusConfig.badgeColor}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.badgeAccent}`} />
                     {statusConfig.label}
                   </span>
 
@@ -552,78 +614,6 @@ export const TaskDetail = () => {
           confirmText="Supprimer"
           variant="danger"
         />
-
-        <Modal
-          isOpen={isStatusModalOpen}
-          onClose={() => setIsStatusModalOpen(false)}
-          title="Changer le statut"
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-neutral-600">
-              Sélectionnez le nouveau statut de la tâche :
-            </p>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleChangeStatus('todo')}
-                disabled={updating}
-                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                  task.status === 'todo'
-                    ? 'border-neutral-500 bg-neutral-50'
-                    : 'border-neutral-200 hover:border-neutral-400'
-                }`}
-              >
-                <div className="font-semibold text-neutral-900">À faire</div>
-                <div className="text-xs text-neutral-500 mt-1">Pas encore commencé</div>
-              </button>
-              
-              <button
-                onClick={() => handleChangeStatus('in_progress')}
-                disabled={updating}
-                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                  task.status === 'in_progress'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-neutral-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="font-semibold text-blue-900">En cours</div>
-                <div className="text-xs text-blue-600 mt-1">En cours de réalisation</div>
-              </button>
-              
-              <button
-                onClick={() => handleChangeStatus('in_review')}
-                disabled={updating}
-                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                  task.status === 'in_review'
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-neutral-200 hover:border-amber-300'
-                }`}
-              >
-                <div className="font-semibold text-amber-900">En révision</div>
-                <div className="text-xs text-amber-600 mt-1">En attente de validation</div>
-              </button>
-              
-              <button
-                onClick={() => handleChangeStatus('done')}
-                disabled={updating}
-                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                  task.status === 'done'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-neutral-200 hover:border-green-300'
-                }`}
-              >
-                <div className="font-semibold text-green-900">Terminé</div>
-                <div className="text-xs text-green-600 mt-1">Tâche complétée</div>
-              </button>
-            </div>
-            
-            {updating && (
-              <div className="text-center text-sm text-neutral-500">
-                Mise à jour en cours...
-              </div>
-            )}
-          </div>
-        </Modal>
       </div>
     </Layout>
   );
