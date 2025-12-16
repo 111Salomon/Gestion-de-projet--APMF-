@@ -18,7 +18,6 @@
 import { Calendar, FileText, Activity } from 'lucide-react';
 import { useForm } from '../../hooks/useForm';
 import { required, minLength } from '../../utils/validators';
-import { DateInput } from '../common/DateInput';
 
 export const ProjectForm = ({ 
   onSubmit, 
