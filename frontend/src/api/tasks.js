@@ -3,11 +3,45 @@
 import axiosInstance from './axios';
 
 export const tasksAPI = {
-  
-  // GET /api/tasks/ - Liste des tâches (avec pagination optionnelle)
+
+  // GET /api/tasks/ - Liste des tâches (avec pagination normale)
   getAll: async (params = {}) => {
     const response = await axiosInstance.get('/tasks/', { params });
     return response.data;
+  },
+
+  
+  // ✅ NOUVEAU : Charge TOUTES les pages (spécifique pour Kanban)
+  getAllUnpaginated: async (params = {}) => {
+    let allTasks = [];
+    let nextUrl = '/tasks/';
+    
+    // 🔄 Boucle pour charger toutes les pages
+    while (nextUrl) {
+      const response = await axiosInstance.get(nextUrl, { params });
+      const data = response.data;
+      
+      console.log(`📄 Page chargée: ${allTasks.length + data.results.length} tâches au total`);
+      
+      // Ajouter les résultats de cette page
+      allTasks = [...allTasks, ...data.results];
+      
+      // Y a-t-il une page suivante ?
+      if (data.next) {
+        // Extraire juste le path (sans le domaine)
+        nextUrl = data.next.replace('http://127.0.0.1:8000/api', '');
+      } else {
+        nextUrl = null;
+      }
+    }
+    
+    console.log(`✅ TOTAL CHARGÉ: ${allTasks.length} tâches`);
+    
+    // Retourner au même format que l'API
+    return {
+      count: allTasks.length,
+      results: allTasks
+    };
   },
 
   // GET /api/tasks/:id/ - Détails d'une tâche
@@ -51,7 +85,7 @@ export const tasksAPI = {
     return response.data;
   },
 
-  // POST /api/tasks/:id/change_status/ - Changer le statut
+  // PATCH /api/tasks/:id/change-status/ - Changer le statut
   changeStatus: async (id, newStatus) => {
     const response = await axiosInstance.patch(`/tasks/${id}/change-status/`, {
       status: newStatus,
@@ -59,16 +93,16 @@ export const tasksAPI = {
     return response.data;
   },
 
-  // PATCH /api/tasks/:id/update_status/ - Mise à jour Kanban (statut + ordre)
+  // PATCH /api/tasks/:id/update-order/ - Mise à jour Kanban (statut + ordre)
   updateStatusKanban: async (taskId, status, order) => {
     try {
       const response = await axiosInstance.patch(
-        `/tasks/${taskId}/update_status/`,
+        `/tasks/${taskId}/update-order/`,
         { status, order }
       );
       return response.data;
     } catch (error) {
-      console.error('❌ Erreur update_status Kanban:', error);
+      console.error('❌ Erreur update_order Kanban:', error);
       console.error('❌ Response:', error.response?.data);
       throw error;
     }

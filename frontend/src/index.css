@@ -446,3 +446,88 @@
   word-break: break-word;
   overflow-wrap: break-word;
 }
+/* ═══════════════════════════════════════════════════════════════
+   🎯 SCROLLBAR KANBAN - Style Asana/Linear
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Scrollbar moderne et discrète pour les colonnes Kanban */
+.kanban-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #d1d5db #f3f4f6; /* Thumb + Track pour Firefox */
+}
+
+/* Webkit (Chrome, Safari, Edge) */
+.kanban-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.kanban-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+  margin: 4px 0; /* Espace en haut/bas */
+}
+
+.kanban-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.kanban-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+  background-clip: padding-box;
+}
+
+/* ✨ Animation : Scrollbar apparaît au hover (style Asana) */
+.kanban-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.kanban-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  background-clip: padding-box;
+}
+
+.kanban-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+  background-clip: padding-box;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   🎯 Z-INDEX KANBAN - Hiérarchie des couches
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Header sticky */
+.sticky {
+  z-index: 40;
+}
+
+/* Colonnes Kanban */
+.kanban-column {
+  z-index: 1;
+  position: relative;
+}
+
+/* Cartes en drag - FORCE position fixed */
+[data-dnd-kit-overlay] {
+  position: fixed !important;
+  z-index: 99999 !important;
+  pointer-events: none;
+}
+
+/* Permet l'interaction avec le contenu du DragOverlay */
+[data-dnd-kit-overlay] > * {
+  pointer-events: auto;
+}
+
+/* Modal (doit être au-dessus du drag) */
+[role="dialog"] {
+  z-index: 100000;
+}
+
+/* Sidebar (si elle existe) */
+.sidebar {
+  z-index: 30;
+}

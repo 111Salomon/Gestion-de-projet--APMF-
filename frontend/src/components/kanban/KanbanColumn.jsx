@@ -1,93 +1,109 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanCard } from './KanbanCard';
+import { CheckCircle2, Circle, Clock, Eye } from 'lucide-react';
 
-/**
- * 📋 KanbanColumn - Une colonne de statut avec drag & drop
- * 
- * Représente une colonne Kanban (ex: "À faire", "En cours").
- * Contient des KanbanCard draggables et peut recevoir des drops.
- * 
- * @param {string} id - ID du statut ('todo', 'in_progress', etc.)
- * @param {string} title - Titre affiché ("À faire")
- * @param {Array} tasks - Liste des tâches de cette colonne
- * @param {Function} onTaskClick - Callback au clic sur une carte
- */
 export const KanbanColumn = ({ 
-  id,           // Identifiant de la colonne
-  title,        // Titre affiché
-  tasks,        // Tâches de cette colonne
-  onTaskClick   // Fonction appelée au clic sur une carte
+  id,
+  title,
+  color,
+  tasks,
+  onTaskClick
 }) => {
 
-  // ── Hook @dnd-kit pour rendre la colonne droppable ──
   const { setNodeRef, isOver } = useDroppable({
-    id: id,  // ID unique de la zone droppable
+    id: id,
   });
 
-  /**
-   * 🎨 Fonction : Classe CSS selon le statut
-   * Applique les couleurs définies dans index.css
-   */
-  const getColumnHeaderClass = () => {
-    const classes = {
-      'todo': 'kanban-header-todo',
-      'in_progress': 'kanban-header-in-progress',
-      'in_review': 'kanban-header-in-review',
-      'done': 'kanban-header-done',
+  // Configuration couleurs par statut
+  const getColumnStyle = () => {
+    const styles = {
+      'neutral': {
+        header: 'bg-neutral-50 border-neutral-200',
+        icon: 'text-neutral-600',
+        badge: 'bg-neutral-600',
+        dropzone: 'border-neutral-200',
+        IconComponent: Circle,
+      },
+      'blue': {
+        header: 'bg-blue-50 border-blue-200',
+        icon: 'text-blue-600',
+        badge: 'bg-blue-600',
+        dropzone: 'border-blue-200',
+        IconComponent: Clock,
+      },
+      'amber': {
+        header: 'bg-amber-50 border-amber-200',
+        icon: 'text-amber-600',
+        badge: 'bg-amber-600',
+        dropzone: 'border-amber-200',
+        IconComponent: Eye,
+      },
+      'green': {
+        header: 'bg-green-50 border-green-200',
+        icon: 'text-green-600',
+        badge: 'bg-green-600',
+        dropzone: 'border-green-200',
+        IconComponent: CheckCircle2,
+      },
     };
-    return classes[id] || 'kanban-header-todo';
+    return styles[color] || styles.neutral;
   };
 
-  return (
-    <div className="kanban-column">
-      
-      {/* ── Header : Titre + Compteur ── */}
-      <div className={`kanban-column-header ${getColumnHeaderClass()}`}>
-        
-        {/* Titre de la colonne */}
-        <h3 className="font-semibold text-neutral-800">
-          {title}
-        </h3>
+  const columnStyle = getColumnStyle();
+  const IconComponent = columnStyle.IconComponent;
 
-        {/* Badge compteur de tâches */}
-        <span className="bg-white bg-opacity-60 px-2 py-1 rounded-full text-xs font-medium">
+  return (
+    <div className="flex flex-col h-full">
+      
+      {/* Header */}
+      <div className={`flex items-center justify-between px-4 py-3 rounded-xl  mb-4
+                     ${columnStyle.header} transition-all duration-200`}>
+        <div className="flex items-center gap-2">
+          <IconComponent className={`w-5 h-5 ${columnStyle.icon}`} strokeWidth={2.5} />
+          <h3 className="font-bold text-neutral-900">{title}</h3>
+        </div>
+        <span className={`${columnStyle.badge} text-white px-2.5 py-1 rounded-full text-xs font-bold
+                        shadow-sm`}>
           {tasks.length}
         </span>
-
       </div>
 
-      {/* ── Zone droppable contenant les cartes ── */}
+      {/* ✅ Dropzone avec SCROLL Asana-style */}
       <div 
-        ref={setNodeRef}  // Référence pour @dnd-kit
-        className={`kanban-dropzone ${isOver ? 'drag-over' : ''}`}
-        // Classe 'drag-over' ajoutée quand on survole avec une carte
+        ref={setNodeRef}
+        className={`flex-1 rounded-xl border-2 border-dashed p-3
+                   overflow-y-auto  
+                   max-h-[calc(100vh-280px)]
+                   transition-all duration-200
+                   kanban-scrollbar
+                   ${isOver 
+                     ? 'border-orange-400 bg-orange-50/50 shadow-inner' 
+                     : `${columnStyle.dropzone} bg-white/30`}`}
+        style={{
+          minHeight: '500px',
+        }}
       >
         
-        {/* SortableContext : permet de trier les cartes dans la colonne */}
-        <SortableContext 
-          items={tasks.map(t => t.id)}  // Liste des IDs de tâches
-          strategy={verticalListSortingStrategy}  // Tri vertical
-        >
-          
-          {/* Liste des cartes */}
-          {tasks.length === 0 ? (
-            // Message si colonne vide
-            <div className="text-center text-neutral-400 text-sm py-8">
-              Aucune tâche
+        {tasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
+              <IconComponent className="w-8 h-8 text-neutral-400" strokeWidth={2} />
             </div>
-          ) : (
-            // Affichage des cartes
-            tasks.map(task => (
+            <p className="text-neutral-400 text-sm font-medium">Aucune tâche</p>
+            <p className="text-neutral-400 text-xs mt-1">Glissez une tâche ici</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tasks.map(task => (
               <KanbanCard
                 key={task.id}
                 task={task}
-                onClick={() => onTaskClick(task)}  // Ouvre modal détails
+                onClick={() => onTaskClick(task)}
               />
-            ))
-          )}
-
-        </SortableContext>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>

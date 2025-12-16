@@ -177,8 +177,8 @@ export const TaskForm = ({
           >
             <option value="todo">À faire</option>
             <option value="in_progress">En cours</option>
+            <option value="in_review">En révision</option> {/* ✅ AJOUTÉ */}
             <option value="done">Terminé</option>
-            <option value="blocked">Bloqué</option>
           </select>
           {touched.status && errors.status && (
             <p className="error-message">{errors.status}</p>

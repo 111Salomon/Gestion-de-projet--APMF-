@@ -162,6 +162,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     # 'DEFAULT_PAGINATION_CLASS': None,
+
+        # ✅ AJOUT : Permet au client de modifier page_size
+    'PAGE_SIZE_QUERY_PARAM': 'page_size',  # Active ?page_size=XXX
+    'MAX_PAGE_SIZE': 10000,  # Limite maximale autorisée
 }
 
 ## JWT Configuration

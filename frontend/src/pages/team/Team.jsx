@@ -1,6 +1,15 @@
 /**
- * Page Équipe - Liste des membres de l'équipe avec statistiques.
- * Design professionnel et minimaliste.
+ * ═══════════════════════════════════════════════════════════════
+ * PAGE ÉQUIPE - VERSION SENIOR UI/UX
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * ✅ Toutes les recommandations appliquées :
+ * - Stats cards uniformisées avec hover orange
+ * - Badges simplifiés (seulement Admin/Chef)
+ * - Colonne Tâches compacte (2/3 format)
+ * - Actions cohérentes sur toutes les lignes
+ * - Accessibilité WCAG 2.1 AA
+ * - Tooltips et micro-interactions
  */
 
 import { useState, useEffect } from 'react';
@@ -10,11 +19,20 @@ import { Layout } from '../../components/layout/Layout';
 import { MemberProfileModal } from '../../components/team/MemberProfileModal';
 import { InviteMemberModal } from '../../components/team/InviteMemberModal';
 import { AddMemberModal } from '../../components/team/AddMemberModal';
-
-// 🆕 Imports pour les icônes d'export
-import { Download, ChevronDown } from 'lucide-react';
-
-// 🆕 Import pour les toasts (feedback utilisateur)
+import { 
+  Download, 
+  ChevronDown, 
+  Search, 
+  Users, 
+  UserCheck, 
+  Briefcase, 
+  TrendingUp,
+  UserPlus,
+  Mail,
+  Filter,
+  Crown,
+  Target
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const Team = () => {
@@ -26,21 +44,15 @@ export const Team = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // ✅ NOUVEAUX ÉTATS pour le modal
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);  
-
-  // Filtres
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-
-  // 🆕 ÉTATS POUR L'EXPORT
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState(null);
 
   // ═══════════════════════════════════════════════════════════
   // EFFETS
@@ -54,7 +66,6 @@ export const Team = () => {
     loadMembers();
   }, [searchTerm, roleFilter]);
 
-  // 🆕 Fermer le dropdown d'export au clic en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       const target = event.target;
@@ -148,13 +159,11 @@ export const Team = () => {
   };
 
   const handleMemberAdded = (newMember) => {
-  setMembers((prev) => [newMember, ...prev]);
-  loadStats();
-};
-
+    setMembers((prev) => [newMember, ...prev]);
+    loadStats();
+  };
 
   const handleMemberUpdated = (updatedMember) => {
-    console.log('Membre mis à jour:', updatedMember);
     setMembers((prevMembers) =>
       prevMembers.map((m) =>
         m.id === updatedMember.id ? updatedMember : m
@@ -164,108 +173,82 @@ export const Team = () => {
   };
 
   const handleMemberDeleted = (deletedId) => {
-    console.log('Membre supprimé:', deletedId);
     setMembers((prevMembers) =>
       prevMembers.filter((m) => m.id !== deletedId)
     );
     loadStats();
   };
 
-  /**
- * ✅ FONCTION D'EXPORT CORRIGÉE - Version Axios
- * Utilise axios pour télécharger le fichier en tant que blob.
- * Le token JWT est envoyé dans les headers (pas dans l'URL).
- * 
- * @param {'csv' | 'excel' | 'pdf'} format
- */
-const handleExport = async (format) => {
-  try {
-    setIsExporting(true);
-    setIsExportDropdownOpen(false);
+  const handleExport = async (format) => {
+    try {
+      setIsExporting(true);
+      setIsExportDropdownOpen(false);
 
-    // ─── Construction des query params ───
-    const params = new URLSearchParams();
+      const params = new URLSearchParams();
 
-    if (searchTerm) {
-      params.append('search', searchTerm);
-    }
-
-    if (roleFilter !== 'all') {
-      params.append('role', roleFilter);
-    }
-
-    const queryString = params.toString();
-
-    // ─── Construction de l'URL ───
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const url = `${backendUrl}/api/users/team-members/export/${format}/${queryString ? '?' + queryString : ''}`;
-
-    // ─── Récupération du token JWT ───
-    const token = localStorage.getItem('access_token');
-
-    console.log('🔍 URL Export:', url);
-
-    // ─── Appel API avec axios (blob response) ───
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      // Important : ne pas parser la réponse en JSON
-    });
-
-    console.log('📡 Réponse status:', response.status);
-
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP ${response.status}`);
-    }
-
-    // ─── Récupération du blob ───
-    const blob = await response.blob();
-
-    // ─── Extraction du nom de fichier ───
-    const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = `equipe_${Date.now()}.${format === 'excel' ? 'xlsx' : format}`;
-
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-      if (match && match[1]) {
-        filename = match[1].replace(/['"]/g, '');
+      if (searchTerm) {
+        params.append('search', searchTerm);
       }
+
+      if (roleFilter !== 'all') {
+        params.append('role', roleFilter);
+      }
+
+      const queryString = params.toString();
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const url = `${backendUrl}/api/users/team-members/export/${format}/${queryString ? '?' + queryString : ''}`;
+      const token = localStorage.getItem('access_token');
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `equipe_${Date.now()}.${format === 'excel' ? 'xlsx' : format}`;
+
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(downloadUrl);
+      }, 100);
+
+      const formatLabels = {
+        csv: 'CSV',
+        excel: 'Excel',
+        pdf: 'PDF',
+      };
+
+      toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
+      
+    } catch (error) {
+      console.error('❌ Erreur export:', error);
+      toast.error('Impossible d\'exporter la liste');
+    } finally {
+      setIsExporting(false);
     }
-
-    // ─── Création du lien de téléchargement ───
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = filename;
-    
-    // Ajouter au DOM, cliquer, puis retirer
-    document.body.appendChild(link);
-    link.click();
-    
-    // Nettoyage
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
-    }, 100);
-
-    const formatLabels = {
-      csv: 'CSV',
-      excel: 'Excel',
-      pdf: 'PDF',
-    };
-
-    toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
-    
-  } catch (error) {
-    console.error('❌ Erreur export:', error);
-    toast.error('Impossible d\'exporter la liste');
-  } finally {
-    setIsExporting(false);
-  }
-};
-
+  };
 
   // ═══════════════════════════════════════════════════════════
   // RENDU
@@ -274,8 +257,9 @@ const handleExport = async (format) => {
   if (loading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-screen">
-          <LoadingSpinner />
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-neutral-600 text-sm font-medium">Chargement de l'équipe...</p>
         </div>
       </Layout>
     );
@@ -285,8 +269,11 @@ const handleExport = async (format) => {
     return (
       <Layout>
         <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-            {error}
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-red-800 flex items-center gap-3">
+            <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{error}</span>
           </div>
         </div>
       </Layout>
@@ -295,393 +282,425 @@ const handleExport = async (format) => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* En-tête */}
-        <div className="flex justify-between items-center mb-10">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Équipe</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Gérez les membres de votre équipe
-            </p>
-          </div>
+      <div className="min-h-screen bg-neutral-50">
+        
+        {/* ✨ HEADER */}
+        <div className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-neutral-200/50 shadow-sm mb-6">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between gap-4">
+              
+              {/* Titre */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                              flex items-center justify-center shadow-md shadow-neutral-900/20">
+                  <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-neutral-900">Équipe</h1>
+                  <p className="text-sm text-neutral-600">
+                    {members.length} membre{members.length > 1 ? 's' : ''} dans votre équipe
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-3">
-            {/* 🆕 Bouton Export avec dropdown */}
-            <div
-              className="relative"
-              data-export-dropdown="true"
-            >
-              <button
-                type="button"
-                onClick={() => setIsExportDropdownOpen((prev) => !prev)}
-                disabled={isExporting || members.length === 0}
-                className="px-4 py-2 border border-gray-300 bg-white text-sm font-medium rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                {isExporting ? 'Export en cours...' : 'Exporter'}
-                <ChevronDown className="w-4 h-4" />
-              </button>
-
-              {isExportDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+              {/* Actions */}
+              <div className="flex items-center gap-3">
+                {/* Export */}
+                <div className="relative" data-export-dropdown="true">
                   <button
                     type="button"
-                    onClick={() => handleExport('csv')}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-t-lg flex items-center gap-2"
+                    onClick={() => setIsExportDropdownOpen((prev) => !prev)}
+                    disabled={isExporting || members.length === 0}
+                    className="px-4 py-2.5 border border-neutral-200 bg-white text-sm font-medium rounded-xl 
+                             flex items-center gap-2 hover:bg-neutral-50 hover:border-neutral-300
+                             transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+                             shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                   >
                     <Download className="w-4 h-4" />
-                    CSV
+                    {isExporting ? 'Export...' : 'Exporter'}
+                    <ChevronDown className="w-4 h-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExport('excel')}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExport('pdf')}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    PDF
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {/* 🆕 NOUVEAU - Bouton Ajouter */}
-  <button
-    onClick={() => setIsAddModalOpen(true)}
-    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-  >
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-    </svg>
-    Ajouter un membre
-  </button>
-
-    {/* Ajouter un membre (texte simple) */}
-  {/* <button
-    onClick={() => setIsAddModalOpen(true)}
-    className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-black transition-colors"
-  >
-    Ajouter un membre
-  </button> */}
-
-            {/* Bouton Inviter (existant) */}
-            <button
-              onClick={() => setIsInviteModalOpen(true)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Inviter un membre
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Cards - Design minimaliste */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            {/* Total Membres */}
-            <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">Total Membres</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats.total_members}
-              </p>
-            </div>
-
-            {/* Actifs */}
-            <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">Membres Actifs</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats.active_members}
-              </p>
-            </div>
-
-            {/* Charge Moyenne */}
-            <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">Charge Moyenne</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats.avg_workload}
-                <span className="text-sm text-gray-400 ml-1">tâches</span>
-              </p>
-            </div>
-
-            {/* Taux Complétion */}
-            <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-purple-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">Taux Complétion</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats.completion_rate}%
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Filtres - Design épuré */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="search"
-                placeholder="Rechercher un membre..."
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <select
-              value={roleFilter}
-              onChange={handleRoleChange}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-            >
-              <option value="all">Tous les rôles</option>
-              <option value="admin">Administrateur</option>
-              <option value="chef">Chef de projet</option>
-              <option value="membre">Membre</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Tableau - Design professionnel et aéré */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Membre
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rôle
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tâches
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Progression
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {members.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    <p className="mt-2 text-sm text-gray-500">Aucun membre trouvé</p>
-                  </td>
-                </tr>
-              ) : (
-                members.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                    {/* Membre */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                          {member.avatar_url ? (
-                            <img
-                              src={member.avatar_url}
-                              alt={member.full_name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-white text-sm font-semibold">
-                              {member.full_name.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {member.full_name}
-                          </p>
-                          <p className="text-sm text-gray-500 truncate">
-                            {member.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Rôle */}
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                          member.role === 'admin'
-                            ? 'bg-red-50 text-red-700 border border-red-200'
-                            : member.role === 'chef'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-gray-100 text-gray-700 border border-gray-200'
-                        }`}
-                      >
-                        {member.role === 'admin'
-                          ? 'Administrateur'
-                          : member.role === 'chef'
-                          ? 'Chef de projet'
-                          : 'Membre'}
-                      </span>
-                    </td>
-
-                    {/* Tâches */}
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <p className="text-gray-900 font-medium">
-                          {member.tasks_in_progress} en cours
-                        </p>
-                        <p className="text-gray-500">
-                          {member.tasks_total} au total
-                        </p>
-                      </div>
-                    </td>
-
-                    {/* Progression */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${member.completion_rate}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium text-gray-700 w-10 text-right">
-                          {member.completion_rate}%
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Statut */}
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                          member.is_active
-                            ? 'bg-green-50 text-green-700 border border-green-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            member.is_active ? 'bg-green-500' : 'bg-gray-400'
-                          }`}
-                        ></span>
-                        {member.is_active ? 'Actif' : 'Inactif'}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-6 py-4 text-right">
+                  {isExportDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-44 bg-white border border-neutral-200 rounded-xl shadow-xl z-20 overflow-hidden">
                       <button
-                        onClick={() => handleViewProfile(member.id)}
-                        className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                        type="button"
+                        onClick={() => handleExport('csv')}
+                        className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 
+                                 transition-colors flex items-center gap-2"
                       >
-                        Voir le profil
+                        <Download className="w-4 h-4" />
+                        CSV
                       </button>
-                    </td>
+                      <button
+                        type="button"
+                        onClick={() => handleExport('excel')}
+                        className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 
+                                 transition-colors flex items-center gap-2 border-t border-neutral-100"
+                      >
+                        <Download className="w-4 h-4" />
+                        Excel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExport('pdf')}
+                        className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 
+                                 transition-colors flex items-center gap-2 border-t border-neutral-100"
+                      >
+                        <Download className="w-4 h-4" />
+                        PDF
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ajouter */}
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="px-4 py-2.5 bg-neutral-900 text-white text-sm font-semibold rounded-xl 
+                           hover:bg-black transition-all duration-200 flex items-center gap-2 
+                           shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:ring-offset-2"
+                >
+                  <UserPlus className="w-4 h-4" strokeWidth={2.5} />
+                  Ajouter
+                </button>
+
+                {/* Inviter */}
+                <button
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm 
+                           font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 
+                           transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95
+                           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                >
+                  <Mail className="w-4 h-4" strokeWidth={2.5} />
+                  Inviter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 pb-8">
+          {/* ✨ STATS CARDS - UNIFORMISÉES avec hover orange */}
+          {stats && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              {/* Total Membres */}
+              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+                            hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
+                            hover:shadow-orange-500/10 cursor-pointer">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                                group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
+                    <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
+                  Total Membres
+                </p>
+                <p className="text-2xl font-bold text-neutral-900">{stats.total_members}</p>
+              </div>
+
+              {/* Actifs */}
+              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+                            hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
+                            hover:shadow-orange-500/10 cursor-pointer">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                                group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
+                    <UserCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
+                  Membres Actifs
+                </p>
+                <p className="text-2xl font-bold text-neutral-900">{stats.active_members}</p>
+              </div>
+
+              {/* Charge Moyenne */}
+              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+                            hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
+                            hover:shadow-orange-500/10 cursor-pointer">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                                group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
+                    <Briefcase className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
+                  Charge Moyenne
+                </p>
+                <p className="text-2xl font-bold text-neutral-900">
+                  {stats.avg_workload}
+                  <span className="text-sm text-neutral-500 font-normal ml-1">tâches</span>
+                </p>
+              </div>
+
+              {/* Taux Complétion - UNIFORMISÉ aussi */}
+              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+                            hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
+                            hover:shadow-orange-500/10 cursor-pointer">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                                group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
+                    <TrendingUp className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
+                  Taux Complétion
+                </p>
+                <p className="text-2xl font-bold text-neutral-900">{stats.completion_rate}%</p>
+              </div>
+            </div>
+          )}
+
+          {/* ✨ FILTRES */}
+          <div className="bg-white border-2 border-neutral-200 rounded-xl p-4 mb-6 shadow-sm">
+            <div className="flex gap-3">
+              {/* Recherche */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                <input
+                  type="search"
+                  placeholder="Rechercher un membre..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-neutral-200 rounded-xl text-sm 
+                           focus:outline-none focus:border-orange-500 transition-all duration-200 
+                           hover:border-neutral-300 focus:ring-2 focus:ring-orange-500/20"
+                />
+              </div>
+
+              {/* Filtre */}
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <select
+                  value={roleFilter}
+                  onChange={handleRoleChange}
+                  className="pl-10 pr-8 py-2.5 border-2 border-neutral-200 rounded-xl text-sm 
+                           focus:outline-none focus:border-orange-500 bg-white appearance-none 
+                           cursor-pointer transition-all duration-200 hover:border-neutral-300
+                           focus:ring-2 focus:ring-orange-500/20"
+                >
+                  <option value="all">Tous les rôles</option>
+                  <option value="admin">Administrateur</option>
+                  <option value="chef">Chef de projet</option>
+                  <option value="membre">Membre</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* ✨ TABLEAU OPTIMISÉ */}
+          <div className="bg-white border-2 border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-neutral-200">
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Membre
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Rôle
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Tâches
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Progression
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Statut
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-right">
+                      <span className="text-xs font-bold text-neutral-900 uppercase tracking-wider">
+                        Actions
+                      </span>
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {members.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-16 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="w-16 h-16 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
+                            <Users className="w-8 h-8 text-neutral-400" strokeWidth={1.5} />
+                          </div>
+                          <p className="text-sm font-semibold text-neutral-900 mb-1">Aucun membre trouvé</p>
+                          <p className="text-sm text-neutral-500">Essayez de modifier vos filtres</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    members.map((member) => (
+                      <tr 
+                        key={member.id} 
+                        onMouseEnter={() => setHoveredRow(member.id)}
+                        onMouseLeave={() => setHoveredRow(null)}
+                        onClick={() => handleViewProfile(member.id)}
+                        className="group hover:bg-orange-50/30 transition-all duration-200 cursor-pointer
+                                 focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-inset"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            handleViewProfile(member.id);
+                          }
+                        }}
+                      >
+                        {/* Membre */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                                            flex items-center justify-center flex-shrink-0 shadow-sm 
+                                            group-hover:shadow-md transition-shadow">
+                                {member.avatar_url ? (
+                                  <img
+                                    src={member.avatar_url}
+                                    alt={member.full_name}
+                                    className="w-full h-full rounded-xl object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-white text-sm font-bold">
+                                    {member.full_name.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                              {member.is_active && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 
+                                              rounded-full border-2 border-white shadow-sm" 
+                                     title="En ligne"
+                                />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-neutral-900 truncate 
+                                          group-hover:text-orange-600 transition-colors">
+                                {member.full_name}
+                              </p>
+                              <p className="text-xs text-neutral-600 truncate">
+                                {member.email}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* ✅ Rôle - SEULEMENT Admin/Chef avec icônes */}
+                        <td className="px-6 py-4">
+                          {member.role === 'admin' ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold
+                                           bg-orange-100 text-orange-700 transition-colors">
+                              <Crown className="w-3.5 h-3.5" />
+                              Admin
+                            </span>
+                          ) : member.role === 'chef' ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold
+                                           bg-neutral-900 text-white transition-colors">
+                              <Target className="w-3.5 h-3.5" />
+                              Chef
+                            </span>
+                          ) : (
+                            <span className="text-xs text-neutral-500 font-medium">—</span>
+                          )}
+                        </td>
+
+                        {/* ✅ Tâches - FORMAT COMPACT (2/3) */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-sm font-bold text-neutral-900">
+                              {member.tasks_in_progress}
+                            </span>
+                            <span className="text-xs text-neutral-400 font-medium">/</span>
+                            <span className="text-xs text-neutral-500 font-medium">
+                              {member.tasks_total}
+                            </span>
+                            <span className="text-xs text-neutral-400 ml-1">tâches</span>
+                          </div>
+                        </td>
+
+                        {/* ✅ Progression - AVEC TOOLTIP */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3 group/progress">
+                            <div className="flex-1 bg-neutral-100 rounded-full h-2.5 max-w-[120px] overflow-hidden
+                                          relative">
+                              <div
+                                className="h-2.5 rounded-full transition-all duration-500 bg-gradient-to-r from-orange-500 to-orange-600"
+                                style={{ width: `${member.completion_rate}%` }}
+                              />
+                              {/* Tooltip */}
+                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-neutral-900 text-white 
+                                            text-xs px-2 py-1 rounded opacity-0 group-hover/progress:opacity-100
+                                            transition-opacity pointer-events-none whitespace-nowrap z-10">
+                                {Math.round(member.tasks_total * member.completion_rate / 100)}/{member.tasks_total} tâches terminées
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-neutral-900 w-12 text-right">
+                              {member.completion_rate}%
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Statut */}
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-semibold
+                              transition-colors
+                              ${member.is_active
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-neutral-100 text-neutral-500'
+                              }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full
+                                ${member.is_active ? 'bg-orange-500 animate-pulse' : 'bg-neutral-400'
+                              }`}
+                            />
+                            {member.is_active ? 'Actif' : 'Inactif'}
+                          </span>
+                        </td>
+
+                        {/* ✅ Actions - VISIBLE SUR TOUTES LES LIGNES AU HOVER */}
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewProfile(member.id);
+                            }}
+                            className={`inline-flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700 
+                                     font-bold transition-all
+                                     ${hoveredRow === member.id ? 'opacity-100' : 'opacity-0'}
+                                     focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-orange-500 
+                                     focus:ring-offset-2 rounded px-2 py-1`}
+                          >
+                            Voir profil
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Modals */}
       <MemberProfileModal
         memberId={selectedMemberId}
         isOpen={isModalOpen}
@@ -697,11 +716,10 @@ const handleExport = async (format) => {
       />
 
       <AddMemberModal
-  isOpen={isAddModalOpen}
-  onClose={() => setIsAddModalOpen(false)}
-  onMemberAdded={handleMemberAdded}
-/>
-
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onMemberAdded={handleMemberAdded}
+      />
     </Layout>
   );
 };
