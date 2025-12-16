@@ -1,3 +1,17 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * MODAL COMPONENT - BACKDROP FULL SCREEN + CLICK OUTSIDE
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * ✅ Corrections :
+ * - Backdrop couvre 100% de l'écran (fixed inset-0)
+ * - Click outside ferme le modal
+ * - Scroll lock automatique
+ * - Z-index correct
+ * - Animations smooth
+ */
+
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 /**
@@ -5,21 +19,35 @@ import { X } from 'lucide-react';
  * 
  * @param {boolean} isOpen - État d'ouverture du modal
  * @param {Function} onClose - Fonction de fermeture
- * @param {string} title - Titre du modal
+ * @param {string} title - Titre du modal (optionnel)
  * @param {React.ReactNode} children - Contenu du modal
  * @param {string} size - Taille du modal (sm, md, lg, xl)
+ * @param {string} maxWidth - Alternative à size (ex: "max-w-xl")
  */
 export const Modal = ({ 
   isOpen, 
   onClose, 
   title, 
   children, 
-  size = 'md' 
+  size = 'md',
+  maxWidth 
 }) => {
+  // ✨ SCROLL LOCK
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // Si le modal n'est pas ouvert, ne rien afficher
   if (!isOpen) return null;
 
-  // Classes de taille selon la prop
+  // Classes de taille
   const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
@@ -27,44 +55,54 @@ export const Modal = ({
     xl: 'max-w-4xl',
   };
 
+  const widthClass = maxWidth || sizeClasses[size];
+
   /**
-   * Ferme le modal quand on clique sur l'arrière-plan
+   * ✅ CLICK OUTSIDE pour fermer
    */
   const handleBackdropClick = (e) => {
-    // Ferme seulement si on clique sur l'arrière-plan, pas sur le contenu
     if (e.target === e.currentTarget) {
       onClose();
     }
   };
 
   return (
-    // Arrière-plan sombre (backdrop)
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4
+                 bg-neutral-900/60 backdrop-blur-[2px]
+                 animate-in fade-in duration-200"
       onClick={handleBackdropClick}
     >
-      {/* Contenu du modal */}
+      {/* ✨ MODAL CONTENT */}
       <div
         className={`
-          bg-white rounded-xl shadow-2xl w-full ${sizeClasses[size]}
+          relative bg-white rounded-2xl shadow-2xl w-full ${widthClass}
           max-h-[90vh] flex flex-col
-          animate-in fade-in zoom-in duration-200
+          animate-in zoom-in-95 fade-in duration-200
         `}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
-        {/* Header avec titre et bouton fermer */}
-        <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-          <h2 className="text-2xl font-bold text-neutral-900">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
-            aria-label="Fermer"
-          >
-            <X className="w-5 h-5 text-neutral-600" />
-          </button>
-        </div>
+        
+        {/* ✨ HEADER CONDITIONNEL */}
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+            <h2 className="text-xl font-bold text-neutral-900">
+              {title}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+              aria-label="Fermer"
+            >
+              <X className="w-5 h-5 text-neutral-600" strokeWidth={2} />
+            </button>
+          </div>
+        )}
 
-        {/* Contenu scrollable */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* ✨ CONTENU */}
+        <div className={`flex-1 overflow-y-auto ${title ? 'p-6' : ''}`}>
           {children}
         </div>
       </div>

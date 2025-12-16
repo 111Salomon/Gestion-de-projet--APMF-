@@ -1,3 +1,19 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * CALENDAR VIEW - VERSION ULTRA ÉPURÉE
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * ✅ Améliorations design :
+ * - Bordures 1px ultra-fines
+ * - Couleurs douces (neutral-100/200)
+ * - Espacements généreux
+ * - Shadows subtiles
+ * - Rounded-xl moderne
+ * - Transitions smooth
+ * 
+ * ⚠️ Logique drag & drop 100% préservée
+ */
+
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
@@ -14,12 +30,12 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
   // Génère les jours du mois avec padding
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }); // Lundi
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const daysToShow = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   // Jours de la semaine
-  const weekDays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   // Grouper les tâches par date
   const tasksByDate = {};
@@ -63,7 +79,6 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
 
     if (!over) return;
 
-    // Récupérer la tâche et la date cible
     const task = active.data.current?.task;
     const targetDate = over.data.current?.date;
 
@@ -72,16 +87,12 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
     const oldDate = task.due_date;
     const newDate = format(targetDate, 'yyyy-MM-dd');
 
-    // Si même date, ne rien faire
     if (oldDate === newDate) return;
 
     try {
-      // Appel API
       await calendarAPI.changeTaskDate(task.id, newDate);
-      
       toast.success(`Échéance déplacée au ${format(targetDate, 'd MMMM', { locale: fr })}`);
       
-      // Recharger les tâches
       if (onTasksUpdate) {
         onTasksUpdate();
       }
@@ -98,44 +109,59 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-4">
-        {/* Header Navigation */}
+        
+        {/* ✨ HEADER NAVIGATION - ÉPURÉ */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            
+            {/* Bouton Précédent */}
             <button
               onClick={handlePreviousMonth}
-              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-orange-50 rounded-lg transition-all duration-200 
+                       group focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              aria-label="Mois précédent"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 text-neutral-500 group-hover:text-orange-600" strokeWidth={2} />
             </button>
             
-            <h2 className="text-xl font-bold text-neutral-900 min-w-[200px] text-center">
+            {/* Titre Mois */}
+            <h2 className="text-lg font-bold text-neutral-900 min-w-[180px] text-center capitalize">
               {format(currentDate, 'MMMM yyyy', { locale: fr })}
             </h2>
             
+            {/* Bouton Suivant */}
             <button
               onClick={handleNextMonth}
-              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-orange-50 rounded-lg transition-all duration-200 
+                       group focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              aria-label="Mois suivant"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 text-neutral-500 group-hover:text-orange-600" strokeWidth={2} />
             </button>
           </div>
 
+          {/* ✨ BOUTON AUJOURD'HUI - Subtil */}
           <button
             onClick={handleToday}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white 
+                     rounded-lg hover:shadow-md hover:shadow-orange-500/25 
+                     transition-all duration-200 font-medium text-sm
+                     hover:scale-[1.02] active:scale-[0.98]
+                     focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
           >
             Aujourd'hui
           </button>
         </div>
 
-        {/* Grille Calendrier */}
-        <div className="border border-neutral-200 rounded-lg overflow-hidden bg-white">
+        {/* ✨ GRILLE CALENDRIER - ULTRA ÉPURÉE */}
+        <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white">
+          
           {/* Header jours semaine */}
-          <div className="grid grid-cols-7 bg-neutral-50 border-b border-neutral-200">
+          <div className="grid grid-cols-7 bg-neutral-50/50 border-b border-neutral-200">
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="p-3 text-center text-sm font-semibold text-neutral-700 border-r border-neutral-200 last:border-r-0"
+                className="py-3 text-center text-xs font-semibold text-neutral-600 uppercase tracking-wider"
               >
                 {day}
               </div>
@@ -143,7 +169,7 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
           </div>
 
           {/* Grille des jours */}
-          <div className="grid grid-cols-7">
+          <div className="grid grid-cols-7 divide-x divide-y divide-neutral-100">
             {daysToShow.map((date, index) => {
               const dateKey = format(date, 'yyyy-MM-dd');
               const dayTasks = tasksByDate[dateKey] || [];
@@ -156,9 +182,10 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
                   date={date}
                   tasks={dayTasks}
                   isToday={isTodayDate}
+                  isCurrentMonth={isCurrentMonth}
                   onTaskClick={onTaskClick}
                 >
-                  <div className={`${!isCurrentMonth ? 'opacity-30' : ''}`}>
+                  <div className={`${!isCurrentMonth ? 'opacity-40' : ''}`}>
                     {dayTasks.map((task) => (
                       <DraggableTask
                         key={task.id}
@@ -174,11 +201,13 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
         </div>
       </div>
 
-      {/* Overlay pendant le drag */}
+      {/* ✨ OVERLAY DRAG - Subtil */}
       <DragOverlay>
         {activeTask && (
-          <div className="bg-white shadow-2xl rounded-lg p-3 border-2 border-primary-400">
-            <p className="text-sm font-medium text-neutral-900">{activeTask.title}</p>
+          <div className="bg-white shadow-xl rounded-lg p-3 border border-orange-300 
+                        ring-2 ring-orange-500/20 transform rotate-2 scale-105">
+            <p className="text-sm font-semibold text-neutral-900">{activeTask.title}</p>
+            <p className="text-xs text-neutral-500 mt-1">Déplacement...</p>
           </div>
         )}
       </DragOverlay>

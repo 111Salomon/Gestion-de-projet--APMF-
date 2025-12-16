@@ -1,3 +1,17 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * CALENDAR FILTERS - VERSION LÉGÈRE (LOGIQUE PRÉSERVÉE)
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * ✅ Changements UNIQUEMENT visuels :
+ * - primary-600 → orange-500
+ * - Couleurs douces et aérées
+ * - Padding généreux
+ * - Bordures arrondies
+ * 
+ * ⚠️ AUCUNE logique modifiée (accordéons, recherche, tags, etc.)
+ */
+
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Filter, 
@@ -58,7 +72,7 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
     { value: 'low', label: 'Basse', icon: Flag, color: 'text-green-500' },
   ];
 
-  // 🆕 CORRIGÉ - Filtrer les projets selon recherche globale OU recherche locale
+  // Filtrer les projets selon recherche globale OU recherche locale
   const filteredProjects = useMemo(() => {
     const searchTerm = (globalSearch || projectSearch).toLowerCase();
     if (!searchTerm) return availableProjects;
@@ -68,7 +82,7 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
     );
   }, [availableProjects, projectSearch, globalSearch]);
 
-  // 🆕 AJOUTÉ - Filtrer les statuts selon recherche globale
+  // Filtrer les statuts selon recherche globale
   const filteredStatuses = useMemo(() => {
     if (!globalSearch) return statusOptions;
     
@@ -79,7 +93,7 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
     );
   }, [globalSearch]);
 
-  // 🆕 AJOUTÉ - Filtrer les priorités selon recherche globale
+  // Filtrer les priorités selon recherche globale
   const filteredPriorities = useMemo(() => {
     if (!globalSearch) return priorityOptions;
     
@@ -90,7 +104,7 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
     );
   }, [globalSearch]);
 
-  // 🆕 AJOUTÉ - Auto-expand sections avec résultats
+  // Auto-expand sections avec résultats
   useEffect(() => {
     if (globalSearch) {
       setExpandedSections({
@@ -189,28 +203,32 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
   return (
     <div className="space-y-3">
       
-      {/* Bouton toggle */}
+      {/* ✨ BOUTON TOGGLE - COULEURS ORANGE */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={`
-            flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium
-            transition-all duration-200 border
+            flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-medium text-sm
+            transition-all duration-200 border shadow-sm hover:shadow-md
             ${isOpen 
-              ? 'bg-primary-50 border-primary-300 text-primary-700' 
-              : 'bg-white border-neutral-200 text-neutral-700 hover:border-neutral-300'
+              ? 'bg-orange-50 border-orange-200 text-orange-700' 
+              : 'bg-white border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50'
             }
+            focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2
           `}
         >
-          <Filter className="w-4 h-4" />
+          <Filter className={`w-4 h-4 ${isOpen ? 'text-orange-500' : 'text-neutral-500'}`} 
+                  strokeWidth={2.5} />
           <span>Filtres</span>
           {activeFiltersCount > 0 && (
-            <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs font-bold rounded-full">
+            <span className="ml-1 px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full
+                           animate-pulse">
               {activeFiltersCount}
             </span>
           )}
           <ChevronDown 
-            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            strokeWidth={2.5}
           />
         </button>
 
@@ -218,19 +236,22 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
         {activeFiltersCount > 0 && (
           <button
             onClick={resetFilters}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 
-                     hover:bg-red-50 rounded-lg transition-colors font-medium"
+            className="flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 
+                     hover:bg-red-50 rounded-xl transition-all duration-200 font-medium
+                     border-2 border-transparent hover:border-red-200
+                     focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" strokeWidth={2.5} />
             Réinitialiser
           </button>
         )}
       </div>
 
-      {/* Tags des filtres actifs */}
+      {/* ✨ TAGS DES FILTRES ACTIFS - AÉRÉ */}
       {activeFiltersCount > 0 && !isOpen && (
-        <div className="flex flex-wrap gap-2 items-center bg-neutral-50 p-3 rounded-lg border border-neutral-200">
-          <span className="text-xs text-neutral-500 font-semibold uppercase tracking-wide">
+        <div className="flex flex-wrap gap-2 items-center bg-orange-50/50 p-4 rounded-xl 
+                      border-2 border-orange-100">
+          <span className="text-xs text-neutral-600 font-bold uppercase tracking-wide">
             Actifs :
           </span>
           
@@ -278,77 +299,81 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
         </div>
       )}
 
-      {/* Panel des filtres */}
+      {/* ✨ PANEL DES FILTRES - AÉRÉ */}
       {isOpen && (
-        <div className="bg-white border border-neutral-200 rounded-xl shadow-lg animate-fadeIn overflow-hidden">
+        <div className="bg-white border-2 border-neutral-200 rounded-xl shadow-2xl 
+                      animate-fadeIn overflow-hidden">
           
           {/* Header sticky */}
-          <div className="sticky top-0 bg-white border-b border-neutral-200 p-4 z-10">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
-                <Filter className="w-5 h-5 text-primary-600" />
+          <div className="sticky top-0 bg-white border-b-2 border-neutral-200 p-5 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2.5">
+                <Filter className="w-5 h-5 text-orange-500" strokeWidth={2.5} />
                 Filtrer les tâches
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-neutral-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-neutral-100 rounded-lg transition-colors
+                         focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <X className="w-5 h-5 text-neutral-500" />
+                <X className="w-5 h-5 text-neutral-500" strokeWidth={2.5} />
               </button>
             </div>
 
-            {/* 🆕 CORRIGÉ - Recherche globale fonctionnelle */}
+            {/* Recherche globale */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" 
+                      strokeWidth={2.5} />
               <input
                 type="text"
                 placeholder="Rechercher dans les filtres..."
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg
-                         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-                         text-sm"
+                className="w-full pl-10 pr-10 py-2.5 border-2 border-neutral-200 rounded-xl
+                         focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-300
+                         text-sm transition-all duration-200"
               />
-              {/* 🆕 AJOUTÉ - Bouton clear recherche */}
               {globalSearch && (
                 <button
                   onClick={() => setGlobalSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-neutral-100 rounded"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-neutral-100 
+                           rounded-full transition-colors"
                 >
-                  <X className="w-3.5 h-3.5 text-neutral-400" />
+                  <X className="w-3.5 h-3.5 text-neutral-400" strokeWidth={2.5} />
                 </button>
               )}
             </div>
 
-            {/* 🆕 AJOUTÉ - Compteur de résultats */}
+            {/* Compteur de résultats */}
             {globalSearch && (
-              <p className="text-xs text-neutral-600 mt-2">
+              <p className="text-xs text-neutral-600 mt-2 font-medium">
                 {filteredProjects.length + filteredStatuses.length + filteredPriorities.length} résultat(s) trouvé(s)
               </p>
             )}
           </div>
 
-          {/* Contenu scrollable */}
-          <div className="max-h-[500px] overflow-y-auto p-4 space-y-3">
+          {/* ✨ CONTENU SCROLLABLE - SPACING GÉNÉREUX */}
+          <div className="max-h-[500px] overflow-y-auto p-5 space-y-3">
             
             {/* Section Projets */}
             {(filteredProjects.length > 0 || !globalSearch) && (
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
+              <div className="border-2 border-neutral-200 rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggleSection('projects')}
-                  className="w-full flex items-center justify-between p-3 hover:bg-neutral-50 transition-colors"
+                  className="w-full flex items-center justify-between p-3.5 hover:bg-orange-50 
+                           transition-colors duration-200"
                 >
-                  <div className="flex items-center gap-2">
-                    <FolderOpen className="w-4 h-4 text-neutral-600" />
-                    <span className="font-semibold text-neutral-900">Projets</span>
+                  <div className="flex items-center gap-2.5">
+                    <FolderOpen className="w-4 h-4 text-neutral-600" strokeWidth={2.5} />
+                    <span className="font-bold text-neutral-900">Projets</span>
                     {getActiveCount('projects') > 0 && (
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold 
+                                   rounded-full ring-1 ring-orange-200">
                         {getActiveCount('projects')}
                       </span>
                     )}
-                    {/* 🆕 AJOUTÉ - Nombre de résultats filtrés */}
                     {globalSearch && filteredProjects.length > 0 && (
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs text-neutral-500 font-medium">
                         ({filteredProjects.length})
                       </span>
                     )}
@@ -360,39 +385,43 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
                           e.stopPropagation();
                           clearSection('projects');
                         }}
-                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        className="text-xs text-red-600 hover:text-red-700 font-bold hover:underline"
                       >
                         Effacer
                       </button>
                     )}
                     <ChevronDown 
-                      className={`w-4 h-4 text-neutral-500 transition-transform ${
+                      className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${
                         expandedSections.projects ? 'rotate-180' : ''
                       }`}
+                      strokeWidth={2.5}
                     />
                   </div>
                 </button>
 
                 {expandedSections.projects && (
-                  <div className="p-3 pt-0 space-y-2 border-t border-neutral-100">
-                    {/* Recherche projets (masquée si recherche globale active) */}
+                  <div className="p-3.5 pt-0 space-y-2.5 border-t-2 border-neutral-100">
+                    {/* Recherche projets */}
                     {!globalSearch && (
                       <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" 
+                                strokeWidth={2.5} />
                         <input
                           type="text"
                           placeholder="Rechercher projet..."
                           value={projectSearch}
                           onChange={(e) => setProjectSearch(e.target.value)}
-                          className="w-full pl-8 pr-3 py-1.5 text-sm border border-neutral-200 rounded
-                                   focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="w-full pl-9 pr-9 py-2 text-sm border-2 border-neutral-200 rounded-lg
+                                   focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-300
+                                   transition-all duration-200"
                         />
                         {projectSearch && (
                           <button
                             onClick={() => setProjectSearch('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:bg-neutral-100 
+                                     rounded-full"
                           >
-                            <X className="w-3 h-3 text-neutral-400" />
+                            <X className="w-3 h-3 text-neutral-400" strokeWidth={2.5} />
                           </button>
                         )}
                       </div>
@@ -404,22 +433,24 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
                         filteredProjects.map(project => (
                           <label
                             key={project.id}
-                            className="flex items-center gap-2 p-2 hover:bg-neutral-50 rounded cursor-pointer group"
+                            className="flex items-center gap-2.5 p-2.5 hover:bg-orange-50 rounded-lg 
+                                     cursor-pointer group transition-colors border-2 border-transparent 
+                                     hover:border-orange-200"
                           >
                             <input
                               type="checkbox"
                               checked={localFilters.projects?.includes(project.id) || false}
                               onChange={() => toggleProject(project.id)}
-                              className="w-4 h-4 text-primary-600 rounded border-neutral-300 
-                                       focus:ring-2 focus:ring-primary-500"
+                              className="w-4 h-4 text-orange-500 rounded border-2 border-neutral-300 
+                                       focus:ring-2 focus:ring-orange-500 cursor-pointer"
                             />
-                            <span className="text-sm text-neutral-700 group-hover:text-neutral-900">
+                            <span className="text-sm text-neutral-700 group-hover:text-neutral-900 font-medium">
                               {project.name}
                             </span>
                           </label>
                         ))
                       ) : (
-                        <p className="text-sm text-neutral-500 text-center py-4">
+                        <p className="text-sm text-neutral-500 text-center py-6">
                           Aucun projet trouvé
                         </p>
                       )}
@@ -431,22 +462,23 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
 
             {/* Section Statuts */}
             {(filteredStatuses.length > 0 || !globalSearch) && (
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
+              <div className="border-2 border-neutral-200 rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggleSection('status')}
-                  className="w-full flex items-center justify-between p-3 hover:bg-neutral-50 transition-colors"
+                  className="w-full flex items-center justify-between p-3.5 hover:bg-orange-50 
+                           transition-colors duration-200"
                 >
-                  <div className="flex items-center gap-2">
-                    <Circle className="w-4 h-4 text-neutral-600" />
-                    <span className="font-semibold text-neutral-900">Statuts</span>
+                  <div className="flex items-center gap-2.5">
+                    <Circle className="w-4 h-4 text-neutral-600" strokeWidth={2.5} />
+                    <span className="font-bold text-neutral-900">Statuts</span>
                     {getActiveCount('status') > 0 && (
-                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold 
+                                   rounded-full ring-1 ring-orange-200">
                         {getActiveCount('status')}
                       </span>
                     )}
-                    {/* 🆕 AJOUTÉ */}
                     {globalSearch && filteredStatuses.length > 0 && (
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs text-neutral-500 font-medium">
                         ({filteredStatuses.length})
                       </span>
                     )}
@@ -458,36 +490,40 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
                           e.stopPropagation();
                           clearSection('status');
                         }}
-                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        className="text-xs text-red-600 hover:text-red-700 font-bold hover:underline"
                       >
                         Effacer
                       </button>
                     )}
                     <ChevronDown 
-                      className={`w-4 h-4 text-neutral-500 transition-transform ${
+                      className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${
                         expandedSections.status ? 'rotate-180' : ''
                       }`}
+                      strokeWidth={2.5}
                     />
                   </div>
                 </button>
 
                 {expandedSections.status && (
-                  <div className="p-3 pt-0 space-y-1 border-t border-neutral-100">
+                  <div className="p-3.5 pt-0 space-y-1 border-t-2 border-neutral-100">
                     {filteredStatuses.map(option => {
                       const Icon = option.icon;
                       return (
                         <label
                           key={option.value}
-                          className="flex items-center gap-2 p-2 hover:bg-neutral-50 rounded cursor-pointer group"
+                          className="flex items-center gap-2.5 p-2.5 hover:bg-orange-50 rounded-lg 
+                                   cursor-pointer group transition-colors border-2 border-transparent 
+                                   hover:border-orange-200"
                         >
                           <input
                             type="checkbox"
                             checked={localFilters.status?.includes(option.value) || false}
                             onChange={() => toggleStatus(option.value)}
-                            className="w-4 h-4 text-primary-600 rounded border-neutral-300"
+                            className="w-4 h-4 text-orange-500 rounded border-2 border-neutral-300 
+                                     focus:ring-2 focus:ring-orange-500 cursor-pointer"
                           />
-                          <Icon className={`w-4 h-4 ${option.color}`} />
-                          <span className="text-sm text-neutral-700 group-hover:text-neutral-900">
+                          <Icon className={`w-4 h-4 ${option.color}`} strokeWidth={2.5} />
+                          <span className="text-sm text-neutral-700 group-hover:text-neutral-900 font-medium">
                             {option.label}
                           </span>
                         </label>
@@ -500,22 +536,23 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
 
             {/* Section Priorités */}
             {(filteredPriorities.length > 0 || !globalSearch) && (
-              <div className="border border-neutral-200 rounded-lg overflow-hidden">
+              <div className="border-2 border-neutral-200 rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggleSection('priority')}
-                  className="w-full flex items-center justify-between p-3 hover:bg-neutral-50 transition-colors"
+                  className="w-full flex items-center justify-between p-3.5 hover:bg-orange-50 
+                           transition-colors duration-200"
                 >
-                  <div className="flex items-center gap-2">
-                    <Flag className="w-4 h-4 text-neutral-600" />
-                    <span className="font-semibold text-neutral-900">Priorités</span>
+                  <div className="flex items-center gap-2.5">
+                    <Flag className="w-4 h-4 text-neutral-600" strokeWidth={2.5} />
+                    <span className="font-bold text-neutral-900">Priorités</span>
                     {getActiveCount('priority') > 0 && (
-                      <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold 
+                                   rounded-full ring-1 ring-orange-200">
                         {getActiveCount('priority')}
                       </span>
                     )}
-                    {/* 🆕 AJOUTÉ */}
                     {globalSearch && filteredPriorities.length > 0 && (
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs text-neutral-500 font-medium">
                         ({filteredPriorities.length})
                       </span>
                     )}
@@ -527,36 +564,40 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
                           e.stopPropagation();
                           clearSection('priority');
                         }}
-                        className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        className="text-xs text-red-600 hover:text-red-700 font-bold hover:underline"
                       >
                         Effacer
                       </button>
                     )}
                     <ChevronDown 
-                      className={`w-4 h-4 text-neutral-500 transition-transform ${
+                      className={`w-4 h-4 text-neutral-500 transition-transform duration-200 ${
                         expandedSections.priority ? 'rotate-180' : ''
                       }`}
+                      strokeWidth={2.5}
                     />
                   </div>
                 </button>
 
                 {expandedSections.priority && (
-                  <div className="p-3 pt-0 space-y-1 border-t border-neutral-100">
+                  <div className="p-3.5 pt-0 space-y-1 border-t-2 border-neutral-100">
                     {filteredPriorities.map(option => {
                       const Icon = option.icon;
                       return (
                         <label
                           key={option.value}
-                          className="flex items-center gap-2 p-2 hover:bg-neutral-50 rounded cursor-pointer group"
+                          className="flex items-center gap-2.5 p-2.5 hover:bg-orange-50 rounded-lg 
+                                   cursor-pointer group transition-colors border-2 border-transparent 
+                                   hover:border-orange-200"
                         >
                           <input
                             type="checkbox"
                             checked={localFilters.priority?.includes(option.value) || false}
                             onChange={() => togglePriority(option.value)}
-                            className="w-4 h-4 text-primary-600 rounded border-neutral-300"
+                            className="w-4 h-4 text-orange-500 rounded border-2 border-neutral-300 
+                                     focus:ring-2 focus:ring-orange-500 cursor-pointer"
                           />
-                          <Icon className={`w-4 h-4 ${option.color}`} />
-                          <span className="text-sm text-neutral-700 group-hover:text-neutral-900">
+                          <Icon className={`w-4 h-4 ${option.color}`} strokeWidth={2.5} />
+                          <span className="text-sm text-neutral-700 group-hover:text-neutral-900 font-medium">
                             {option.label}
                           </span>
                         </label>
@@ -567,14 +608,14 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
               </div>
             )}
 
-            {/* 🆕 AJOUTÉ - Message si aucun résultat */}
+            {/* Message si aucun résultat */}
             {globalSearch && 
              filteredProjects.length === 0 && 
              filteredStatuses.length === 0 && 
              filteredPriorities.length === 0 && (
-              <div className="text-center py-8">
-                <Search className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                <p className="text-neutral-600 font-medium">Aucun résultat trouvé</p>
+              <div className="text-center py-10">
+                <Search className="w-12 h-12 text-neutral-300 mx-auto mb-3" strokeWidth={1.5} />
+                <p className="text-neutral-600 font-semibold">Aucun résultat trouvé</p>
                 <p className="text-sm text-neutral-500 mt-1">
                   Essayez avec d'autres termes de recherche
                 </p>
@@ -583,12 +624,15 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
 
           </div>
 
-          {/* Footer sticky */}
-          <div className="sticky bottom-0 bg-white border-t border-neutral-200 p-4 flex gap-2">
+          {/* ✨ FOOTER STICKY - BOUTONS ORANGE */}
+          <div className="sticky bottom-0 bg-white border-t-2 border-neutral-200 p-5 flex gap-3">
             <button
               onClick={applyFilters}
-              className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg 
-                       hover:bg-primary-700 transition-colors font-semibold shadow-sm"
+              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white 
+                       rounded-xl hover:shadow-lg hover:shadow-orange-500/30 
+                       transition-all duration-300 font-bold shadow-sm
+                       hover:scale-105 active:scale-95
+                       focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
             >
               Appliquer les filtres
             </button>
@@ -597,8 +641,10 @@ export const CalendarFilters = ({ currentFilters, onFiltersChange, userRole }) =
                 setLocalFilters(currentFilters);
                 setIsOpen(false);
               }}
-              className="px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-lg 
-                       hover:bg-neutral-200 transition-colors font-medium"
+              className="px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl 
+                       hover:bg-neutral-200 transition-all duration-200 font-semibold
+                       border-2 border-transparent hover:border-neutral-300
+                       focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2"
             >
               Annuler
             </button>
