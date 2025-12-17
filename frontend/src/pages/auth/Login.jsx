@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, Check } from "lucide-react";
 import logo from "../../assets/img/APMF Logo.png";
 import imgSide from "../../assets/img/rightSide.jpg";
 import { useAuth } from '../../context/AuthContext';
 import { useForm } from '../../hooks/useForm';
 import { required, email, minLength } from '../../utils/validators';
 import { Input } from '../../components/common/Input';
-import { Button } from '../../components/common/Button';
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -45,22 +44,21 @@ export const Login = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Partie gauche - Formulaire */}
+      {/* ✨ PARTIE GAUCHE - FORMULAIRE (Améliorée) */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
-          {/* Logo / Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div>
-                <img 
-                  src={logo} 
-                  className="w-21 h-20 object-contain" 
-                  alt="Logo APMF" 
-                />
-              </div>
+          
+          {/* Logo Original (sans card) */}
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-8">
+              <img 
+                src={logo} 
+                className="w-20 h-20 object-contain" 
+                alt="Logo APMF" 
+              />
               <div>
                 <h1 className="text-2xl font-bold text-neutral-900">APMF</h1>
-                <p className="text-sm text-neutral-500">Gestion de Projets</p>
+                <p className="text-sm text-neutral-600">Gestion de Projets</p>
               </div>
             </div>
             
@@ -72,7 +70,6 @@ export const Login = () => {
             </p>
           </div>
 
-          {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
               label="Adresse Email"
@@ -103,67 +100,66 @@ export const Login = () => {
             />
 
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <input 
                   type="checkbox" 
-                  className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                  className="w-4 h-4 rounded border border-neutral-300 text-orange-600 focus:ring-2 focus:ring-orange-500 transition-all"
                 />
                 <span className="text-neutral-600">Se souvenir de moi</span>
               </label>
               
-              <a 
-                href="#" 
-                className="text-primary-600 hover:text-primary-700 font-medium"
-              >
+              <a href="#" className="text-orange-600 hover:text-orange-700 font-medium">
                 Mot de passe oublié ?
               </a>
             </div>
 
-            <Button
+            <button
               type="submit"
-              variant="primary"
-              fullWidth
-              loading={isLoading}
               disabled={isLoading}
+              className="
+                w-full flex items-center justify-center gap-2 px-5 py-3
+                bg-gradient-to-r from-orange-500 to-orange-600 text-white
+                rounded-lg font-semibold text-sm
+                hover:shadow-lg hover:shadow-orange-500/30
+                transition-all duration-300
+                hover:scale-[1.02] active:scale-[0.98]
+                disabled:opacity-50 disabled:cursor-not-allowed
+                focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2
+              "
             >
-              {!isLoading && (
+              {isLoading ? (
                 <>
-                  Se connecter
-                  <ArrowRight size={18} />
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  <span>Connexion...</span>
+                </>
+              ) : (
+                <>
+                  <span>Se connecter</span>
+                  <ArrowRight className="w-4 h-4" />
                 </>
               )}
-            </Button>
+            </button>
           </form>
 
-          {/* Divider */}
           <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 border-t border-neutral-200"></div>
+            <div className="flex-1 h-px bg-neutral-200"></div>
             <span className="text-sm text-neutral-500">ou</span>
-            <div className="flex-1 border-t border-neutral-200"></div>
+            <div className="flex-1 h-px bg-neutral-200"></div>
           </div>
 
-          {/* Compte demo */}
-          {/* <div className="p-4 bg-primary-50 border border-primary-200 rounded-lg">
-            <p className="text-sm text-primary-800 mb-2 font-medium">
-              🔑 Compte de démonstration
-            </p>
-            <p className="text-xs text-primary-700">
-              Username: <span className="font-mono font-semibold">admin</span> • 
-              Password: <span className="font-mono font-semibold">votre_mot_de_passe</span>
-            </p>
-          </div> */}
-
-          {/* Footer */}
-          <div className="mt-8 text-center text-sm text-neutral-600">
+          <div className="text-center text-sm text-neutral-600">
             Pas encore de compte ?{' '}
-            <a href="#" className="text-primary-600 hover:text-primary-700 font-medium">
+            <a href="#" className="text-orange-600 hover:text-orange-700 font-medium">
               Créer un compte
             </a>
           </div>
         </div>
       </div>
 
-      {/* Partie droite - Image/Design */}
+ {/* Partie droite - Image/Design */}
       <div className="hidden lg:flex lg:w-1/2 relative ">
         {/* Image de fond */}
         <div 
