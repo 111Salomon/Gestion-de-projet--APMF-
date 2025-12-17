@@ -98,6 +98,8 @@ function App() {
             <Routes>
               {/* Route publique */}
               <Route path="/login" element={<Login />} />
+              <Route path="reset-password" element={<ResetPassword />} />
+
               
               {/* Routes protégées */}
               <Route
@@ -192,14 +194,15 @@ function App() {
                 } 
               />
 
-              <Route 
+              {/* <Route 
                 path="/reset-password" 
                 element={
                   <PrivateRoute>
                     <ResetPassword />
                   </PrivateRoute>
                 } 
-              />
+              /> */}
+
 
               {/* Redirection par défaut */}
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

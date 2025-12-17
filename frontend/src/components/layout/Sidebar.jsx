@@ -208,7 +208,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 <p className="text-sm font-semibold text-white truncate">
                   {user?.full_name || user?.username || 'Utilisateur'}
                 </p>
-                <p className="text-xs text-neutral-400 capitalize">
+                <p className="text-xs  text-orange-400 capitalize mt-1">
                   {user?.role === 'admin' ? 'Administrateur' : 
                    user?.role === 'chef' ? 'Chef de Projet' : 'Membre'}
                 </p>

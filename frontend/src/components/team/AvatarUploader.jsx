@@ -56,7 +56,7 @@ export const AvatarUploader = ({ userId, currentAvatar, onAvatarUpdated }) => {
     <div className="flex flex-col items-center gap-4">
       {/* Avatar actuel ou prévisualisation */}
       <div className="relative group">
-        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
+        <div className="w-32 h-32 rounded-full bg-gradient-to-br border-4 border-neutral-300 from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden">
           {preview || currentAvatar ? (
             <img
               src={preview || currentAvatar}
@@ -92,16 +92,16 @@ export const AvatarUploader = ({ userId, currentAvatar, onAvatarUpdated }) => {
       </div>
 
       {/* Bouton de changement */}
-      <label
+      {/* <label
         htmlFor="avatar-upload"
         className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
           uploading
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+            : ' text-neutral-700 border  hover:bg-neutral-100'
         }`}
       >
         {uploading ? 'Upload en cours...' : 'Changer la photo'}
-      </label>
+      </label> */}
 
       {/* Info */}
       <p className="text-xs text-gray-500 text-center">
