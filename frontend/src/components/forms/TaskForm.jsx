@@ -135,7 +135,7 @@ export const TaskForm = ({
     <form onSubmit={handleSubmit} className="space-y-5">
       
       {/* ✨ TITRE */}
-      <div className="space-y-2">
+      <div className="space-y-2 mt-4">
         <label 
           htmlFor="title" 
           className="block text-sm font-semibold text-neutral-900"

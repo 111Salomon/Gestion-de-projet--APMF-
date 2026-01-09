@@ -64,7 +64,7 @@ export const ProjectForm = ({
     <form onSubmit={handleSubmit} className="space-y-5">
       
       {/* ✨ NOM DU PROJET */}
-      <div className="space-y-2">
+      <div className="space-y-2 mt-4">
         <label 
           htmlFor="name" 
           className="block text-sm font-semibold text-neutral-900"

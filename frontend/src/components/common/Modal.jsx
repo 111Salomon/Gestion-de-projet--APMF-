@@ -70,7 +70,7 @@ export const Modal = ({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center
                  bg-neutral-900/60 backdrop-blur-[2px]
-                 animate-in fade-in duration-200"
+                 animate-in fade-in duration-200"  style={{ marginTop: 0 }}
       onClick={handleBackdropClick}
     >
       {/* ✨ MODAL CONTENT */}
@@ -102,7 +102,8 @@ export const Modal = ({
         )}
 
         {/* ✨ CONTENU */}
-        <div className={`flex-1 overflow-y-auto ${title ? 'p-6' : ''}`}>
+        {/* <div className={`flex-1 overflow-y-auto ${title ? 'p-6' : ''}`}> */}
+        <div className={`flex-1 overflow-y-auto ${title ? 'px-6 pb-6' : ''}`}>
           {children}
         </div>
       </div>
