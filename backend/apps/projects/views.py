@@ -229,8 +229,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         POST /api/projects/{id}/members/add/
         Body: {
             "user_id": 2,
-            "role": "member"  // optionnel, défaut = "member"
+            "role": "member"  // manager, member, viewer (PAS owner !)
         }
+        
+        ✅ CORRECTION : Validation stricte du rôle OWNER
         
         📌 Permissions:
             - Admin (rôle global)
@@ -243,7 +245,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         project = self.get_object()
         user_id = request.data.get('user_id')
-        role = request.data.get('role', 'member')  # Défaut: member
+        role = request.data.get('role', 'member')
         
         # ❌ Validation 1: user_id requis
         if not user_id:
@@ -268,42 +270,90 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # ✅ CORRECTION COMPLÈTE : Vérification de TOUTES les permissions
+        # ✅ AJOUTÉ : Validation 4 - Vérifier que le rôle est valide
+        valid_roles = ['owner', 'manager', 'member', 'viewer']
+        if role not in valid_roles:
+            return Response(
+                {
+                    'error': 'Rôle invalide',
+                    'message': f'Les rôles autorisés sont : {", ".join(valid_roles)}',
+                    'provided_role': role
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # ✅ AJOUTÉ : Validation 5 - Empêcher d'ajouter un 2ème OWNER
+        if role == 'owner':
+            existing_owner = ProjectMember.objects.filter(
+                project=project,
+                role='owner'
+            ).exists()
+            
+            if existing_owner:
+                return Response(
+                    {
+                        'error': 'Propriétaire déjà existant',
+                        'message': 'Ce projet a déjà un propriétaire. Un seul propriétaire est autorisé par projet.',
+                        'suggestion': 'Utilisez le rôle "manager" pour donner des droits de gestion.'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # ✅ Vérification de TOUTES les permissions
         is_project_owner = project.owner == request.user
         is_admin = request.user.role == 'admin'
         is_chef = request.user.role == 'chef'
         
-        # 🆕 Vérifier si l'utilisateur a le rôle "owner" dans ProjectMember
         has_owner_role = ProjectMember.objects.filter(
             project=project,
             user=request.user,
             role='owner'
         ).exists()
         
-        # Vérifier si gestionnaire du projet
         is_manager = ProjectMember.objects.filter(
             project=project,
             user=request.user,
             role='manager'
         ).exists()
         
-        # ❌ Validation 4: Permissions (owner DB OU owner member OU admin OU chef OU manager)
+        # ❌ Validation 6: Permissions
         if not (is_project_owner or has_owner_role or is_admin or is_chef or is_manager):
             return Response(
                 {'error': 'Vous n\'avez pas les permissions pour ajouter des membres'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # ✅ Crée le membre
-        member = ProjectMember.objects.create(
-            project=project,
-            user=user,
-            role=role
-        )
+        # ✅ AJOUTÉ : Validation 7 - Seul l'admin peut ajouter un OWNER
+        if role == 'owner' and not is_admin:
+            return Response(
+                {
+                    'error': 'Permission refusée',
+                    'message': 'Seul un administrateur peut désigner un propriétaire de projet.',
+                    'your_role': request.user.role
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
         
-        serializer = ProjectMemberSerializer(member)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+        # ✅ Crée le membre
+        try:
+            member = ProjectMember.objects.create(
+                project=project,
+                user=user,
+                role=role
+            )
+            
+            serializer = ProjectMemberSerializer(member)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Erreur lors de l\'ajout du membre',
+                    'message': str(e)
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )    
+
     @action(detail=True, methods=['delete'], url_path='members/(?P<user_id>[^/.]+)/remove')
     def remove_member(self, request, pk=None, user_id=None):
         """
@@ -311,10 +361,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         DELETE /api/projects/{id}/members/{user_id}/remove/
         
+        ✅ CORRECTION : L'admin peut TOUT supprimer (même OWNER)
+        
         📌 Permissions:
-            - Admin (rôle global)
+            - Admin (rôle global) → Peut TOUT supprimer
             - Chef de projet (rôle global)
-            - Propriétaire du projet (champ owner OU rôle owner dans ProjectMember)
+            - Propriétaire du projet
             - Gestionnaire du projet
         
         Returns:
@@ -322,26 +374,24 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """
         project = self.get_object()
         
-        # ✅ CORRECTION COMPLÈTE : Vérification de TOUTES les permissions
+        # ✅ Vérification permissions
         is_project_owner = project.owner == request.user
         is_admin = request.user.role == 'admin'
         is_chef = request.user.role == 'chef'
         
-        # 🆕 Vérifier si l'utilisateur a le rôle "owner" dans ProjectMember
         has_owner_role = ProjectMember.objects.filter(
             project=project,
             user=request.user,
             role='owner'
         ).exists()
         
-        # Vérifier si gestionnaire du projet
         is_manager = ProjectMember.objects.filter(
             project=project,
             user=request.user,
             role='manager'
         ).exists()
         
-        # ❌ Validation: Permissions (owner DB OU owner member OU admin OU chef OU manager)
+        # ❌ Validation permissions
         if not (is_project_owner or has_owner_role or is_admin or is_chef or is_manager):
             return Response(
                 {'error': 'Vous n\'avez pas les permissions pour retirer des membres'},
@@ -349,18 +399,34 @@ class ProjectViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            # Cherche le membre
             member = ProjectMember.objects.get(project=project, user_id=user_id)
+            
+            # ✅ AJOUTÉ : Protection OWNER - Seul l'admin peut supprimer un OWNER
+            if member.role == 'owner' and not is_admin:
+                return Response(
+                    {
+                        'error': 'Permission refusée',
+                        'message': 'Seul un administrateur peut retirer le propriétaire d\'un projet.',
+                        'member_role': 'owner',
+                        'your_role': request.user.role
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Supprime le membre
             member.delete()
             
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(
+                {'message': 'Membre retiré avec succès'},
+                status=status.HTTP_204_NO_CONTENT
+            )
             
         except ProjectMember.DoesNotExist:
             return Response(
                 {'error': 'Membre introuvable dans ce projet'},
                 status=status.HTTP_404_NOT_FOUND
-            )
-    
+            )    
+
     @action(detail=True, methods=['patch'], url_path='members/(?P<user_id>[^/.]+)/role')
     def update_member_role(self, request, pk=None, user_id=None):
         """

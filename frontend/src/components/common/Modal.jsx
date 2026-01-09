@@ -68,7 +68,7 @@ export const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4
+      className="fixed inset-0 z-50 flex items-center justify-center
                  bg-neutral-900/60 backdrop-blur-[2px]
                  animate-in fade-in duration-200"
       onClick={handleBackdropClick}

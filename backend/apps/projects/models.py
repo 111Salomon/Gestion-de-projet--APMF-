@@ -193,6 +193,16 @@ class ProjectMember(models.Model):
             models.Index(fields=['project', 'user'], name='projmem_proj_user_idx'),
         ]
     
+        # ✅ AJOUTÉ : Contrainte pour UN SEUL owner par projet
+        constraints = [
+            models.UniqueConstraint(
+                fields=['project'],
+                condition=models.Q(role='owner'),
+                name='unique_owner_per_project',
+                violation_error_message="Un projet ne peut avoir qu'un seul propriétaire."
+            )
+        ]
+
     def __str__(self):
         """Représentation textuelle."""
         return f"{self.user.get_full_name()} - {self.project.name} ({self.get_role_display()})"

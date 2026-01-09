@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Users, Crown, Trash2, Edit2, Check, X, Shield, Eye, User, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 
+
 const ROLES = [
   { 
     value: 'owner', 
@@ -41,6 +42,7 @@ const ROLES = [
   },
 ];
 
+
 export const MemberList = ({ 
   members = [], 
   canManageMembers = false,
@@ -53,18 +55,21 @@ export const MemberList = ({
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
-  const [showAll, setShowAll] = useState(false); // 🆕 État pour collapse/expand
+  const [showAll, setShowAll] = useState(false);
 
-  // 🆕 Limite d'affichage
+
+  // Limite d'affichage
   const DISPLAY_LIMIT = 4;
   const hasMore = members.length > DISPLAY_LIMIT;
   const displayedMembers = showAll ? members : members.slice(0, DISPLAY_LIMIT);
   const remainingCount = members.length - DISPLAY_LIMIT;
 
+
   const handleRemoveClick = (member) => {
     setMemberToRemove(member);
     setIsRemoveModalOpen(true);
   };
+
 
   const confirmRemove = () => {
     if (memberToRemove) {
@@ -74,10 +79,12 @@ export const MemberList = ({
     }
   };
 
+
   const startEditRole = (member) => {
     setEditingRole(member.id);
     setSelectedRole(member.role);
   };
+
 
   const saveRole = (member) => {
     if (selectedRole !== member.role) {
@@ -86,14 +93,17 @@ export const MemberList = ({
     setEditingRole(null);
   };
 
+
   const cancelEditRole = () => {
     setEditingRole(null);
     setSelectedRole('');
   };
 
+
   const getRoleConfig = (role) => {
     return ROLES.find(r => r.value === role) || ROLES[2];
   };
+
 
   if (loading) {
     return (
@@ -103,6 +113,7 @@ export const MemberList = ({
       </div>
     );
   }
+
 
   if (members.length === 0) {
     return (
@@ -115,6 +126,7 @@ export const MemberList = ({
       </div>
     );
   }
+
 
   return (
     <>
@@ -143,6 +155,7 @@ export const MemberList = ({
                     {member.user.username?.charAt(0).toUpperCase() || '?'}
                   </div>
 
+
                   {/* Infos membre */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -157,6 +170,7 @@ export const MemberList = ({
                       {member.user.email}
                     </p>
                   </div>
+
 
                   {/* Rôle - Version épurée */}
                   <div className="flex items-center gap-2">
@@ -215,23 +229,39 @@ export const MemberList = ({
                     )}
                   </div>
 
-                  {/* Actions - Cachées par défaut */}
-                  {canManageMembers && member.role !== 'owner' && !isEditing && (
+
+                  {/* ✅ CORRECTION : Actions toujours visibles, protection backend */}
+                  {canManageMembers && !isEditing && (
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      
+                      {/* Bouton Modifier - Désactivé pour owner */}
                       <button
                         onClick={() => startEditRole(member)}
-                        className="p-1.5 text-neutral-600 hover:bg-neutral-100 
-                                 rounded-md transition-colors"
-                        title="Changer le rôle"
+                        disabled={member.role === 'owner'}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          member.role === 'owner'
+                            ? 'text-neutral-300 cursor-not-allowed'
+                            : 'text-neutral-600 hover:bg-neutral-100'
+                        }`}
+                        title={
+                          member.role === 'owner'
+                            ? 'Le rôle propriétaire ne peut pas être modifié'
+                            : 'Changer le rôle'
+                        }
                       >
                         <Edit2 className="w-3.5 h-3.5" strokeWidth={2.5} />
                       </button>
 
+                      {/* Bouton Supprimer - Toujours visible (protection backend) */}
                       <button
                         onClick={() => handleRemoveClick(member)}
                         className="p-1.5 text-red-600 hover:bg-red-50 
                                  rounded-md transition-colors"
-                        title="Retirer du projet"
+                        title={
+                          member.role === 'owner'
+                            ? 'Seul un administrateur peut retirer le propriétaire'
+                            : 'Retirer du projet'
+                        }
                       >
                         <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
                       </button>
@@ -244,7 +274,8 @@ export const MemberList = ({
         })}
       </div>
 
-      {/* 🆕 BOUTON VOIR PLUS / VOIR MOINS */}
+
+      {/* BOUTON VOIR PLUS / VOIR MOINS */}
       {hasMore && (
         <button
           onClick={() => setShowAll(!showAll)}
@@ -269,6 +300,7 @@ export const MemberList = ({
         </button>
       )}
 
+
       <ConfirmModal
         isOpen={isRemoveModalOpen}
         onClose={() => setIsRemoveModalOpen(false)}
@@ -276,11 +308,16 @@ export const MemberList = ({
         title="Retirer ce membre ?"
         message={`Êtes-vous sûr de vouloir retirer ${
           memberToRemove?.user.full_name || memberToRemove?.user.username
-        } du projet ?`}
+        } du projet ?${
+          memberToRemove?.role === 'owner' 
+            ? '\n\n⚠️ Attention : Seul un administrateur peut retirer un propriétaire.' 
+            : ''
+        }`}
         confirmText="Retirer"
         cancelText="Annuler"
         variant="danger"
       />
+
 
       <style jsx>{`
         @keyframes fadeInUp {
