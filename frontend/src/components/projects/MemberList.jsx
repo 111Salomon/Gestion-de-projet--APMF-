@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Avatar } from '../common/Avatar'; 
 import { Users, Crown, Trash2, Edit2, Check, X, Shield, Eye, User, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
+
 
 
 const ROLES = [
@@ -149,11 +151,15 @@ export const MemberList = ({
               <div className="p-3">
                 <div className="flex items-center gap-3">
                   {/* Avatar ROND */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-300 to-neutral-400
-                               flex items-center justify-center text-white font-bold text-sm 
-                               shadow-sm flex-shrink-0">
-                    {member.user.username?.charAt(0).toUpperCase() || '?'}
-                  </div>
+{/* Avatar avec composant Avatar */}
+<Avatar
+  avatarUrl={member.user?.avatar_url}
+  name={member.user?.full_name || member.user?.username}
+  size="md"
+  showBorder={false}
+  className="shadow-sm"
+/>
+
 
 
                   {/* Infos membre */}

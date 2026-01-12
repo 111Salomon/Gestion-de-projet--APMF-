@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { MoreVertical, Edit2, Trash2, User, Calendar, Flag, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { canModifyTask, canDeleteTask } from '../../utils/permissions';
+import { Avatar } from '../common/Avatar';
 import { useAuth } from '../../context/AuthContext';
 
 
@@ -9,6 +10,11 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
+
+    // ✅ AJOUTEZ CES 3 LOGS ICI
+  console.log('🔍 Tâche complète:', task);
+  console.log('🔍 Assigné à:', task.assigned_to);
+  console.log('🔍 Avatar URL:', task.assigned_to?.avatar_url);
 
   const userCanModify = canModifyTask(user, task);
   const userCanDelete = canDeleteTask(user, task);
@@ -236,25 +242,25 @@ return (
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 mt-2 border-t border-neutral-100">
-        {/* Assigné */}
-        {task.assigned_to ? (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-neutral-300 to-neutral-400
-                         flex items-center justify-center text-white text-xs font-semibold 
-                         border-2 border-white shadow-sm"
-                 title={task.assigned_to.full_name || task.assigned_to.username}>
-              {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
-            </div>
-            <span className="text-xs text-neutral-600 font-medium truncate max-w-[100px]">
-              {task.assigned_to.full_name || task.assigned_to.username}
-            </span>
-          </div>
-        ) : (
-          <span className="flex items-center gap-1.5 text-xs text-neutral-400">
-            <User className="w-3.5 h-3.5" />
-            Non assigné
-          </span>
-        )}
+{task.assigned_to ? (
+  <div className="flex items-center gap-2">
+    <Avatar
+      avatarUrl={task.assigned_to.avatar_url}
+      name={task.assigned_to.full_name || task.assigned_to.username}
+      size="sm"
+      showBorder={true}
+    />
+    <span className="text-xs text-neutral-600 font-medium truncate max-w-[100px]">
+      {task.assigned_to.full_name || task.assigned_to.username}
+    </span>
+  </div>
+) : (
+  <span className="flex items-center gap-1.5 text-xs text-neutral-400">
+    <User className="w-3.5 h-3.5" />
+    Non assigné
+  </span>
+)}
+
 
         {/* Date - Plus subtile */}
         <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg

@@ -218,7 +218,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # Utilise select_related pour optimiser (1 seule requête SQL)
         members = project.project_members.select_related('user').all()
         
-        serializer = ProjectMemberSerializer(members, many=True)
+        serializer = ProjectMemberSerializer(members, many=True, context={'request': request})
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'], url_path='members/add')

@@ -19,6 +19,8 @@ import { Layout } from '../../components/layout/Layout';
 import { MemberProfileModal } from '../../components/team/MemberProfileModal';
 import { InviteMemberModal } from '../../components/team/InviteMemberModal';
 import { AddMemberModal } from '../../components/team/AddMemberModal';
+import { Avatar } from '../../components/common/Avatar'; 
+import { useAuth } from '../../context/AuthContext'; 
 import { 
   Download, 
   ChevronDown, 
@@ -53,6 +55,8 @@ export const Team = () => {
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [hoveredRow, setHoveredRow] = useState(null);
+  const { user, subscribe } = useAuth(); // ✅ Ajouter subscribe ici
+
 
   // ═══════════════════════════════════════════════════════════
   // EFFETS
@@ -83,6 +87,34 @@ export const Team = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isExportDropdownOpen]);
+
+  
+  // ✅ ÉCOUTER LES CHANGEMENTS D'UTILISATEUR ET DE MEMBRES
+  useEffect(() => {
+    console.log('🎧 Team.jsx: Setting up listener');
+    
+    if (!subscribe) {
+      console.log('⚠️ subscribe is undefined in Team.jsx');
+      return;
+    }
+
+    const unsubscribe = subscribe((event, data) => {
+      console.log('🔔 Team.jsx received event:', event);
+      
+      if (event === 'user_updated' || event === 'member_updated') {
+        console.log('👥 Rechargement de l\'équipe suite à:', event);
+        loadMembers(); // ✅ Recharge la liste
+        loadStats();   // ✅ Recharge les stats
+      }
+    });
+
+    console.log('✅ Team listener registered');
+    return () => {
+      console.log('🔌 Team listener unregistered');
+      unsubscribe();
+    };
+  }, [subscribe]); // ✅ Seulement subscribe, pas de currentPage
+
 
   // ═══════════════════════════════════════════════════════════
   // FONCTIONS
@@ -559,43 +591,38 @@ export const Team = () => {
                           }
                         }}
                       >
-                        {/* Membre */}
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
-                                            flex items-center justify-center flex-shrink-0 shadow-sm 
-                                            group-hover:shadow-md transition-shadow">
-                                {member.avatar_url ? (
-                                  <img
-                                    src={member.avatar_url}
-                                    alt={member.full_name}
-                                    className="w-full h-full rounded-xl object-cover"
-                                  />
-                                ) : (
-                                  <span className="text-white text-sm font-bold">
-                                    {member.full_name.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              {member.is_active && (
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 
-                                              rounded-full border-2 border-white shadow-sm" 
-                                     title="En ligne"
-                                />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-neutral-900 truncate 
-                                          group-hover:text-orange-600 transition-colors">
-                                {member.full_name}
-                              </p>
-                              <p className="text-xs text-neutral-600 truncate">
-                                {member.email}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
+{/* Membre */}
+<td className="px-6 py-4">
+  <div className="flex items-center gap-3">
+    <div className="relative">
+      {/* ✅ UTILISER LE COMPOSANT AVATAR */}
+      <Avatar
+        avatarUrl={member.avatar_url}
+        name={member.full_name}
+        size="md"
+        showBorder={false}
+        className="shadow-sm group-hover:shadow-md transition-shadow"
+      />
+      
+      {member.is_active && (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 
+                      rounded-full border-2 border-white shadow-sm" 
+             title="En ligne"
+        />
+      )}
+    </div>
+    <div className="min-w-0">
+      <p className="text-sm font-bold text-neutral-900 truncate 
+                  group-hover:text-orange-600 transition-colors">
+        {member.full_name}
+      </p>
+      <p className="text-xs text-neutral-600 truncate">
+        {member.email}
+      </p>
+    </div>
+  </div>
+</td>
+
 
                         {/* ✅ Rôle - SEULEMENT Admin/Chef avec icônes */}
                         <td className="px-6 py-4">

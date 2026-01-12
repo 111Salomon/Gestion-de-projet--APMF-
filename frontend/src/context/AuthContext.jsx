@@ -4,6 +4,20 @@ import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 
+// ✨ EVENT EMITTER pour notifier les changements
+const eventListeners = new Set();
+
+const notifyListeners = (event, data) => {
+  console.log(`📢 Event emitted: ${event}`, data);
+  eventListeners.forEach(listener => {
+    try {
+      listener(event, data);
+    } catch (error) {
+      console.error('Error in listener:', error);
+    }
+  });
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +49,10 @@ export const AuthProvider = ({ children }) => {
       const userData = await authAPI.getCurrentUser();
       setUser(userData);
       toast.success('Connexion réussie !');
+      
+      // ✨ Notifier les listeners
+      notifyListeners('user_logged_in', userData);
+      
       return true;
     } catch (error) {
       toast.error('Identifiants invalides');
@@ -46,16 +64,46 @@ export const AuthProvider = ({ children }) => {
     authAPI.logout();
     setUser(null);
     toast.success('Déconnexion réussie');
+    
+    // ✨ Notifier les listeners
+    notifyListeners('user_logged_out', null);
   };
 
-  // ✅ NOUVELLE FONCTION : Recharger les données de l'utilisateur
+  // ✅ FONCTION AMÉLIORÉE : Recharger + Notifier
   const refreshUser = async () => {
     try {
       const userData = await authAPI.getCurrentUser();
       setUser(userData);
+      
+      console.log('✅ User refreshed:', userData);
+      
+      // ✨ NOTIFIER TOUS LES COMPOSANTS
+      notifyListeners('user_updated', userData);
+      
+      return userData;
     } catch (error) {
-      console.error('Erreur lors du rechargement du user:', error);
+      console.error('❌ Erreur lors du rechargement du user:', error);
+      return null;
     }
+  };
+
+
+  // ✨ NOUVELLE FONCTION : Notifier qu'un membre a été mis à jour
+  const notifyMemberUpdated = (memberData) => {
+    console.log('👤 Member updated, notifying listeners:', memberData);
+    notifyListeners('member_updated', memberData);
+  };
+
+  // ✨ FONCTION D'ABONNEMENT
+  const subscribe = (callback) => {
+    eventListeners.add(callback);
+    console.log('📌 Listener added. Total:', eventListeners.size);
+    
+    // Retourner fonction de désabonnement
+    return () => {
+      eventListeners.delete(callback);
+      console.log('📌 Listener removed. Total:', eventListeners.size);
+    };
   };
 
   return (
@@ -64,7 +112,9 @@ export const AuthProvider = ({ children }) => {
       loading, 
       login, 
       logout, 
-      refreshUser  // ✅ EXPOSER LA FONCTION
+      refreshUser,
+      notifyMemberUpdated,
+      subscribe  // ✨ EXPOSER subscribe
     }}>
       {children}
     </AuthContext.Provider>

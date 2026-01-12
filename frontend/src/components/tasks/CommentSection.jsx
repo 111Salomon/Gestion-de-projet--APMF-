@@ -4,6 +4,8 @@ import { Send, Edit2, Trash2, MoreVertical, MessageCircle, Loader2 } from 'lucid
 import { useAuth } from '../../context/AuthContext';
 import { tasksAPI } from '../../api/tasks';
 import toast from 'react-hot-toast';
+import { Avatar } from '../common/Avatar';
+
 
 export const CommentSection = ({ taskId }) => {
   const { user } = useAuth();
@@ -121,14 +123,14 @@ export const CommentSection = ({ taskId }) => {
     });
   };
 
-  const getInitials = (name) => {
-    return name
-      ?.split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '?';
-  };
+  // const getInitials = (name) => {
+  //   return name
+  //     ?.split(' ')
+  //     .map(n => n[0])
+  //     .join('')
+  //     .toUpperCase()
+  //     .slice(0, 2) || '?';
+  // };
 
   return (
     <div className="mt-8 border-t border-neutral-200 pt-6">
@@ -146,13 +148,15 @@ export const CommentSection = ({ taskId }) => {
       {/* Formulaire */}
       <div className="mb-6">
         <div className="flex gap-3 items-start">
-          <div className="flex-shrink-0">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 
-                           flex items-center justify-center text-white font-semibold text-xs
-                           shadow-sm">
-              {getInitials(user?.username)}
-            </div>
-          </div>
+<div className="flex-shrink-0">
+  <Avatar
+    avatarUrl={user?.avatar_url}
+    name={user?.username}
+    size="sm"
+    showBorder={true}
+  />
+</div>
+
 
           <form onSubmit={handleSubmit} className="flex-1 relative">
             <textarea
@@ -226,14 +230,17 @@ export const CommentSection = ({ taskId }) => {
                       rounded-full" />
                   )}
 
-                  {/* Avatar parfaitement aligné */}
-                  <div className="flex-shrink-0 ml-5">
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 
-                                   flex items-center justify-center  text-white font-semibold text-xs
-                                   ${isOwnComment ? 'ring-1 ring-orange-200' : ''}`}>
-                      {getInitials(comment.author?.username)}
-                    </div>
-                  </div>
+{/* Avatar parfaitement aligné */}
+<div className="flex-shrink-0 ml-5">
+  <Avatar
+    avatarUrl={comment.author?.avatar_url}
+    name={comment.author?.username}
+    size="xs"
+    showBorder={isOwnComment}
+    className={isOwnComment ? 'ring-1 ring-orange-200' : ''}
+  />
+</div>
+
 
                   {/* Contenu */}
                   <div className={`flex-1 min-w-0 ${isOwnComment ? 'pl-3' : ''}`}>

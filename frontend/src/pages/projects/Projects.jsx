@@ -15,6 +15,7 @@ import {
   Check
 } from 'lucide-react';
 import { Layout } from '../../components/layout/Layout';
+import { Avatar } from '../../components/common/Avatar';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { ProjectForm } from '../../components/forms/ProjectForm';
@@ -33,7 +34,7 @@ import { canCreateProject } from '../../utils/permissions';
  */
 export const Projects = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, subscribe } = useAuth();
   const { stats, refreshStats } = useStats();
   
   const canCreate = canCreateProject(user);
@@ -68,6 +69,38 @@ useEffect(() => {
   if (loading) return;
   loadProjects(1);
 }, [statusFilter, searchQuery]);
+
+
+// ✅ ÉCOUTER LES CHANGEMENTS D'UTILISATEUR ET DE MEMBRES
+useEffect(() => {
+  console.log('🎧 Projects.jsx: Setting up listener');
+  
+  if (!subscribe) {
+    console.log('⚠️ subscribe is undefined in Projects.jsx');
+    return;
+  }
+
+  const unsubscribe = subscribe((event, data) => {
+    console.log('🔔 Projects.jsx received event:', event);
+    
+    if (event === 'user_updated' || event === 'member_updated') {
+      console.log('👥 Rechargement des projets suite à:', event);
+      
+      // ✅ Utiliser setCurrentPage pour capturer la valeur actuelle
+      setCurrentPage(prev => {
+        loadProjects(prev); // ✅ Recharge avec la page actuelle
+        return prev;
+      });
+    }
+  });
+
+  console.log('✅ Projects listener registered');
+  return () => {
+    console.log('🔌 Projects listener unregistered');
+    unsubscribe();
+  };
+}, [subscribe]); // ✅ Seulement subscribe dans les dépendances
+
 
 
   // Fermeture du dropdown au clic extérieur
@@ -556,33 +589,57 @@ const handlePageChange = (newPage) => {
                   </div>
 
                   <div className="flex items-center justify-between pt-4 mt-2 border-t border-neutral-100">
-                    <div className="flex items-center gap-2">
-                      {project.members_count > 0 ? (
-                        <>
-                          <div className="flex -space-x-2">
-                            {project.members?.slice(0, 3).map((member, idx) => (
-                              <div
-                                key={member.user.id || idx}
-                                className="w-7 h-7 rounded-full bg-gradient-to-br from-neutral-300 to-neutral-400
-                                         flex items-center justify-center text-white text-xs font-semibold 
-                                         border-2 border-white shadow-sm"
-                                title={member.user.full_name || member.user.username}
-                              >
-                                {(member.user.full_name || member.user.username).charAt(0).toUpperCase()}
-                              </div>
-                            ))}
-                          </div>
-                          <span className="text-xs text-neutral-600 font-medium">
-                            {project.members_count}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="flex items-center gap-1.5 text-xs text-neutral-400">
-                          <Users className="w-3.5 h-3.5" />
-                          Aucun membre
-                        </span>
-                      )}
-                    </div>
+
+                    
+
+{/* ✅ AVATARS AVEC COMPOSANT RÉUTILISABLE */}
+<div className="flex items-center gap-2">
+  {project.members_count > 0 ? (
+    <>
+      <div className="flex -space-x-2">
+        {project.members?.slice(0, 3).map((member, idx) => {
+          const user = member.user;
+          const displayName = user.full_name || user.username || user.email || 'User';
+            // ✅ AJOUTER CE LOG POUR DÉBUGGER
+  console.log('🔍 Membre dans projet:', {
+    projectName: project.name,
+    userName: displayName,
+    avatar_url: user.avatar_url,
+    userObject: user
+  });
+          
+          return (
+            <Avatar
+              key={user.id || idx}
+              avatarUrl={user.avatar_url}
+              name={displayName}
+              size="sm"
+              showBorder={true}
+            />
+          );
+        })}
+      </div>
+      
+      {/* Badge compteur */}
+      <span className="text-xs text-neutral-600 font-medium">
+        {project.members_count}
+      </span>
+      
+      {/* Si plus de 3 membres, afficher "+X" */}
+      {project.members_count > 3 && (
+        <span className="text-xs text-neutral-400">
+          +{project.members_count - 3}
+        </span>
+      )}
+    </>
+  ) : (
+    <span className="flex items-center gap-1.5 text-xs text-neutral-400">
+      <Users className="w-3.5 h-3.5" />
+      Aucun membre
+    </span>
+  )}
+</div>
+
 
                     <div className="flex items-center gap-1.5 text-xs text-neutral-500">
                       <Calendar className="w-3.5 h-3.5" />

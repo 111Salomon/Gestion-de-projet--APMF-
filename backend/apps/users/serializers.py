@@ -110,10 +110,21 @@ class UserMinimalSerializer(serializers.ModelSerializer):
     """
     
     full_name = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField() 
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'full_name', 'email', 'role', 'avatar']
+        fields = ['id', 'username', 'full_name', 'email', 'role', 'avatar', 'avatar_url']
     
     def get_full_name(self, obj):
         return obj.get_full_name()
+
+            # ✅ MÉTHODE AJOUTÉE
+    def get_avatar_url(self, obj):
+        """Retourne l'URL complète de l'avatar."""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None

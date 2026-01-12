@@ -32,7 +32,9 @@ import { ProjectForm } from '../../components/forms/ProjectForm';
 import { MemberList } from '../../components/projects/MemberList';
 import { AddMemberModal } from '../../components/projects/AddMemberModal';
 import { projectsAPI } from '../../api/projects';
+import { Avatar } from '../../components/common/Avatar'; // ✅ AJOUTER
 import { useAuth } from '../../context/AuthContext';
+
 
 export const ProjectDetail = () => {
   const { id } = useParams();
@@ -770,48 +772,48 @@ export const ProjectDetail = () => {
               </div>
             </div>
 
-            {/* Carte Équipe */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
-                          hover:border-green-200 hover:shadow-sm transition-all duration-300 group">
-              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center
-                            group-hover:scale-110 transition-transform duration-300">
-                <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-neutral-500 font-medium mb-1">Équipe</div>
-                
-                {members.length > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {members.slice(0, 4).map((member, idx) => (
-                        <div
-                          key={member.user?.id || idx}
-                          className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600
-                                   flex items-center justify-center text-white text-xs font-bold 
-                                   border-2 border-white shadow-sm
-                                   hover:scale-110 hover:z-10 transition-transform duration-200 cursor-pointer"
-                          title={member.user?.full_name || member.user?.username}
-                        >
-                          {(member.user?.full_name || member.user?.username || '?').charAt(0).toUpperCase()}
-                        </div>
-                      ))}
-                      {members.length > 4 && (
-                        <div className="w-7 h-7 rounded-full bg-neutral-200
-                                     flex items-center justify-center text-neutral-600 text-xs font-bold 
-                                     border-2 border-white shadow-sm">
-                          +{members.length - 4}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-xs text-neutral-600 font-semibold">
-                      {members.length} membre{members.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="text-sm font-bold text-neutral-400">Aucun membre</div>
-                )}
-              </div>
+{/* Carte Équipe */}
+<div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+              hover:border-green-200 hover:shadow-sm transition-all duration-300 group">
+  <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center
+                group-hover:scale-110 transition-transform duration-300">
+    <Users className="w-5 h-5 text-green-600" strokeWidth={2.5} />
+  </div>
+  <div className="flex-1 min-w-0">
+    <div className="text-xs text-neutral-500 font-medium mb-1">Équipe</div>
+    
+    {members.length > 0 ? (
+      <div className="flex items-center gap-2">
+        <div className="flex -space-x-2">
+          {members.slice(0, 4).map((member, idx) => (
+            <Avatar
+              key={member.user?.id || idx}
+              avatarUrl={member.user?.avatar_url}
+              name={member.user?.full_name || member.user?.username}
+              size="sm"
+              showBorder={true}
+              className="hover:scale-110 hover:z-10 transition-transform duration-200 cursor-pointer"
+            />
+          ))}
+          {members.length > 4 && (
+            <div className="w-7 h-7 rounded-full bg-neutral-200
+                         flex items-center justify-center text-neutral-600 text-xs font-bold 
+                         border-2 border-white shadow-sm">
+              +{members.length - 4}
             </div>
+          )}
+        </div>
+        <span className="text-xs text-neutral-600 font-semibold">
+          {members.length} membre{members.length > 1 ? 's' : ''}
+        </span>
+      </div>
+    ) : (
+      <div className="text-sm font-bold text-neutral-400">Aucun membre</div>
+    )}
+  </div>
+</div>
+
+
           </div>
         </div>
 

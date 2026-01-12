@@ -23,6 +23,7 @@ import { tasksAPI } from '../../api/tasks';
 
 // Import des permissions et du contexte Auth
 import { canModifyTask, canDeleteTask, canChangeTaskStatus } from '../../utils/permissions';
+import { Avatar } from '../../components/common/Avatar';
 import { useAuth } from '../../context/AuthContext';
 
 export const TaskDetail = () => {
@@ -451,37 +452,44 @@ export const TaskDetail = () => {
               </div>
             </div>
 
-            {/* Assigné à */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
-                          hover:border-blue-200 hover:shadow-sm transition-all duration-300 group">
-              {task.assigned_to ? (
-                <>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600
-                               flex items-center justify-center text-white text-sm font-bold 
-                               border-2 border-white shadow-sm
-                               group-hover:scale-110 transition-transform duration-300">
-                    {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs text-neutral-500 font-medium">Assigné à</div>
-                    <div className="text-sm font-bold text-neutral-900 truncate">
-                      {task.assigned_to.full_name || task.assigned_to.username}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center
-                               group-hover:scale-110 transition-transform duration-300">
-                    <User className="w-5 h-5 text-neutral-400" strokeWidth={2.5} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs text-neutral-500 font-medium">Assigné à</div>
-                    <div className="text-sm font-bold text-neutral-400 italic">Non assigné</div>
-                  </div>
-                </>
-              )}
-            </div>
+{/* Assigné à */}
+<div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-neutral-200
+              hover:border-blue-200 hover:shadow-sm transition-all duration-300 group">
+  {task.assigned_to ? (
+    <>
+      <Avatar
+        avatarUrl={task.assigned_to.avatar_url}
+        name={task.assigned_to.full_name || task.assigned_to.username}
+        size="md"
+        showBorder={true}
+        className="group-hover:scale-110 transition-transform duration-300"
+      />
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-neutral-500 font-medium">Assigné à</div>
+        <div className="text-sm font-bold text-neutral-900 truncate">
+          {task.assigned_to.full_name || task.assigned_to.username}
+        </div>
+        {task.assigned_to.email && (
+          <div className="text-xs text-neutral-500 truncate">
+            {task.assigned_to.email}
+          </div>
+        )}
+      </div>
+    </>
+  ) : (
+    <>
+      <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center
+                   group-hover:scale-110 transition-transform duration-300">
+        <User className="w-5 h-5 text-neutral-400" strokeWidth={2.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-neutral-500 font-medium">Assigné à</div>
+        <div className="text-sm font-bold text-neutral-400 italic">Non assigné</div>
+      </div>
+    </>
+  )}
+</div>
+
 
             {/* Date de début */}
             {task.start_date && (

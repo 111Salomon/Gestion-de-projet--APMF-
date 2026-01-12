@@ -6,6 +6,7 @@ from apps.projects.models import Project, ProjectMember
 from apps.users.models import User
 
 
+
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer pour les commentaires."""
     
@@ -22,6 +23,7 @@ class CommentSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'task', 'author', 'created_at', 'updated_at']
+
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
@@ -66,6 +68,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.file.url)
             return obj.file.url
         return None
+
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -116,8 +119,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'attachments',
             'created_at',
             'updated_at',
-            'user_role_in_project',  # ✅ NOUVEAU
-            'user_permissions',      # ✅ NOUVEAU
+            'user_role_in_project',
+            'user_permissions',
         ]
         read_only_fields = [
             'id',
@@ -190,11 +193,11 @@ class TaskSerializer(serializers.ModelSerializer):
         try:
             membership = ProjectMember.objects.get(project=project, user=user)
             
-            # Propriétaire désigné → Tous les droits (sauf delete selon ta logique)
+            # Propriétaire désigné → Tous les droits
             if membership.role == 'owner':
                 return {
                     'can_edit': True,
-                    'can_delete': True,  # Mets False si seul le créateur peut supprimer
+                    'can_delete': True,
                     'can_change_status': True,
                 }
             
@@ -212,7 +215,7 @@ class TaskSerializer(serializers.ModelSerializer):
                 return {
                     'can_edit': False,
                     'can_delete': False,
-                    'can_change_status': is_assigned,  # Seulement si assigné
+                    'can_change_status': is_assigned,
                 }
             
             # Viewer → Lecture seule
@@ -229,7 +232,7 @@ class TaskSerializer(serializers.ModelSerializer):
                 return {
                     'can_edit': False,
                     'can_delete': False,
-                    'can_change_status': True,  # Peut changer le statut
+                    'can_change_status': True,
                 }
             
             return {
@@ -252,9 +255,13 @@ class TaskSerializer(serializers.ModelSerializer):
             data['project'] = ProjectListSerializer(instance.project, context=self.context).data
         
         if instance.assigned_to:
-            data['assigned_to'] = UserMinimalSerializer(instance.assigned_to).data
+            data['assigned_to'] = UserMinimalSerializer(
+                instance.assigned_to, 
+                context=self.context
+            ).data
         
         return data
+
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):
@@ -284,11 +291,12 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         return attrs
 
 
+
 class TaskListSerializer(serializers.ModelSerializer):
     """Serializer léger pour la liste des tâches."""
     
     project = ProjectListSerializer(read_only=True)
-    assigned_to = UserMinimalSerializer(read_only=True)
+    assigned_to = serializers.SerializerMethodField()
     is_overdue = serializers.ReadOnlyField()
     
     # ✅ AJOUT : Permissions aussi dans la liste
@@ -306,8 +314,18 @@ class TaskListSerializer(serializers.ModelSerializer):
             'due_date',
             'is_overdue',
             'created_at',
-            'user_permissions',  # ✅ NOUVEAU
+            'user_permissions',
         ]
+    
+    # ✅ MÉTHODE MANQUANTE AJOUTÉE ICI
+    def get_assigned_to(self, obj):
+        """Retourne les infos de l'utilisateur assigné avec avatar_url complet."""
+        if obj.assigned_to:
+            return UserMinimalSerializer(
+                obj.assigned_to, 
+                context=self.context
+            ).data
+        return None
     
     def get_user_permissions(self, obj):
         """Même logique que TaskSerializer."""

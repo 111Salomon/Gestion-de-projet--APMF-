@@ -52,7 +52,7 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
     bio: ''
   });
   const [saving, setSaving] = useState(false);
-  const { user: currentUser, refreshUser } = useAuth();
+  const { user: currentUser, refreshUser, notifyMemberUpdated} = useAuth();
 
   // Charge les détails du membre
   useEffect(() => {
@@ -111,15 +111,41 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
     }
   };
 
+  // const handleAvatarUpdated = (newAvatarUrl) => {
+  //   setMember((prev) => ({ ...prev, avatar_url: newAvatarUrl }));
+  //   if (currentUser && memberId === currentUser.id) {
+  //     refreshUser();
+  //   }
+  //   if (onMemberUpdated) {
+  //     onMemberUpdated({ ...member, avatar_url: newAvatarUrl });
+  //   }
+  // };
+
   const handleAvatarUpdated = (newAvatarUrl) => {
-    setMember((prev) => ({ ...prev, avatar_url: newAvatarUrl }));
-    if (currentUser && memberId === currentUser.id) {
+    console.log('🖼️ Avatar updated in modal:', newAvatarUrl);
+    console.log('📌 Current user ID:', currentUser?.id);
+    console.log('📌 Member ID:', memberId);
+    
+    // Mettre à jour l'état local
+    const updatedMember = { ...member, avatar_url: newAvatarUrl };
+    setMember(updatedMember);
+    
+    // ✅ Si c'est l'utilisateur connecté, rafraîchir son contexte
+    if (currentUser && Number(memberId) === Number(currentUser.id)) {
+      console.log('🔄 Calling refreshUser (own avatar)...');
       refreshUser();
+    } else {
+      console.log('👤 Notifying member_updated (other user avatar)...');
+      // ✅ Sinon, notifier que ce membre a été mis à jour
+      notifyMemberUpdated(updatedMember);
     }
+    
+    // Callback parent
     if (onMemberUpdated) {
-      onMemberUpdated({ ...member, avatar_url: newAvatarUrl });
+      onMemberUpdated(updatedMember);
     }
   };
+
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -617,7 +643,7 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
       />
 
       {/* ✨ ANIMATIONS */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }

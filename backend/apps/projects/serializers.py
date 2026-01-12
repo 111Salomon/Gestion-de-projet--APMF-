@@ -14,13 +14,22 @@ class UserSerializer(serializers.ModelSerializer):
     Utilisé dans la liste des membres et les users disponibles.
     """
     full_name = serializers.CharField(source='get_full_name', read_only=True)
-    
+    avatar_url = serializers.SerializerMethodField() 
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'full_name', 'avatar', 'role']
+        fields = ['id', 'username', 'email', 'full_name', 'avatar', 'avatar_url', 'role']
         read_only_fields = ['id']
 
-
+    # ✅ AJOUTER CETTE MÉTHODE
+    def get_avatar_url(self, obj):
+        """Retourne l'URL complète de l'avatar ou None."""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
 # ═══════════════════════════════════════════════════════════════════
 # 👥 PROJECT MEMBER SERIALIZER
 # ═══════════════════════════════════════════════════════════════════
@@ -187,4 +196,4 @@ class ProjectListSerializer(serializers.ModelSerializer):
     def get_members(self, obj):  # ✅ AJOUTE CETTE MÉTHODE
         """Retourne les 3 premiers membres pour les avatars."""
         members = obj.project_members.select_related('user').all()[:3]
-        return ProjectMemberSerializer(members, many=True).data
+        return ProjectMemberSerializer(members, many=True, context=self.context).data
