@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ProjectViewSet
+from .views import ProjectViewSet, public_stats 
 
 # ═══════════════════════════════════════════════════════════════
 # 🔧 CONFIGURATION DU ROUTER
@@ -14,6 +14,9 @@ router.register(r'', ProjectViewSet, basename='project')
 # ═══════════════════════════════════════════════════════════════
 
 urlpatterns = [
+
+    # 🆕 ROUTE PUBLIQUE (avant les routes du router)
+    path('public/stats/', public_stats, name='public-stats'),
     # Routes du ViewSet (CRUD + actions custom)
     path('', include(router.urls)),
     

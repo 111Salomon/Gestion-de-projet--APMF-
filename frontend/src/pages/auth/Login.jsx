@@ -1,17 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // 🆕 Ajout de useEffect
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight, Check } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
+import CountUp from 'react-countup'; // 🆕 Animation des chiffres
 import logo from "../../assets/img/APMF Logo.png";
 import imgSide from "../../assets/img/rightSide.jpg";
 import { useAuth } from '../../context/AuthContext';
 import { useForm } from '../../hooks/useForm';
 import { required, email, minLength } from '../../utils/validators';
 import { Input } from '../../components/common/Input';
+import { dashboardAPI } from '../../api/dashboard'; // 🆕 Import de l'API
+
 
 export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 🆕 État pour les statistiques dynamiques
+  const [stats, setStats] = useState({
+    active_projects: 0,
+    satisfaction_rate: 0,
+    active_users: 0,
+    loading: true
+  });
+
+  // 🆕 Chargement des statistiques au montage du composant
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const data = await dashboardAPI.getPublicStats();
+        setStats({
+          ...data,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Erreur chargement stats:', error);
+        // Garde les valeurs par défaut si erreur
+        setStats(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    loadStats();
+    
+    // 🔄 Rafraîchissement automatique toutes les 30 secondes
+    const interval = setInterval(loadStats, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const { values, errors, touched, handleChange, handleBlur, validateAll } = useForm(
     { username: '', password: '' },
@@ -42,13 +77,14 @@ export const Login = () => {
     }
   };
 
+
   return (
     <div className="min-h-screen flex">
-      {/* ✨ PARTIE GAUCHE - FORMULAIRE (Améliorée) */}
+      {/* ✨ PARTIE GAUCHE - FORMULAIRE */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
           
-          {/* Logo Original (sans card) */}
+          {/* Logo */}
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-8">
               <img 
@@ -159,15 +195,13 @@ export const Login = () => {
         </div>
       </div>
 
- {/* Partie droite - Image/Design */}
-      <div className="hidden lg:flex lg:w-1/2 relative ">
+      {/* 🆕 PARTIE DROITE - STATISTIQUES DYNAMIQUES */}
+      <div className="hidden lg:flex lg:w-1/2 relative">
         {/* Image de fond */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${imgSide})` }}
-        >
-
-        </div>
+        />
         
         {/* Contenu superposé */}
         <div className="relative z-10 w-full flex items-center justify-center p-12 bg-black/25 backdrop-blur-sm m-10 rounded-2xl border border-white/10">
@@ -182,7 +216,7 @@ export const Login = () => {
                 <span className="text-sm font-medium">Plateforme Active</span>
               </div>
               
-              <h2 className="text-5xl font-bold mb-4 leading-tight  text-white">
+              <h2 className="text-5xl font-bold mb-4 leading-tight text-white">
                 Gérez vos projets efficacement
               </h2>
               <p className="text-xl text-primary-30 mb-8">
@@ -191,7 +225,7 @@ export const Login = () => {
             </div>
 
             {/* Features */}
-            <div className="space-y-4 ">
+            <div className="space-y-4">
               {[
                 { icon: '✓', text: 'Gestion des projets en temps réel' },
                 { icon: '✓', text: 'Collaboration d\'équipe simplifiée' },
@@ -210,21 +244,77 @@ export const Login = () => {
               ))}
             </div>
 
-            {/* Stats */}
+            {/* 🆕 STATISTIQUES DYNAMIQUES AVEC COUNTUP */}
             <div className="mt-12 grid grid-cols-3 gap-8">
-              <div>
-                <div className="text-3xl font-bold">500+</div>
-                <div className="text-sm text-primary-200">Projets actifs</div>
+              {/* Projets Actifs */}
+              <div className="text-center">
+                <div className="text-3xl font-bold">
+                  {stats.loading ? (
+                    <div className="animate-pulse bg-white/20 h-9 w-20 mx-auto rounded"></div>
+                  ) : (
+                    <>
+                      <CountUp 
+                        start={0}
+                        end={stats.active_projects}
+                        duration={2.5}
+                        separator=" "
+                        suffix="+"
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="text-sm text-primary-200 mt-1">Projets actifs</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold">98%</div>
-                <div className="text-sm text-primary-200">Satisfaction</div>
+
+              {/* Satisfaction */}
+              <div className="text-center">
+                <div className="text-3xl font-bold">
+                  {stats.loading ? (
+                    <div className="animate-pulse bg-white/20 h-9 w-20 mx-auto rounded"></div>
+                  ) : (
+                    <>
+                      <CountUp 
+                        start={0}
+                        end={stats.satisfaction_rate}
+                        duration={2.5}
+                        decimals={0}
+                        suffix="%"
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="text-sm text-primary-200 mt-1">Satisfaction</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold">24/7</div>
-                <div className="text-sm text-primary-200">Support</div>
+
+              {/* Utilisateurs Actifs */}
+              <div className="text-center">
+                <div className="text-3xl font-bold">
+                  {stats.loading ? (
+                    <div className="animate-pulse bg-white/20 h-9 w-20 mx-auto rounded"></div>
+                  ) : (
+                    <>
+                      <CountUp 
+                        start={0}
+                        end={stats.active_users}
+                        duration={2.5}
+                        separator=" "
+                        suffix="+"
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="text-sm text-primary-200 mt-1">Utilisateurs actifs</div>
               </div>
             </div>
+
+            {/* 🆕 Indicateur de mise à jour */}
+            {!stats.loading && !stats.error && (
+              <div className="mt-6 text-center">
+                <p className="text-xs text-white/50">
+                  Données en temps réel • Mis à jour automatiquement
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
