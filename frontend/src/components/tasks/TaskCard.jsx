@@ -52,6 +52,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     const colors = {
       todo: 'bg-blue-50 text-blue-700',
       in_progress: 'bg-amber-50 text-amber-700',
+      in_review: 'bg-neutral-100 text-neutral-700',
       done: 'bg-green-50 text-green-700',
       blocked: 'bg-red-50 text-red-700',
     };
@@ -62,6 +63,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     const accents = {
       todo: 'bg-blue-500',
       in_progress: 'bg-amber-500',
+      in_review: 'bg-neutral-400',
       done: 'bg-green-500',
       blocked: 'bg-red-500',
     };
@@ -72,6 +74,7 @@ export const TaskCard = ({ task, onEdit, onDelete }) => {
     const labels = {
       todo: 'À faire',
       in_progress: 'En cours',
+      in_review: 'En révision',
       done: 'Terminé',
       blocked: 'Bloqué',
     };

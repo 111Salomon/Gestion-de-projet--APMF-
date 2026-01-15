@@ -271,17 +271,17 @@ const handlePageChange = (newPage) => {
         accent: 'bg-blue-500',
         icon: null
       },
-      cancelled: {
-        color: 'bg-red-50 text-red-700',
-        label: 'Annulé',
-        accent: 'bg-red-500',
-        icon: null
-      },
+      // cancelled: {
+      //   color: 'bg-red-50 text-red-700',
+      //   label: 'Annulé',
+      //   accent: 'bg-red-500',
+      //   icon: null
+      // },
     };
     return configs[status] || configs.all;
   };
 
-  const statusOptions = ['all', 'active', 'on_hold', 'completed', 'cancelled'];
+  const statusOptions = ['all', 'active', 'on_hold', 'completed'];
 
 
   return (

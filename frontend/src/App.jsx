@@ -16,6 +16,7 @@ import { ResetPassword } from './pages/auth/ResetPassword';
 import { Analytics } from './pages/reports/Reports'; 
 import { ProjectAnalytics } from './pages/projects/ProjectAnalytics';
 import { Calendar } from './pages/calendar/Calendar';
+import { Settings } from './pages/settings/Settings';
 
 /**
  * Composant pour protéger les routes privées
@@ -153,6 +154,15 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Tasks />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/settings"
+                element={
+                  <PrivateRoute>
+                    <Settings />
                   </PrivateRoute>
                 }
               />

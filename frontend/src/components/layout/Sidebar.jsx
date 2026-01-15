@@ -19,6 +19,7 @@ import { useStats } from '../../context/StatsContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+
 export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -27,21 +28,26 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
+
   // ═══════════════════════════════════════════════════════
   // 🔒 PERMISSIONS
   // ═══════════════════════════════════════════════════════
+
 
   const canViewAnalytics = () => {
     return user?.role === 'admin' || user?.role === 'chef';
   };
 
+
   const canManageTeam = () => {
     return user?.role === 'admin';
   };
 
+
   // ═══════════════════════════════════════════════════════
   // 🧭 NAVIGATION
   // ═══════════════════════════════════════════════════════
+
 
   const navItems = [
     { 
@@ -95,17 +101,21 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     },
   ];
 
+
   const menuItems = navItems.filter(item => item.section === 'menu');
   const workspaceItems = navItems.filter(item => item.section === 'workspace');
+
 
   // ═══════════════════════════════════════════════════════
   // 🎯 HANDLERS
   // ═══════════════════════════════════════════════════════
 
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
 
   const handlePreviousMonth = () => {
     const prevMonth = new Date(currentMonth);
@@ -113,29 +123,40 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     setCurrentMonth(prevMonth);
   };
 
+
   const handleNextMonth = () => {
     const nextMonth = new Date(currentMonth);
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     setCurrentMonth(nextMonth);
   };
 
+
   const handleDateClick = (date) => {
     setSelectedDate(date);
     navigate(`/calendar?date=${format(date, 'yyyy-MM-dd')}`);
   };
 
+
   // ═══════════════════════════════════════════════════════
   // 📅 CALENDRIER
   // ═══════════════════════════════════════════════════════
+
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
+  // ✅ CORRECTION : Calcul des jours vides avant le 1er du mois
+  const firstDayOfMonth = monthStart.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+  const startingDayIndex = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Ajuste pour que Lundi = 0
+  const emptyDays = Array(startingDayIndex).fill(null);
+
+
   // ═══════════════════════════════════════════════════════
   // 🎨 RENDER
   // ═══════════════════════════════════════════════════════
+
 
   return (
     <aside 
@@ -191,15 +212,24 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           </button>
         </div>
 
+
         {/* ═══ USER PROFILE ═══ */}
         {!isCollapsed && (
           <div className="px-4 py-4 border-b border-white/5 flex-shrink-0">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center ring-2 ring-white/10">
-                  <span className="text-white font-bold text-sm">
-                    {user?.full_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
-                  </span>
+                <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white/10 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                  {user?.avatar_url ? (
+                    <img 
+                      src={user.avatar_url}
+                      alt={user?.username || 'Avatar utilisateur'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-bold text-sm">
+                      {user?.full_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-neutral-900" />
               </div>
@@ -217,6 +247,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           </div>
         )}
 
+
         {/* ═══ NAVIGATION ═══ */}
         <nav className="flex-1 overflow-y-auto py-4 scrollbar-hide">
           {/* Menu Section */}
@@ -227,6 +258,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               </span>
             </div>
           )}
+
 
           <div className="space-y-0.5 px-2">
             {menuItems.map((item) => (
@@ -276,10 +308,12 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             ))}
           </div>
 
+
           {/* Separator */}
           {!isCollapsed && menuItems.length > 0 && workspaceItems.length > 0 && (
             <div className="my-4 mx-6 border-t border-white/5" />
           )}
+
 
           {/* Workspace Section */}
           {!isCollapsed && workspaceItems.length > 0 && (
@@ -289,6 +323,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               </span>
             </div>
           )}
+
 
           <div className="space-y-0.5 px-2">
             {workspaceItems.map((item) => (
@@ -339,6 +374,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           </div>
         </nav>
 
+
         {/* ═══ CALENDRIER ═══ */}
         {!isCollapsed && (
           <div className="px-4 pb-3 flex-shrink-0">
@@ -361,6 +397,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             </button>
           </div>
         )}
+
 
         {!isCollapsed && isCalendarOpen && (
           <div className="px-4 pb-4 animate-fadeIn flex-shrink-0">
@@ -387,6 +424,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 </button>
               </div>
 
+
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {weekDays.map((day, i) => (
                   <div
@@ -398,7 +436,14 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 ))}
               </div>
 
+
               <div className="grid grid-cols-7 gap-1">
+                {/* ✅ AJOUT : Cellules vides avant le 1er du mois */}
+                {emptyDays.map((_, i) => (
+                  <div key={`empty-${i}`} className="aspect-square" />
+                ))}
+                
+                {/* Jours du mois */}
                 {daysInMonth.map((date, i) => {
                   const isSelected = isSameDay(date, selectedDate);
                   const isTodayDate = isToday(date);
@@ -425,14 +470,16 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 })}
               </div>
 
+
               <div className="mt-3 pt-3 border-t border-white/10">
                 <p className="text-xs text-neutral-400 text-center capitalize">
-                  Aujourd'hui : {format(new Date(), "d MMMM yyyy", { locale: fr })}
+                  Aujourd'hui : {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
                 </p>
               </div>
             </div>
           </div>
         )}
+
 
         {/* ═══ FOOTER ═══ */}
         <div className="px-4 py-4 border-t border-white/5 space-y-1 flex-shrink-0">
@@ -450,6 +497,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             <Settings className="w-5 h-5 flex-shrink-0 group-hover:rotate-90 transition-transform duration-300" />
             {!isCollapsed && <span className="text-sm font-medium">Paramètres</span>}
           </button>
+
 
           <button
             onClick={handleLogout}

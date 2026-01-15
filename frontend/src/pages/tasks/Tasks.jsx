@@ -7,7 +7,8 @@ import {
   X,
   ChevronDown,
   Check,
-  AlertCircle
+  AlertCircle,
+  FolderOpen
 } from 'lucide-react';
 import { Layout } from '../../components/layout/Layout';
 import { Button } from '../../components/common/Button';
@@ -17,6 +18,7 @@ import { Pagination } from '../../components/common/Pagination';
 import { TaskCard } from '../../components/tasks/TaskCard';
 import { TaskForm } from '../../components/forms/TaskForm';
 import { tasksAPI } from '../../api/tasks';
+import { projectsAPI } from '../../api/projects';
 import { useStats } from '../../context/StatsContext';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -36,8 +38,12 @@ export const Tasks = () => {
   
   // États - Données
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsError, setProjectsError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [projectFilter, setProjectFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   
@@ -56,15 +62,65 @@ export const Tasks = () => {
   const [totalCount, setTotalCount] = useState(0);
   
   // États - Dropdowns
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
   
   // Refs pour les dropdowns
+  const projectDropdownRef = useRef(null);
   const statusDropdownRef = useRef(null);
   const priorityDropdownRef = useRef(null);
   
   // Context
   const { refreshStats } = useStats();
+
+
+  const loadProjects = async () => {
+    try {
+      setProjectsLoading(true);
+      setProjectsError(null);
+      const data = await projectsAPI.getAll({ page_size: 100 });
+      if (data.results) {
+        setProjects(data.results);
+      } else {
+        setProjects(data);
+      }
+    } catch (error) {
+      console.error('❌ Erreur chargement projets:', error);
+      setProjectsError('Impossible de charger la liste des projets');
+      toast.error('Impossible de charger la liste des projets');
+    }
+    finally {
+      setProjectsLoading(false);
+    }
+  };
+
+
+  const mergeProjectsFromTasks = (taskList) => {
+    if (!Array.isArray(taskList) || taskList.length === 0) return;
+
+    const projectsFromTasks = taskList
+      .map((task) => task.project)
+      .filter((project) => project && project.id && project.name);
+
+    if (projectsFromTasks.length === 0) return;
+
+    setProjects((prevProjects) => {
+      const map = new Map(prevProjects.map((proj) => [String(proj.id), proj]));
+      let hasChanges = false;
+
+      projectsFromTasks.forEach((project) => {
+        const key = String(project.id);
+        if (!map.has(key)) {
+          map.set(key, { id: project.id, name: project.name });
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? Array.from(map.values()) : prevProjects;
+    });
+  };
 
 
 
@@ -96,19 +152,29 @@ export const Tasks = () => {
   // Chargement initial
   useEffect(() => {
     loadTasks(1);
+    loadProjects();
   }, []);
+
+
+  useEffect(() => {
+    if (!isProjectDropdownOpen) {
+      setProjectSearchTerm('');
+    }
+  }, [isProjectDropdownOpen]);
 
 
   // Recharge quand les filtres changent
   useEffect(() => {
     if (loading) return;
     loadTasks(1);
-  }, [statusFilter, priorityFilter, searchQuery]);
-
+  }, [projectFilter, statusFilter, priorityFilter, searchQuery]);
 
   // Fermeture des dropdowns au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target)) {
+        setIsProjectDropdownOpen(false);
+      }
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target)) {
         setIsStatusDropdownOpen(false);
       }
@@ -128,6 +194,7 @@ export const Tasks = () => {
       setLoading(true);
       
       const params = { page };
+      if (projectFilter !== 'all') params.project = projectFilter;
       if (statusFilter !== 'all') params.status = statusFilter;
       if (priorityFilter !== 'all') params.priority = priorityFilter;
       if (searchQuery.trim()) params.search = searchQuery.trim();
@@ -139,12 +206,14 @@ export const Tasks = () => {
       if (data.results) {
         const validTasks = data.results.filter(t => t && t.title);
         setTasks(validTasks);
+        mergeProjectsFromTasks(validTasks);
         setTotalCount(data.count);
         setTotalPages(Math.ceil(data.count / 20));
         setCurrentPage(page);
       } else {
         const validTasks = data.filter(t => t && t.title);
         setTasks(validTasks);
+        mergeProjectsFromTasks(validTasks);
         setTotalCount(validTasks.length);
         setTotalPages(1);
         setCurrentPage(1);
@@ -272,10 +341,10 @@ export const Tasks = () => {
         label: 'Terminé',
         accent: 'bg-green-500'
       },
-      blocked: {
-        color: 'bg-red-50 text-red-700',
-        label: 'Bloqué',
-        accent: 'bg-red-500'
+      in_review: {
+        color: 'bg-neutral-100 text-neutral-700',
+        label: 'En révision',
+        accent: 'bg-neutral-400'
       },
     };
     return configs[status] || configs.all;
@@ -311,7 +380,35 @@ export const Tasks = () => {
     return configs[priority] || configs.all;
   };
 
-  const statusOptions = ['all', 'todo', 'in_progress', 'done', 'blocked'];
+  const getProjectLabel = () => {
+    if (projectFilter === 'all') return 'Tous les projets';
+    const project = projects.find((p) => String(p.id) === String(projectFilter));
+    return project?.name || 'Projet sélectionné';
+  };
+
+  const activeFilterLabels = [];
+  if (projectFilter !== 'all') activeFilterLabels.push(getProjectLabel());
+  if (statusFilter !== 'all') activeFilterLabels.push(getStatusConfig(statusFilter).label);
+  if (priorityFilter !== 'all') activeFilterLabels.push(getPriorityConfig(priorityFilter).label);
+
+  const projectOptions = [
+    { value: 'all', label: 'Tous les projets' },
+    ...projects.map((project) => ({
+      value: String(project.id),
+      label: project.name || `Projet #${project.id}`,
+    })),
+  ];
+
+  const filteredProjectOptions = projectSearchTerm.trim()
+    ? projectOptions.filter((option, index) => {
+        if (option.value === 'all') {
+          return 'tous les projets'.includes(projectSearchTerm.trim().toLowerCase());
+        }
+        return option.label.toLowerCase().includes(projectSearchTerm.trim().toLowerCase());
+      })
+    : projectOptions;
+
+  const statusOptions = ['all', 'todo', 'in_progress', 'in_review', 'done'];
   const priorityOptions = ['all', 'high', 'medium', 'low'];
 
 
@@ -343,20 +440,12 @@ export const Tasks = () => {
                   </span>
                   
                   {/* Filtres actifs */}
-                  {(statusFilter !== 'all' || priorityFilter !== 'all') && (
+                  {activeFilterLabels.length > 0 && (
                     <span className="text-sm text-neutral-500 flex items-center gap-1">
                       · Filtres : 
-                      {statusFilter !== 'all' && (
-                        <span className="font-medium text-orange-600">
-                          {getStatusConfig(statusFilter).label}
-                        </span>
-                      )}
-                      {statusFilter !== 'all' && priorityFilter !== 'all' && ', '}
-                      {priorityFilter !== 'all' && (
-                        <span className="font-medium text-orange-600">
-                          {getPriorityConfig(priorityFilter).label}
-                        </span>
-                      )}
+                      <span className="font-medium text-orange-600">
+                        {activeFilterLabels.join(', ')}
+                      </span>
                     </span>
                   )}
                 </div>
@@ -381,7 +470,7 @@ export const Tasks = () => {
           </div>
 
           {/* Ligne 2 : Recherche + 2 Dropdowns Custom */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Recherche */}
             <div className="flex-1 relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 
@@ -412,11 +501,106 @@ export const Tasks = () => {
               )}
             </div>
 
+            {/* 🎯 DROPDOWN PROJET */}
+            <div className="relative min-w-[200px]" ref={projectDropdownRef}>
+              <button
+                onClick={() => {
+                  setIsProjectDropdownOpen(!isProjectDropdownOpen);
+                  setIsStatusDropdownOpen(false);
+                  setIsPriorityDropdownOpen(false);
+                }}
+                className={`
+                  w-full h-12 pl-4 pr-10 
+                  bg-white border-2 
+                  rounded-xl text-sm font-semibold
+                  transition-all duration-200
+                  flex items-center gap-2
+                  ${isProjectDropdownOpen 
+                    ? 'border-orange-500 ring-4 ring-orange-500/10' 
+                    : 'border-neutral-200 hover:border-neutral-300'
+                  }
+                `}
+              >
+                <FolderOpen className="w-4 h-4 text-neutral-500" />
+                <span className="flex-1 text-left text-neutral-700">
+                  {getProjectLabel()}
+                </span>
+                <ChevronDown 
+                  className={`w-4 h-4 text-neutral-500 transition-transform duration-200 
+                            ${isProjectDropdownOpen ? 'rotate-180' : ''}`} 
+                />
+              </button>
+
+              {isProjectDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 
+                              bg-white rounded-xl border-2 border-neutral-200 
+                              shadow-lg z-50 overflow-hidden
+                              animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-3 border-b border-neutral-100">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      <input
+                        type="text"
+                        value={projectSearchTerm}
+                        onChange={(e) => setProjectSearchTerm(e.target.value)}
+                        placeholder="Rechercher un projet..."
+                        className="w-full pl-9 pr-9 py-2 text-sm border-2 border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-400"
+                      />
+                      {projectSearchTerm && (
+                        <button
+                          onClick={() => setProjectSearchTerm('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                  {filteredProjectOptions.length > 0 ? filteredProjectOptions.map((option) => {
+                    const isSelected = projectFilter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setProjectFilter(option.value);
+                          setIsProjectDropdownOpen(false);
+                          setProjectSearchTerm('');
+                        }}
+                        className={`
+                          w-full px-4 py-3 
+                          flex items-center gap-3
+                          text-sm font-medium
+                          transition-all duration-150
+                          ${isSelected 
+                            ? 'bg-orange-50 text-orange-700' 
+                            : 'text-neutral-700 hover:bg-neutral-50'
+                          }
+                        `}
+                      >
+                        <div className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-orange-500' : 'bg-neutral-300'}`} />
+                        <span className="flex-1 text-left">{option.label}</span>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-orange-600" strokeWidth={2.5} />
+                        )}
+                      </button>
+                    );
+                  }) : (
+                    <div className="px-4 py-6 text-sm text-neutral-500 text-center">
+                      Aucun projet ne correspond à cette recherche
+                    </div>
+                  )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 🎨 DROPDOWN STATUT */}
             <div className="relative min-w-[180px]" ref={statusDropdownRef}>
               <button
                 onClick={() => {
                   setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                  setIsProjectDropdownOpen(false);
                   setIsPriorityDropdownOpen(false);
                 }}
                 className={`
@@ -485,6 +669,7 @@ export const Tasks = () => {
               <button
                 onClick={() => {
                   setIsPriorityDropdownOpen(!isPriorityDropdownOpen);
+                  setIsProjectDropdownOpen(false);
                   setIsStatusDropdownOpen(false);
                 }}
                 className={`
@@ -564,7 +749,7 @@ export const Tasks = () => {
             <Search className="w-8 h-8 text-neutral-400" />
           </div>
           <p className="text-neutral-600 font-medium mb-2">
-            {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
+            {searchQuery || projectFilter !== 'all' || statusFilter !== 'all' || priorityFilter !== 'all'
               ? 'Aucune tâche ne correspond aux filtres'
               : 'Aucune tâche créée'}
           </p>

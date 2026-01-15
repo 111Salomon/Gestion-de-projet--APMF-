@@ -328,7 +328,7 @@ export const ProjectDetail = () => {
         badgeAccent: 'bg-green-500',
       },
       on_hold: {
-        label: 'En pause',
+        label: 'En attente',
         dotColor: 'bg-amber-500',
         textColor: 'text-amber-700',
         badgeColor: 'bg-amber-50 text-amber-700',

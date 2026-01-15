@@ -173,7 +173,7 @@ export const ProjectForm = ({
             <option value="active">Actif</option>
             <option value="on_hold">En attente</option>
             <option value="completed">Terminé</option>
-            <option value="cancelled">Annulé</option>
+            {/* <option value="cancelled">Annulé</option> */}
           </select>
           {/* Icône chevron custom */}
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
