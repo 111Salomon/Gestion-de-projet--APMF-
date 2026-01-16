@@ -323,7 +323,7 @@ export const Team = () => {
               
               {/* Titre */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br  from-orange-500 to-orange-600
                               flex items-center justify-center shadow-md shadow-neutral-900/20">
                   <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
                 </div>
@@ -418,13 +418,13 @@ export const Team = () => {
           {stats && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               {/* Total Membres */}
-              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+              <div className="group relative bg-white border border-neutral-200 rounded-xl p-5 
                             hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
                             hover:shadow-orange-500/10 cursor-pointer">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                  <div className="w-10 h-10  bg-neutral-100 rounded-xl flex items-center justify-center 
                                 group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
-                    <Users className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    <Users className="w-5 h-5  text-neutral-600 group-hover:text-white" strokeWidth={2.5} />
                   </div>
                 </div>
                 <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
@@ -434,13 +434,13 @@ export const Team = () => {
               </div>
 
               {/* Actifs */}
-              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+              <div className="group relative bg-white border border-neutral-200 rounded-xl p-5 
                             hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
                             hover:shadow-orange-500/10 cursor-pointer">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center 
                                 group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
-                    <UserCheck className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    <UserCheck className="w-5 h-5 text-neutral-600 group-hover:text-white" strokeWidth={2.5} />
                   </div>
                 </div>
                 <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
@@ -450,13 +450,13 @@ export const Team = () => {
               </div>
 
               {/* Charge Moyenne */}
-              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+              <div className="group relative bg-white border border-neutral-200 rounded-xl p-5 
                             hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
                             hover:shadow-orange-500/10 cursor-pointer">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center 
                                 group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
-                    <Briefcase className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    <Briefcase className="w-5 h-5 text-neutral-600 group-hover:text-white" strokeWidth={2.5} />
                   </div>
                 </div>
                 <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
@@ -469,13 +469,13 @@ export const Team = () => {
               </div>
 
               {/* Taux Complétion - UNIFORMISÉ aussi */}
-              <div className="group relative bg-white border-2 border-neutral-200 rounded-xl p-5 
+              <div className="group relative bg-white border border-neutral-200 rounded-xl p-5 
                             hover:border-orange-500 transition-all duration-300 hover:shadow-lg 
                             hover:shadow-orange-500/10 cursor-pointer">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center 
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center 
                                 group-hover:bg-orange-500 transition-colors duration-300 shadow-sm">
-                    <TrendingUp className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    <TrendingUp className="w-5 h-5 text-neutral-600 group-hover:text-white" strokeWidth={2.5} />
                   </div>
                 </div>
                 <p className="text-xs text-neutral-500 font-medium mb-1 uppercase tracking-wide">
@@ -487,7 +487,7 @@ export const Team = () => {
           )}
 
           {/* ✨ FILTRES */}
-          <div className="bg-white border-2 border-neutral-200 rounded-xl p-4 mb-6 shadow-sm">
+          <div className="bg-white border border-neutral-200 rounded-xl p-4 mb-6 shadow-sm">
             <div className="flex gap-3">
               {/* Recherche */}
               <div className="flex-1 relative">
@@ -497,7 +497,7 @@ export const Team = () => {
                   placeholder="Rechercher un membre..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-neutral-200 rounded-xl text-sm 
+                  className="w-full pl-10 pr-4 py-2.5 border border-neutral-200 rounded-xl text-sm 
                            focus:outline-none focus:border-orange-500 transition-all duration-200 
                            hover:border-neutral-300 focus:ring-2 focus:ring-orange-500/20"
                 />
@@ -509,7 +509,7 @@ export const Team = () => {
                 <select
                   value={roleFilter}
                   onChange={handleRoleChange}
-                  className="pl-10 pr-8 py-2.5 border-2 border-neutral-200 rounded-xl text-sm 
+                  className="pl-10 pr-8 py-2.5 border border-neutral-200 rounded-xl text-sm 
                            focus:outline-none focus:border-orange-500 bg-white appearance-none 
                            cursor-pointer transition-all duration-200 hover:border-neutral-300
                            focus:ring-2 focus:ring-orange-500/20"
@@ -525,7 +525,7 @@ export const Team = () => {
           </div>
 
           {/* ✨ TABLEAU OPTIMISÉ */}
-          <div className="bg-white border-2 border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -606,7 +606,7 @@ export const Team = () => {
       
       {member.is_active && (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 
-                      rounded-full border-2 border-white shadow-sm" 
+                      rounded-full border border-white shadow-sm" 
              title="En ligne"
         />
       )}

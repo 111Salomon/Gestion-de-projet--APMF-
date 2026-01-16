@@ -96,7 +96,7 @@ export const Dashboard = () => {
         {/* Total Projets */}
         <div 
           onClick={() => navigate('/projects')}
-          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer"
+          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer border border-neutral-200"
         >
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center group-hover:bg-orange-500 transition-all">
@@ -116,7 +116,7 @@ export const Dashboard = () => {
         {/* Tâches Actives */}
         <div 
           onClick={() => navigate('/tasks?status=in_progress')}
-          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer"
+          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer border border-neutral-200"
         >
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center group-hover:bg-orange-500 transition-all">
@@ -136,7 +136,7 @@ export const Dashboard = () => {
         {/* Taux de Complétion */}
         <div 
           onClick={() => navigate('/tasks?status=completed')}
-          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer"
+          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer border border-neutral-200"
         >
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center group-hover:bg-orange-500 transition-all">
@@ -156,7 +156,7 @@ export const Dashboard = () => {
         {/* Tâches en Retard */}
         <div 
           onClick={() => navigate('/tasks?status=overdue')}
-          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer"
+          className="group bg-white rounded-2xl p-6 shadow-sm  hover:shadow-md hover:border-orange-200 transition-all cursor-pointer border border-neutral-200"
         >
           <div className="flex items-start justify-between mb-4">
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center group-hover:bg-orange-500 transition-all">
@@ -237,7 +237,7 @@ export const Dashboard = () => {
           ═══════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Tâches par Statut */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm ">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -253,7 +253,7 @@ export const Dashboard = () => {
         </div>
 
         {/* Top 5 Projets */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm ">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -279,7 +279,7 @@ export const Dashboard = () => {
       {/* ═══════════════════════════════════════════════════════
           ACTIVITÉS RÉCENTES
           ═══════════════════════════════════════════════════════ */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm ">
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200 ">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
