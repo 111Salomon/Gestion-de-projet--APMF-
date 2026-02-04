@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../api/auth';
 import toast from 'react-hot-toast';
+import axiosInstance from '../api/axios'; // ✨ AJOUTÉ
 
 const AuthContext = createContext(null);
 
@@ -106,6 +107,40 @@ export const AuthProvider = ({ children }) => {
     };
   };
 
+  // ═══════════════════════════════════════════════════════════
+  // ✨ GOOGLE CALENDAR INTEGRATION FUNCTIONS
+  // ═══════════════════════════════════════════════════════════
+
+const connectGoogleCalendar = async () => {
+  try {
+    // Appel API pour obtenir l'URL Google (avec token JWT)
+    const response = await axiosInstance.get('/calendar/google/auth/');
+    
+    // Rediriger vers l'URL Google
+    window.location.href = response.data.auth_url;
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur connexion Google Calendar:', error);
+    toast.error('Erreur lors de la connexion à Google Calendar');
+    return false;
+  }
+};
+
+  const disconnectGoogleCalendar = async () => {
+    try {
+      await axiosInstance.post('/calendar/google/disconnect/');
+      // Recharger l'utilisateur pour mettre à jour l'état
+      await refreshUser();
+      toast.success('Google Calendar déconnecté');
+      return true;
+    } catch (error) {
+      console.error('❌ Erreur déconnexion Google Calendar:', error);
+      toast.error('Erreur lors de la déconnexion');
+      return false;
+    }
+  };
+
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -114,7 +149,10 @@ export const AuthProvider = ({ children }) => {
       logout, 
       refreshUser,
       notifyMemberUpdated,
-      subscribe  // ✨ EXPOSER subscribe
+      subscribe,  // ✨ EXPOSER subscribe
+      connectGoogleCalendar,    // ✨ AJOUTÉ
+      disconnectGoogleCalendar   // ✨ AJOUTÉ
+
     }}>
       {children}
     </AuthContext.Provider>

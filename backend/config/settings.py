@@ -215,6 +215,7 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -239,3 +240,23 @@ FRONTEND_URL = 'http://localhost:5173'
 
 # Pour le développement : afficher les emails dans la console au lieu de les envoyer
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Décommente pour tester sans email
+
+
+
+# URL du backend pour les callbacks OAuth2
+BACKEND_URL = 'http://localhost:8000'
+# ═══════════════════════════════════════════════════════════
+# GOOGLE CALENDAR INTEGRATION
+# ═══════════════════════════════════════════════════════════
+
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
+
+# Scopes Google Calendar
+GOOGLE_CALENDAR_SCOPES = [
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/calendar.readonly'
+]
+
+# URL de redirection pour OAuth2
+GOOGLE_REDIRECT_URI = f"{BACKEND_URL}/api/calendar/google/callback/"

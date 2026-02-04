@@ -10,6 +10,7 @@ class CalendarTaskSerializer(serializers.ModelSerializer):
     project = serializers.SerializerMethodField()
     color = serializers.SerializerMethodField()
     is_overdue = serializers.ReadOnlyField()
+    google_synced = serializers.SerializerMethodField()  # ✨ CHAMP CALCULÉ
     
     class Meta:
         model = Task
@@ -23,6 +24,7 @@ class CalendarTaskSerializer(serializers.ModelSerializer):
             'project',
             'color',
             'is_overdue',
+            'google_synced',  # ✨ CHAMP AJOUTÉ
         ]
     
     def get_project(self, obj):
@@ -43,3 +45,19 @@ class CalendarTaskSerializer(serializers.ModelSerializer):
             'low': '#eab308',     # Jaune
         }
         return colors.get(obj.priority, '#6b7280')  # Gris par défaut
+
+    def get_google_synced(self, obj):
+        """Indique si la tâche est synchronisée avec Google Calendar"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            try:
+                from apps.users.models import GoogleCalendarIntegration
+                integration = GoogleCalendarIntegration.objects.get(
+                    user=request.user,
+                    is_active=True,
+                    google_calendar_id__isnull=False
+                )
+                return True
+            except GoogleCalendarIntegration.DoesNotExist:
+                return False
+        return False

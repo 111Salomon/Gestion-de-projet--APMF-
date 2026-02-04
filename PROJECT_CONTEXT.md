@@ -1,292 +1,152 @@
+# Client OAuth créé
+id_client
+223715648574-ngqdssmqr58tvqdfc99ghn1jvbd37k2f.apps.googleusercontent.com
+
+code_secret_du_client
+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
+
 # Projet : Application de Gestion de Projets et Tâches
 
-## Stack Technique
-- **Backend** : Django 5.1, Django REST Framework, JWT Auth
-- **Frontend** : React 18, Vite, TailwindCSS, Axios
-- **Base de données** : PostgreSQL
-
-## Structure du Projet
-
-## frontend
-frontend/
-├── public/
-│   └── vite.svg
-│
-├── src/
-│   ├── api/
-│   │   ├── auth.js
-│   │   ├── axios.js
-│   │   ├── projects.js
-│   │   └── tasks.js
-│   │
-│   ├── assets/
-│   │   └── img/
-│   │       ├── APMF Logo.png
-│   │       ├── rightSide.jpg
-│   │       └── react.svg
-│   │
-│   ├── components/
-│   │   ├── common/
-│   │   │   ├── Button.jsx
-│   │   │   ├── ConfirmModal.jsx
-│   │   │   ├── Input.jsx
-│   │   │   ├── LoadingSpinner.jsx
-│   │   │   └── Modal.jsx
-│   │   │
-│   │   ├── dashboard/
-│   │   │   ├── ProjectCard.jsx
-│   │   │   ├── RecentActivity.jsx
-│   │   │   └── StatCard.jsx
-│   │   │
-│   │   ├── forms/
-│   │   │   ├── ProjectForm.jsx
-│   │   │   └── TaskForm.jsx
-│   │   │
-│   │   ├── layout/
-│   │   │   ├── Layout.jsx
-│   │   │   ├── Navbar.jsx
-│   │   │   └── Sidebar.jsx
-│   │   │
-│   │   └── tasks/
-│   │       └── TaskCard.jsx
-│   │
-│   ├── context/
-│   │   ├── AuthContext.jsx
-│   │   └── StatsContext.jsx
-│   │
-│   ├── hooks/
-│   │   └── useForm.js
-│   │
-│   ├── pages/
-│   │   ├── auth/
-│   │   │   └── Login.jsx
-│   │   ├── dashboard/
-│   │   │   └── Dashboard.jsx
-│   │   ├── projects/
-│   │   │   └── Projects.jsx
-│   │   └── tasks/
-│   │       └── Tasks.jsx
-│   │
-│   ├── utils/
-│   │   └── validators.js
-│   │
-│   ├── App.jsx
-│   ├── index.css
-│   └── main.jsx
-│
-├── eslint.config.js
-├── index.html
-├── package-lock.json
-├── package.json
-├── postcss.config.js
-├── tailwind.config.js
-└── vite.config.js
 
 
-## backend
-backend/
-├── apps/
-│   ├── __init__.py
-│   ├── projects/
-│   │   ├── __init__.py
-│   │   ├── admin.py
-│   │   ├── apps.py
-│   │   ├── migrations/
-│   │   │   ├── 0001_initial.py
-│   │   │   └── __init__.py
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── tests.py
-│   │   ├── urls.py
-│   │   └── views.py
-│   │
-│   ├── tasks/
-│   │   ├── __init__.py
-│   │   ├── admin.py
-│   │   ├── apps.py
-│   │   ├── migrations/
-│   │   │   ├── 0001_initial.py
-│   │   │   └── __init__.py
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── tests.py
-│   │   ├── urls.py
-│   │   └── views.py
-│   │
-│   └── users/
-│       ├── __init__.py
-│       ├── admin.py
-│       ├── apps.py
-│       ├── authentication.py
-│       ├── migrations/
-│       │   ├── 0001_initial.py
-│       │   └── __init__.py
-│       ├── models.py
-│       ├── permissions.py
-│       ├── serializers.py
-│       ├── tests.py
-│       ├── urls.py
-│       └── views.py
-│
-├── config/
-│   ├── __init__.py
-│   ├── asgi.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-│
-├── manage.py
-├── requirements.txt
-└── venv/
+_Dernière mise à jour : 04 fév. 2026_
 
+## 1. Stack technique & versions
+- **Backend** : Python 3.10.10, Django 5.2.8, Django REST Framework 3.16, SimpleJWT, PostgreSQL 17, psycopg2, django-filter, CORS headers, django-extensions.
+- **Frontend** : React 19 + Vite 7, TailwindCSS 3.4, Axios, react-router-dom 7, lucide-react, dnd-kit, recharts, react-hot-toast, date-fns.
+- **Outils dev** : ESLint 9, Black, Pytest, pytest-django.
+- **Authentification** : JWT (access 60 min, refresh 7 jours) + backend email-only (`EmailAuthenticationBackend`).
 
+## 2. Architecture fonctionnelle
+### Backend (`backend/`)
+- **apps/users** : modèle utilisateur personnalisé (connexion email, rôles, équipe), gestion des invitations, exports CSV/Excel/PDF, endpoints profil & équipe.
+- **apps/projects** : CRUD projets, analytique avancée (`analytics.py`, `permissions_analytics.py`), KPIs top projets.
+- **apps/tasks** : CRUD tâches, commentaires, pièces jointes, endpoints spécifiques Kanban (`change-status`, `update-order`), sérialiseurs optimisés (`TaskListSerializer`).
+- **apps/notifications** : modèles/signaux pour suivre activités & notifications temps réel.
+- **apps/calendar** : endpoints calendrier & plages de disponibilité.
+- **config/** : paramètres environnement (.env via `python-decouple`), CORS, REST_FRAMEWORK (pagination `page_size` dynamique), configuration email SMTP Gmail, chemins médias.
 
+### Frontend (`frontend/`)
+- **Layout commun** (`components/layout`) avec Navbar/Sidebar, badges dynamiques via `StatsContext`.
+- **Pages principales** : `Dashboard`, `Projects`, `Tasks`, `Kanban`, `Team`, `Reports` (analytics), `Calendar`, `Settings`, `Auth/Login`.
+- **Contexts** : `AuthContext` (JWT + events `subscribe`), `StatsContext` (compteurs globales rafraîchis après actions).
+- **APIs** (`src/api/`) : modules par domaine (auth, tasks, projects, dashboard, notifications, attachments, team, reports) basés sur `axiosInstance` (intercepteurs token + `MEDIA_URL`).
+- **Drag & Drop Kanban** : `@dnd-kit` + endpoints `tasksAPI.changeStatus / updateStatusKanban`.
 
-## État Actuel (14 Nov 2025)
-
-### ✅ Fonctionnalités Complètes
-- Authentification JWT (login, logout, refresh token)
-- Dashboard avec statistiques
-- CRUD Projets (créer, lire, modifier, supprimer)
-- CRUD Tâches (créer, lire, modifier, supprimer)
-- Badges dynamiques dans sidebar
-- Filtres et recherche de tâches
-- Responsive design
-
-### ⏳ En Cours / À Faire
-- Board Kanban (tentative échouée, à réessayer)
-- Gestion de l'équipe
-- Profil utilisateur
-- Graphiques sur le dashboard
-
-## Problèmes Résolus Récemment
-1. ✅ Badges affichant "6" et "1" au lieu des noms → Ajout de `project_name` et `assigned_to_name` dans TaskListSerializer
-2. ✅ TaskCard avec badge cliquable → Retiré `onStatusChange`
-3. ✅ Badges sidebar à 0 après login → Corrigé StatsContext
-
-## Configuration Importante
-
-### URLs Backend
-- API Base: `http://127.0.0.1:8000/api/`
-- Auth: `/auth/login/`, `/auth/logout/`, `/auth/refresh/`
-- Projects: `/projects/`
-- Tasks: `/tasks/`
-
-### Ports
-- Django: 8000
-- React: 5173
-
-## Notes Importantes
-- Utilise `TaskListSerializer` pour la liste (léger)
-- Utilise `TaskSerializer` pour les détails (complet avec relations)
-- StatsContext charge les stats au montage ET après chaque action
-
+## 3. Structure de fichiers (arborescence principale)
+```
 Gestion de projet/
+├── PROJECT_CONTEXT.md
+├── VERSION.md
 ├── backend/
-│   ├── .env
-│   ├── .gitignore
 │   ├── manage.py
 │   ├── requirements.txt
-│   ├── apps/
-│   │   ├── notifications/
-│   │   │   ├── __init__.py
-│   │   │   ├── admin.py
-│   │   │   ├── apps.py
-│   │   │   ├── models.py
-│   │   │   ├── serializers.py
-│   │   │   ├── signals.py
-│   │   │   ├── tests.py
-│   │   │   ├── urls.py
-│   │   │   ├── views.py
-│   │   │   └── migrations/
-│   │   │       ├── 0001_initial.py
-│   │   │       └── __init__.py
-│   │   ├── projects/
-│   │   │   ├── __init__.py
-│   │   │   ├── admin.py
-│   │   │   ├── apps.py
-│   │   │   ├── models.py
-│   │   │   ├── serializers.py
-│   │   │   ├── tests.py
-│   │   │   ├── urls.py
-│   │   │   ├── views.py
-│   │   │   └── migrations/
-│   │   │       ├── 0001_initial.py
-│   │   │       └── __init__.py
-│   │   ├── tasks/
-│   │   │   ├── __init__.py
-│   │   │   ├── admin.py
-│   │   │   ├── apps.py
-│   │   │   ├── models.py
-│   │   │   ├── serializers.py
-│   │   │   ├── tests.py
-│   │   │   ├── urls.py
-│   │   │   ├── views.py
-│   │   │   └── migrations/
-│   │   │       ├── 0001_initial.py
-│   │   │       ├── 0002_alter_attachment_file_alter_attachment_file_name_and_more.py
-│   │   │       └── __init__.py
-│   │   └── users/
-│   │       ├── __init__.py
-│   │       ├── admin.py
-│   │       ├── apps.py
-│   │       ├── authentication.py
-│   │       ├── models.py
-│   │       ├── permissions.py
-│   │       ├── serializers.py
-│   │       ├── serializers_team.py
-│   │       ├── tests.py
-│   │       ├── urls.py
-│   │       ├── views.py
-│   │       ├── views_password.py
-│   │       ├── views_team.py
-│   │       └── migrations/
-│   │           ├── 0001_initial.py
-│   │           └── __init__.py
 │   ├── config/
-│   │   ├── __init__.py
-│   │   ├── asgi.py
 │   │   ├── settings.py
-│   │   ├── urls.py
-│   │   └── wsgi.py
+│   │   └── urls.py
+│   ├── apps/
+│   │   ├── users/
+│   │   ├── projects/
+│   │   ├── tasks/
+│   │   ├── notifications/
+│   │   └── calendar/
 │   ├── media/
-│   │   ├── avatars/
-│   │   │   └── 2025/
-│   │   └── uploads/
-│   │       └── tasks/
-│   └── venv/ … (fichiers d’environnement virtuel nombreux, non listés ici)
-│
-└── frontend/
-    ├── README.md
-    ├── dist/
-    │   ├── assets/…
-    │   ├── index.html
-    │   └── vite.svg
-    ├── node_modules/ … (dépendances nombreuses, non listées ici)
-    ├── public/
-    │   └── vite.svg
-    ├── src/
-    │   ├── App.jsx
-    │   ├── index.css
-    │   ├── main.jsx
-    │   ├── api/
-    │   │   ├── attachments.js
-    │   │   ├── auth.js
-    │   │   ├── axios.js
-    │   │   ├── dashboard.js
-    │   │   ├── notifications.js
-    │   │   ├── projects.js
-    │   │   ├── tasks.js
-    │   │   └── team.js
-    │   ├── assets/
-    │   │   └── react.svg
-    │   ├── components/
-    │   │   ├── common/ (Button.jsx, ConfirmModal.jsx, Input.jsx, LoadingSpinner.jsx, Modal.jsx, Pagination.jsx)
-    │   │   ├── dashboard/ (DonutChart.jsx, ProjectCard.jsx, ProjectProgressBar.jsx, RecentActivity.jsx, StatCard.jsx, UrgentTasks.jsx)
-    │   │   ├── forms/ (ProjectForm.jsx, TaskForm.jsx)
-    │   │   ├── kanban/ (KanbanCard.jsx, KanbanColumn.jsx)
-    │   │   ├── layout/ (Layout.jsx, Navbar.jsx, Sidebar.jsx)
-    │   │   ├── notifications/ (NotificationBell.jsx, NotificationDropdown.jsx)
-    │   │   ├── projects/ (AddMemberModal.jsx, MemberList.jsx, ProjectStats.jsx)
-    │   │   ├── tasks/ (AttachmentList.jsx, AttachmentUploader.jsx, CommentSection.jsx, TaskCard.jsx)
-    │   │   └── team/ (Voici l’inventaire demandé (fichiers seulement, caches/`__pycache__`, `node_modules/`, `venv/…` exclus).  
+│   └── venv/
+├── frontend/
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── utils/
+│   │   └── index.css
+│   └── node_modules/
+└── desktop.ini
+```
+- `backend/apps/{users,projects,tasks,notifications,calendar}/` : logique métier modulaire et endpoints REST correspondants.
+- `backend/config/settings.py` : configuration CORS, JWT, DB, email, médias, timezone `Indian/Antananarivo`.
+- `backend/requirements.txt` : dépendances exactes du serveur (voir aussi `VERSION.md`).
+- `frontend/src/` :
+  - `pages/` (auth, dashboard, kanban, team, reports, tasks, projects, settings, calendar).
+  - `components/` (common UI, dashboard widgets, kanban, forms, notifications, team modals, tasks attachments/comments).
+  - `api/` (axios wrappers), `context/` (auth & stats), `utils/validators.js`, `index.css` (design system Tailwind).
+
+## 4. Configuration & variables d’environnement
+Créer `backend/.env` (exemple) :
+```
+SECRET_KEY=...
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+DB_NAME=gestion_projet
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=127.0.0.1
+DB_PORT=5432
+EMAIL_HOST_USER=odcfigma@gmail.com
+EMAIL_HOST_PASSWORD=<app-password>
+```
+Autres points :
+- `CORS_ALLOWED_ORIGINS` → `http://localhost:5173` (Vite) + ajouter les domaines de prod au besoin.
+- `MEDIA_ROOT=backend/media`, upload pièces jointes sous `uploads/tasks/%Y/%m/`.
+- Ports par défaut : Django 8000 (API), Vite 5173 (frontend). `FRONTEND_URL` utilisé dans emails.
+
+## 5. Instructions d’exécution
+### Backend
+1. `cd backend`
+2. (Optionnel) `py -3.10 -m venv venv && venv\Scripts\activate`
+3. `pip install -r requirements.txt`
+4. `python manage.py migrate`
+5. `python manage.py createsuperuser` (si nécessaire)
+6. `python manage.py runserver 0.0.0.0:8000`
+
+Tests : `pytest` ou `python manage.py test`. Outils lint/format : `black`, `flake8`.
+
+### Frontend
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev` (Vite) ou `npm run build && npm run preview`
+
+Configurer `VITE_API_URL` si besoin (sinon défaut `http://localhost:8000`).
+
+## 6. État fonctionnel (04 fév. 2026)
+### ✅ Fonctionnalités disponibles
+1. Authentification JWT complète (login/email, refresh, logout).
+2. Dashboard riche : KPIs, donut chart, top projets, activités récentes, alertes tâches urgentes.
+3. CRUD Projets & Tâches + recherche/filtre + pièces jointes + commentaires.
+4. Vue Kanban drag & drop (statuts `todo/in_progress/in_review/done`, filtrage par projet, mise à jour optimiste + refresh stats).
+5. Gestion d’équipe : listing, filtres, modals profil/invitation/ajout, export CSV/Excel/PDF, rôles.
+6. Notifications & RecentActivity (backend signals + composants `NotificationBell/Dropdown`).
+7. Analytics/Rapports : tendances productivité (Recharts), classements équipe, filtres période, export.
+8. Paramètres & informations support (`Settings.jsx`).
+9. API Calendar & pages associées (synchronisation planning).
+
+
+
+## 6. Endpoints & URLs clés
+- Base API : `http://127.0.0.1:8000/api/`
+  - Auth JWT : `/token/`, `/token/refresh/` (vue DRF SimpleJWT)
+  - Users/équipe : `/users/…` (`views_team.py`, exports `/team-members/export/{csv|excel|pdf}/`)
+  - Projects : `/projects/`
+  - Tasks : `/tasks/`, `/tasks/<id>/change-status/`, `/tasks/<id>/update-order/`, `/tasks/<id>/comments/`
+  - Notifications : `/notifications/`
+  - Calendar : `/calendar/`
+- Frontend : `http://localhost:5173`
+
+## 7. Notes & bonnes pratiques
+- `TaskListSerializer` = payload léger pour listes, `TaskSerializer` = détail complet (relations). Utiliser le sérialiseur adapté côté vues.
+- `StatsContext` recharge automatiquement après actions (create/update/delete) — éviter les doubles appels API côté composants.
+- Lors d’un drag & drop Kanban, `tasksAPI.changeStatus` est utilisé pour les transitions simples ; `updateStatusKanban` gère statut + ordre.
+- Export équipe (`Team.jsx`) : nécessite token JWT stocké dans `localStorage`; penser à autoriser `content-disposition` dans CORS si déployé.
+- Pour les uploads >2 MB ajuster `FILE_UPLOAD_MAX_MEMORY_SIZE` / `DATA_UPLOAD_MAX_MEMORY_SIZE`.
+- TIME_ZONE fixé à `Indian/Antananarivo` → toujours convertir côté frontend (`toLocaleDateString('fr-FR')`).
+
+## 8. Historique rapide
+- Correctifs badges sidebar (StatsContext) & TaskCard (suppression `onStatusChange`).
+- Ajout champs `project_name` / `assigned_to_name` dans `TaskListSerializer` pour éviter IDs bruts.
+- Réécriture complète des pages Team & Reports avec UI senior (animations, exports, analytics).
+
+Ce document sert de _single source of truth_ pour briefer un agent IA : fournir ce contexte + les fichiers actifs (ex. composant ou vue concernée) pour obtenir des réponses pertinentes.

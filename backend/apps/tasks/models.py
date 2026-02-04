@@ -118,6 +118,15 @@ class Task(models.Model):
         verbose_name='Ordre',
         help_text='Ordre d\'affichage dans le projet'
     )
+
+    # ✨ NOUVEAU CHAMP : ID de l'événement Google Calendar
+    google_event_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='ID événement Google Calendar',
+        help_text='ID de l\'événement Google Calendar synchronisé'
+    )
     
     # Timestamps automatiques
     created_at = models.DateTimeField(

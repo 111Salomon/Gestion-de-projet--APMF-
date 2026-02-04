@@ -10,6 +10,16 @@ from .serializers import CalendarTaskSerializer
 
 from apps.tasks.permissions import CanModifyTask
 
+# import nécessaire pour la synchronisation Google Calendar
+import requests
+from urllib.parse import urlencode
+from django.conf import settings
+from django.shortcuts import redirect
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from rest_framework.views import APIView
+from apps.users.models import GoogleCalendarIntegration
+from django.utils import timezone  # ✨ AJOUTER CET IMPORT
 
 class CalendarViewSet(viewsets.ViewSet):
     """ViewSet pour la vue calendrier avec permissions granulaires"""
@@ -83,7 +93,7 @@ class CalendarViewSet(viewsets.ViewSet):
         
         # Si pas de dates, par défaut = mois en cours
         if not start_date or not end_date:
-            today = datetime.now().date()
+            today = timezone.now().date()
             start_date = today.replace(day=1)
             if today.month == 12:
                 end_date = today.replace(year=today.year + 1, month=1, day=1) - timedelta(days=1)
@@ -193,7 +203,7 @@ class CalendarViewSet(viewsets.ViewSet):
         - Tâches en retard
         """
         user = request.user
-        today = datetime.now().date()
+        today = timezone.now().date()
         week_end = today + timedelta(days=7)
         
         all_tasks = self._get_user_tasks(user)
@@ -345,3 +355,346 @@ class CalendarViewSet(viewsets.ViewSet):
             'new_date': new_date.isoformat(),
             'task': serializer.data
         }, status=status.HTTP_200_OK)
+
+
+# ═══════════════════════════════════════════════════════════
+# GOOGLE CALENDAR INTEGRATION VIEWS
+# ═══════════════════════════════════════════════════════════
+
+class GoogleCalendarAuthView(APIView):
+    """
+    Vue pour obtenir l'URL d'authentification Google Calendar
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Retourne l'URL d'authentification Google Calendar"""
+        # ✨ MODIFICATION : Utiliser l'URL du backend pour le callback
+        redirect_uri = f"{settings.BACKEND_URL}/api/calendar/google/callback/"
+        
+        params = {
+            'client_id': settings.GOOGLE_CLIENT_ID,
+            'redirect_uri': redirect_uri,
+            'scope': ' '.join(settings.GOOGLE_CALENDAR_SCOPES),
+            'response_type': 'code',
+            'access_type': 'offline',
+            'prompt': 'consent',
+            'state': str(request.user.id)
+        }
+        
+        auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
+        return JsonResponse({'auth_url': auth_url})
+
+class GoogleCalendarCallbackView(APIView):
+    """
+    Vue pour gérer le callback OAuth2 Google Calendar
+    """
+    permission_classes = []  # ✨ MODIFICATION : Pas d'authentification requise
+    
+    def get(self, request):
+        """Traite le code d'autorisation Google et sauvegarde les tokens"""
+        code = request.GET.get('code')
+        state = request.GET.get('state')  # user_id
+        
+        if not code or not state:
+            return JsonResponse({'error': 'Missing code or state'}, status=400)
+        
+        try:
+            user_id = int(state)
+            user = get_user_model().objects.get(id=user_id)
+        except (ValueError, get_user_model().DoesNotExist):
+            return JsonResponse({'error': 'Invalid user'}, status=400)
+        
+        # Échanger le code contre les tokens
+        token_url = 'https://oauth2.googleapis.com/token'
+        redirect_uri = f"{settings.BACKEND_URL}/api/calendar/google/callback/"
+        
+        token_data = {
+            'client_id': settings.GOOGLE_CLIENT_ID,
+            'client_secret': settings.GOOGLE_CLIENT_SECRET,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': redirect_uri
+        }
+        
+        token_response = requests.post(token_url, data=token_data)
+        if token_response.status_code != 200:
+            return JsonResponse({'error': 'Failed to get tokens'}, status=400)
+        
+        token_json = token_response.json()
+        access_token = token_json['access_token']
+        refresh_token = token_json.get('refresh_token')
+        expires_in = token_json['expires_in']
+        
+        # Sauvegarder l'intégration
+        expiry = timezone.now() + timedelta(seconds=expires_in)
+        
+        integration, created = GoogleCalendarIntegration.objects.update_or_create(
+            user=user,
+            defaults={
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'token_expiry': expiry,
+                'is_active': True
+            }
+        )
+
+        # ✨ AJOUTER CES LOGS
+        print(f"✅ Google Calendar intégré pour utilisateur ID: {user.id}")
+        print(f"   Access token: {access_token[:20]}...")
+        print(f"   Token expiry: {expiry}")
+        print(f"   Créé: {created}")
+        
+        # ✨ MODIFICATION : Rediriger vers le frontend avec un message de succès
+        frontend_redirect = f"{settings.FRONTEND_URL}/settings?google_connected=true&success=1"
+        return redirect(frontend_redirect)
+
+
+class GoogleCalendarListView(APIView):
+    """
+    Vue pour lister les calendriers Google disponibles de l'utilisateur
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Retourne la liste des calendriers Google accessibles"""
+        print(f"🔍 Vérification Google Calendar pour utilisateur: {request.user.id}")
+        try:
+            integration = GoogleCalendarIntegration.objects.get(
+                user=request.user, 
+                is_active=True
+            )
+
+            # print(f"✅ Intégration trouvée: {integration}")
+            print(f"   Token expiry: {integration.token_expiry}")
+            print(f"   Est expiré: {timezone.now() > integration.token_expiry}")
+            
+            if timezone.now() > integration.token_expiry:
+                # Token expiré, besoin de refresh
+                return JsonResponse({'error': 'token_expired'}, status=401)
+            
+            # Récupérer les calendriers
+            calendars_url = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
+            headers = {'Authorization': f'Bearer {integration.access_token}'}
+            
+            response = requests.get(calendars_url, headers=headers)
+            if response.status_code != 200:
+                return JsonResponse({'error': 'Failed to fetch calendars'}, status=400)
+            
+            calendars = response.json().get('items', [])
+            calendar_list = []
+            
+            for cal in calendars:
+                if cal.get('accessRole') in ['owner', 'writer']:
+                    calendar_list.append({
+                        'id': cal['id'],
+                        'name': cal['summary'],
+                        'primary': cal.get('primary', False)
+                    })
+            
+            return JsonResponse({'calendars': calendar_list})
+            
+        except GoogleCalendarIntegration.DoesNotExist:
+            return JsonResponse({'error': 'Not connected to Google Calendar'}, status=404)
+
+
+class GoogleCalendarSyncView(APIView):
+    """
+    Vue pour synchroniser les tâches avec Google Calendar
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Synchronise les tâches de l'utilisateur avec Google Calendar"""
+        print(f"\n{'='*60}")
+        print(f"🔄 GoogleCalendarSyncView appelé pour utilisateur: {request.user.id}")
+        print(f"   Email: {request.user.email}")
+        
+        try:
+            integration = GoogleCalendarIntegration.objects.get(
+                user=request.user,
+                is_active=True,
+                google_calendar_id__isnull=False
+            )
+            
+            print(f"✅ Intégration trouvée:")
+            print(f"   Calendar ID: {integration.google_calendar_id}")
+            print(f"   Calendar Name: {integration.google_calendar_name}")
+            print(f"   Token expiry: {integration.token_expiry}")
+            print(f"   Est expiré: {timezone.now() > integration.token_expiry}")
+            
+            if timezone.now() > integration.token_expiry:
+                print(f"❌ Token expiré")
+                return JsonResponse({'error': 'token_expired'}, status=401)
+            
+            # Récupérer les tâches de l'utilisateur avec deadline
+            from apps.tasks.models import Task
+            tasks = Task.objects.filter(
+                assigned_to=request.user,
+                due_date__isnull=False
+            ).select_related('project')
+            
+            print(f"📊 Tâches trouvées: {tasks.count()}")
+            for task in tasks:
+                print(f"   → [{task.project.name}] {task.title} - Due: {task.due_date}")
+            
+            # Filtrer les tâches avec deadline dans le futur
+            from datetime import date
+            today = date.today()
+            tasks = tasks.filter(due_date__gte=today)
+            print(f"📅 Tâches avec deadline future: {tasks.count()}")
+            
+            if tasks.count() == 0:
+                print(f"⚠️ Aucune tâche à synchroniser (deadline dans le passé ou non assignée)")
+                return JsonResponse({
+                    'success': True,
+                    'synced_count': 0,
+                    'message': 'Aucune tâche avec deadline future à synchroniser'
+                })
+            
+            headers = {'Authorization': f'Bearer {integration.access_token}'}
+            calendar_id = integration.google_calendar_id
+            
+            synced_count = 0
+            failed_count = 0
+            
+            for task in tasks:
+                print(f"\n📤 Synchronisation tâche: {task.title}")
+                
+                event_data = {
+                    'summary': f"[{task.project.name}] {task.title}",
+                    'description': task.description or '',
+                    'start': {
+                        'date': task.due_date.isoformat()
+                    },
+                    'end': {
+                        'date': task.due_date.isoformat()
+                    },
+                    'colorId': self._get_color_for_priority(task.priority)
+                }
+                
+                print(f"   Event data: {event_data}")
+                
+                # Créer ou mettre à jour l'événement
+                event_url = f'https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events'
+                print(f"   → POST {event_url}")
+                
+                response = requests.post(event_url, json=event_data, headers=headers)
+                print(f"   ← Status: {response.status_code}")
+                
+    
+                if response.status_code == 200:
+                    # ✨ NOUVEAU : Stocker l'ID de l'événement Google
+                    event_id = response.json().get('id')
+                    if event_id:
+                        task.google_event_id = event_id
+                        task.save()
+                        print(f"   ✅ Succès - Event ID: {event_id} sauvegardé")
+                        synced_count += 1
+                    else:
+                        print(f"   ⚠️ Succès mais pas d'ID retourné")
+                else:
+                    failed_count += 1
+                    print(f"   ❌ Échec - {response.status_code}: {response.text[:200]}")
+            
+            print(f"\n✅ Synchronisation terminée: {synced_count} réussies, {failed_count} échouées")
+            print(f"{'='*60}\n")
+            
+            return JsonResponse({
+                'success': True,
+                'synced_count': synced_count,
+                'failed_count': failed_count,
+                'message': f'{synced_count} tâches synchronisées avec Google Calendar'
+            })
+            
+        except GoogleCalendarIntegration.DoesNotExist:
+            print(f"❌ Pas d'intégration Google Calendar active")
+            return JsonResponse({'error': 'Not connected to Google Calendar'}, status=404)
+        except Exception as e:
+            print(f"❌ Erreur inattendue: {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': str(e)}, status=500)    
+    def _get_color_for_priority(self, priority):
+        """Mappe la priorité à une couleur Google Calendar"""
+        colors = {
+            'urgent': '11',  # Rouge
+            'high': '9',     # Bleu
+            'medium': '10',  # Vert  
+            'low': '6'       # Jaune
+        }
+        return colors.get(priority, '8')  # Gris par défaut
+
+class GoogleCalendarSelectView(APIView):
+    """
+    Vue pour sélectionner un calendrier Google spécifique
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Sélectionne un calendrier Google pour la synchronisation"""
+        calendar_id = request.data.get('calendar_id')
+        
+        if not calendar_id:
+            return JsonResponse({'error': 'calendar_id is required'}, status=400)
+        
+        try:
+            # Récupérer l'intégration Google Calendar de l'utilisateur
+            integration = GoogleCalendarIntegration.objects.get(
+                user=request.user,
+                is_active=True
+            )
+            
+            # Récupérer le nom du calendrier depuis Google
+            calendars_url = f'https://www.googleapis.com/calendar/v3/calendars/{calendar_id}'
+            headers = {'Authorization': f'Bearer {integration.access_token}'}
+            
+            response = requests.get(calendars_url, headers=headers)
+            if response.status_code != 200:
+                return JsonResponse({'error': 'Failed to fetch calendar details'}, status=400)
+            
+            calendar_data = response.json()
+            calendar_name = calendar_data.get('summary', 'Calendrier Google')
+            
+            # Mettre à jour l'intégration avec le calendrier sélectionné
+            integration.google_calendar_id = calendar_id
+            integration.google_calendar_name = calendar_name
+            integration.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Calendrier "{calendar_name}" sélectionné avec succès',
+                'calendar_id': calendar_id,
+                'calendar_name': calendar_name
+            })
+            
+        except GoogleCalendarIntegration.DoesNotExist:
+            return JsonResponse({'error': 'Not connected to Google Calendar'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+class GoogleCalendarDisconnectView(APIView):
+    """
+    Vue pour déconnecter Google Calendar
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Supprime l'intégration Google Calendar de l'utilisateur"""
+        try:
+            # Trouver et supprimer l'intégration
+            integration = GoogleCalendarIntegration.objects.get(
+                user=request.user
+            )
+            integration.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Google Calendar déconnecté avec succès'
+            })
+            
+        except GoogleCalendarIntegration.DoesNotExist:
+            return JsonResponse({
+                'success': True,
+                'message': 'Aucune intégration Google Calendar à supprimer'
+            })

@@ -2,6 +2,9 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import FileExtensionValidator
 
+from django.conf import settings
+from django.utils import timezone
+
 
 class User(AbstractUser):
     """
@@ -114,3 +117,72 @@ class User(AbstractUser):
     def is_chef(self):
         """Vérifie si l'utilisateur est chef de projet."""
         return self.role == self.RoleChoices.CHEF
+
+
+class GoogleCalendarIntegration(models.Model):
+    """
+    Modèle pour stocker l'intégration Google Calendar d'un utilisateur
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='google_calendar_integration',
+        verbose_name='Utilisateur'
+    )
+    
+    google_calendar_id = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='ID du calendrier Google'
+    )
+    
+    google_calendar_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Nom du calendrier Google'
+    )
+    
+    access_token = models.TextField(
+        verbose_name='Token d\'accès Google'
+    )
+    
+    refresh_token = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Token de rafraîchissement Google'
+    )
+    
+    token_expiry = models.DateTimeField(
+        verbose_name='Date d\'expiration du token'
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Actif'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Date de création'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Date de mise à jour'
+    )
+
+    class Meta:
+        verbose_name = 'Intégration Google Calendar'
+        verbose_name_plural = 'Intégrations Google Calendar'
+        db_table = 'users_google_calendar_integration'
+
+    def __str__(self):
+        return f"Google Calendar Integration for {self.user.email}"
+    
+    def is_token_expired(self):
+        """Vérifie si le token est expiré"""
+        return timezone.now() >= self.token_expiry
+    
+    def needs_refresh(self):
+        """Vérifie si le token a besoin d'être rafraîchi (expire dans moins de 5 minutes)"""
+        return timezone.now() >= self.token_expiry - timezone.timedelta(minutes=5)
