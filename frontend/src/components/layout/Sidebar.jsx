@@ -11,11 +11,13 @@ import {
   Trello,
   BarChart3,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  MessageSquare,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useStats } from '../../context/StatsContext';
+import { useChat } from '../../context/ChatContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -24,10 +26,13 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { stats } = useStats();
+  const { rooms } = useChat();  // ✨ AJOUTÉ
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
+// ✨ AJOUTÉ : Calcul des messages non lus (avec protection)
+const unreadCount = (rooms || []).reduce((sum, room) => sum + (room?.unread_count || 0), 0);
 
   // ═══════════════════════════════════════════════════════
   // 🔒 PERMISSIONS
@@ -85,6 +90,15 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       badge: null,
       section: 'workspace'
     },
+
+    {
+    name: 'Chat',
+    icon: MessageSquare,
+    path: '/chat',
+    badge: unreadCount > 0 ? unreadCount : null,
+    section: 'workspace'
+    },
+
     ...(canManageTeam() ? [{
       name: 'Équipe',
       icon: Users,
@@ -92,6 +106,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       badge: null,
       section: 'workspace'
     }] : []),
+
     {
       name: 'Calendrier',
       icon: CalendarIcon,

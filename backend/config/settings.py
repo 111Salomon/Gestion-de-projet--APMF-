@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
+    'channels',
 
     ## Local apps 
     'apps.users',
@@ -65,7 +66,9 @@ INSTALLED_APPS = [
     'apps.tasks',
     'apps.notifications',
     'django_extensions',
-    'apps.calendar', 
+    'apps.calendar',
+    'apps.chat',
+
 ]
 
 MIDDLEWARE = [
@@ -260,3 +263,21 @@ GOOGLE_CALENDAR_SCOPES = [
 
 # URL de redirection pour OAuth2
 GOOGLE_REDIRECT_URI = f"{BACKEND_URL}/api/calendar/google/callback/"
+
+
+# ═══════════════════════════════════════════════════════════
+# DJANGO CHANNELS - WEBSOCKET CONFIGURATION
+# ═══════════════════════════════════════════════════════════
+
+# ASGI application
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channels layers (Redis)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}

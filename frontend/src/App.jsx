@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { StatsProvider } from './context/StatsContext';
 import { NotificationProvider } from './context/NotificationContext';  // ✅ AJOUTÉ
+import { ChatProvider } from './context/ChatContext';  // ✨ AJOUTÉ
 import { Login } from './pages/auth/Login';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { Projects } from './pages/projects/Projects';
@@ -17,6 +18,7 @@ import { Analytics } from './pages/reports/Reports';
 import { ProjectAnalytics } from './pages/projects/ProjectAnalytics';
 import { Calendar } from './pages/calendar/Calendar';
 import { Settings } from './pages/settings/Settings';
+import { ChatPage } from './pages/chat/ChatPage';
 
 /**
  * Composant pour protéger les routes privées
@@ -96,6 +98,7 @@ function App() {
       <AuthProvider>
         <StatsProvider>
           <NotificationProvider>  {/* ✅ AJOUTÉ ICI */}
+            <ChatProvider>
             <Routes>
               {/* Route publique */}
               <Route path="/login" element={<Login />} />
@@ -204,6 +207,15 @@ function App() {
                 } 
               />
 
+              <Route 
+                path="/chat" 
+                element={
+                  <PrivateRoute>  {/* ✨ AJOUTÉ */}
+                      <ChatPage />
+                  </PrivateRoute>
+                } 
+              />
+
               {/* <Route 
                 path="/reset-password" 
                 element={
@@ -257,6 +269,7 @@ function App() {
                 },
               }}
             />
+            </ChatProvider>
           </NotificationProvider>  {/* ✅ AJOUTÉ ICI */}
         </StatsProvider>
       </AuthProvider>

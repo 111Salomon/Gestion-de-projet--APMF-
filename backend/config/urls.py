@@ -35,6 +35,8 @@ urlpatterns = [
     path('api/', include('apps.tasks.urls')),  # tasks, comments, attachments
     path('api/notifications/', include('apps.notifications.urls')), 
     path('api/calendar/', include('apps.calendar.urls')),
+    path('api/chat/', include('apps.chat.urls')),  # AJOUTÉ
+
 ]
 
 # Servir les fichiers media en développement
