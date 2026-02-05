@@ -2,6 +2,7 @@
 WebSocket consumers for chat.
 """
 import json
+import logging
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -11,6 +12,9 @@ from .models import Room, Message, Participant
 from .serializers import MessageSerializer
 
 
+logger = logging.getLogger('chat.websocket')
+
+
 class ChatConsumer(AsyncWebsocketConsumer):
     """Consumer pour les connexions WebSocket de chat"""
     
@@ -18,14 +22,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
         """Connexion d'un client WebSocket"""
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         self.room_group_name = f'chat_{self.room_id}'
+        logger.debug('WS connect attempt | room=%s user=%s', self.room_id, self.scope['user'])
         
         # Vérifier que l'utilisateur est authentifié
         if self.scope['user'].is_anonymous:
+            logger.warning('WS connect denied (anonymous) | room=%s', self.room_id)
             await self.close()
             return
         
         # Vérifier que l'utilisateur fait partie de la room
         if not await self.is_participant(self.room_id, self.scope['user']):
+            logger.warning('WS connect denied (not participant) | room=%s user=%s', self.room_id, self.scope['user'])
             await self.close()
             return
         
@@ -36,6 +43,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
+        logger.info('WS connected | room=%s user=%s', self.room_id, self.scope['user'])
         
         # Marquer les messages comme lus pour cet utilisateur
         await self.mark_as_read()
@@ -50,6 +58,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         """Déconnexion d'un client WebSocket"""
         # Quitter le groupe
+        logger.info('WS disconnected | room=%s user=%s code=%s', self.room_id, self.scope['user'], close_code)
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
@@ -76,12 +85,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def handle_message(self, data):
         """Gérer un message texte envoyé via WebSocket"""
         content = (data.get('content') or data.get('message') or '').strip()
+        logger.debug('WS handle_message | room=%s user=%s len=%s', self.room_id, self.scope['user'], len(content))
         if not content:
+            logger.debug('WS handle_message ignored (empty content) | room=%s user=%s', self.room_id, self.scope['user'])
             return
 
         message = await self.save_message(content)
         message_data = await self.serialize_message(message)
 
+        logger.debug('WS broadcast message | room=%s message_id=%s', self.room_id, message.id)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -92,6 +104,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def chat_message(self, event):
         """Recevoir un message du groupe et l'envoyer au client"""
+        logger.debug('WS send chat_message | room=%s target=%s message_id=%s', self.room_id, self.scope['user'], event['message'].get('id'))
         await self.send(text_data=json.dumps({
             'type': 'message',
             'data': event['message']

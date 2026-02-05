@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChatSidebar } from '../../components/chat/ChatSidebar';
 import { ChatRoom } from '../../components/chat/ChatRoom';
+import { CreateChatModal } from '../../components/chat/CreateChatModal';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { Layout } from '../../components/layout/Layout';
@@ -17,14 +18,18 @@ export const ChatPage = () => {
     loadRooms,
   } = useChat();
   const [showChat, setShowChat] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleCreateRoom = async () => {
-    // TODO: Ouvrir un modal pour créer une nouvelle room
-    const roomData = {
-      name: 'Nouvelle conversation',
-      type: 'group',
-    };
-    await createRoom(roomData);
+  const handleCreateRoom = async (roomData) => {
+    try {
+      const newRoom = await createRoom(roomData);
+      // Sélectionner automatiquement la nouvelle room
+      if (newRoom) {
+        selectRoom(newRoom);
+      }
+    } catch (error) {
+      console.error('❌ Erreur création room:', error);
+    }
   };
 
   return (
@@ -35,7 +40,7 @@ export const ChatPage = () => {
             rooms={rooms}
             currentRoom={currentRoom}
             onSelectRoom={selectRoom}
-            onCreateRoom={handleCreateRoom}
+            onCreateRoom={() => setIsModalOpen(true)}
           />
         )}
 
@@ -58,7 +63,7 @@ export const ChatPage = () => {
                   Sélectionnez une conversation ou commencez-en une nouvelle
                 </p>
                 <button
-                  onClick={handleCreateRoom}
+                  onClick={() => setIsModalOpen(true)}
                   className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 >
                   Nouvelle conversation
@@ -67,6 +72,13 @@ export const ChatPage = () => {
             </div>
           )}
         </div>
+
+        {/* Modal de création de conversation */}
+        <CreateChatModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onCreate={handleCreateRoom}
+        />
       </div>
     </Layout>
   );
