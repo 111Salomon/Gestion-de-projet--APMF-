@@ -26,7 +26,7 @@ export const ChatRoom = ({
     <div className="flex flex-col h-full bg-gray-50">
       <ChatHeader room={room} onClose={onClose} />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
         {messages.map((message, index) => (
           <MessageItem
             key={message.id ?? `temp-${index}`}
