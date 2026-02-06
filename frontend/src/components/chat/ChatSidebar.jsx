@@ -1,9 +1,45 @@
-import { MessageSquare, Users, Plus, Search } from 'lucide-react';
+import { MessageSquare, Users, Plus, Search, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Avatar } from '../common/Avatar';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 
 
-export const ChatSidebar = ({ rooms, onSelectRoom, currentRoom, onCreateRoom }) => {
+export const ChatSidebar = ({ rooms, onSelectRoom, currentRoom, onCreateRoom, onDeleteRoom }) => {
+  const [openMenuRoomId, setOpenMenuRoomId] = useState(null);
+  const [confirmRoomId, setConfirmRoomId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [openMenuUp, setOpenMenuUp] = useState(false);
+  const [menuPos, setMenuPos] = useState(null);
+  const listRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!openMenuRoomId) return;
+    const handleOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuRoomId(null);
+        setMenuPos(null);
+      }
+    };
+    window.addEventListener('mousedown', handleOutside);
+    return () => window.removeEventListener('mousedown', handleOutside);
+  }, [openMenuRoomId]);
+
+  const handleConfirmDelete = async () => {
+    if (!onDeleteRoom || !confirmRoomId) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteRoom(confirmRoomId);
+      setConfirmRoomId(null);
+      setOpenMenuRoomId(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
 
@@ -59,7 +95,7 @@ export const ChatSidebar = ({ rooms, onSelectRoom, currentRoom, onCreateRoom }) 
 
 
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div ref={listRef} className="flex-1 overflow-y-auto overflow-x-hidden">
 
         {rooms.length === 0 ? (
 
@@ -95,7 +131,7 @@ export const ChatSidebar = ({ rooms, onSelectRoom, currentRoom, onCreateRoom }) 
 
                 onClick={() => onSelectRoom(room)}
 
-                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                className={`group relative w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
 
                   currentRoom?.id === room.id ? 'bg-orange-50' : ''
 
@@ -146,25 +182,86 @@ export const ChatSidebar = ({ rooms, onSelectRoom, currentRoom, onCreateRoom }) 
 
 
 
-                  {room.unread_count > 0 && (
+                  <div className="flex items-center gap-2">
+                    {room.unread_count > 0 && (
+                      <div className="flex-shrink-0">
+                        <span className="bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                          {room.unread_count}
+                        </span>
+                      </div>
+                    )}
 
-                    <div className="flex-shrink-0">
+                    {/* Trois points visible au hover */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const shouldOpen = openMenuRoomId === room.id ? null : room.id;
+                        try {
+                          const btnRect = e.currentTarget.getBoundingClientRect();
+                          const menuHeight = 88; // estimate
+                          const spaceBelow = window.innerHeight - btnRect.bottom;
+                          const openUpNow = spaceBelow < menuHeight;
 
-                      <span className="bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                          // compute horizontal position: align menu right to button right
+                          const menuWidth = 200;
+                          const left = Math.max(8, btnRect.right - menuWidth);
+                          const top = openUpNow ? btnRect.top - menuHeight : btnRect.bottom;
 
-                        {room.unread_count}
-
-                      </span>
-
-                    </div>
-
-                  )}
+                          setOpenMenuUp(openUpNow);
+                          setMenuPos({ top, left, width: menuWidth });
+                        } catch (err) {
+                          setOpenMenuUp(false);
+                          setMenuPos(null);
+                        }
+                        setOpenMenuRoomId(shouldOpen);
+                      }}
+                      className="invisible group-hover:visible p-1 text-gray-500 hover:text-gray-700 transition-colors rounded"
+                      title="Plus d'options"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                  </div>
 
                 </div>
+
+                {openMenuRoomId === room.id && menuPos && createPortal(
+                  <div
+                    ref={menuRef}
+                    style={{
+                      position: 'fixed',
+                      top: menuPos.top,
+                      left: menuPos.left,
+                      width: menuPos.width,
+                    }}
+                  >
+                    <div className="bg-white border border-gray-200 rounded shadow-sm">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmRoomId(room.id); setOpenMenuRoomId(null); setMenuPos(null); }}
+                        className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded whitespace-nowrap"
+                        title="Supprimer la conversation"
+                      >
+                        Supprimer la conversation
+                      </button>
+                    </div>
+                  </div>,
+                  document.body
+                )}
 
               </button>
 
             ))}
+
+            {/* Modal global de confirmation */}
+            <ConfirmModal
+              isOpen={confirmRoomId !== null}
+              onClose={() => setConfirmRoomId(null)}
+              onConfirm={handleConfirmDelete}
+              title="Supprimer la conversation"
+              message="Cette action supprimera la conversation pour tous les participants. Confirmez-vous ?"
+              confirmText="Supprimer"
+              cancelText="Annuler"
+              isLoading={isDeleting}
+            />
 
           </div>
 

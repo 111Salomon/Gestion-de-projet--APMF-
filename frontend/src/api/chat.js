@@ -64,4 +64,8 @@ export const chatAPI = {
     const response = await axiosInstance.delete(`/chat/messages/${messageId}/`);
     return response.data;
   },
+  deleteRoom: async (roomId) => {
+    const response = await axiosInstance.delete(`/chat/rooms/${roomId}/`);
+    return response.data;
+  },
 };

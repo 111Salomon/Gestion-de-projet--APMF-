@@ -19,6 +19,7 @@ export const ChatPage = () => {
     startEditingMessage,
     editMessage,      // 
     deleteMessage,    // 
+    deleteRoom,
   } = useChat();
 
   const [showChat, setShowChat] = useState(true);
@@ -45,6 +46,7 @@ export const ChatPage = () => {
             currentRoom={currentRoom}
             onSelectRoom={selectRoom}
             onCreateRoom={() => setIsModalOpen(true)}
+            onDeleteRoom={deleteRoom}
           />
         )}
 

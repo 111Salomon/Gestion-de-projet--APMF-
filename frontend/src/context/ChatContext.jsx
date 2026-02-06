@@ -366,6 +366,24 @@ const deleteMessage = useCallback(async (messageId) => {
     .filter(([userId]) => Number(userId) !== currentUser?.id)
     .map(([, name]) => name);
 
+  const deleteRoom = useCallback(async (roomId) => {
+    if (!roomId) return;
+    try {
+      await chatAPI.deleteRoom(roomId);
+      // If the deleted room was open, close it and disconnect
+      if (currentRoom?.id === roomId) {
+        setCurrentRoom(null);
+        setMessages([]);
+        disconnectWebSocket();
+      }
+      await loadRooms();
+      toast.success('Conversation supprimée');
+    } catch (error) {
+      console.error('❌ Erreur suppression conversation:', error);
+      toast.error('Erreur lors de la suppression de la conversation');
+    }
+  }, [currentRoom?.id, loadRooms, disconnectWebSocket]);
+
 
   
 
@@ -382,6 +400,7 @@ const deleteMessage = useCallback(async (messageId) => {
       startEditingMessage, // ✨ AJOUTÉ
       editMessage, // ✨ AJOUTÉ
       deleteMessage, // ✨ AJOUTÉ
+      deleteRoom,
       notifyTyping,
       createRoom,
       addParticipant,
