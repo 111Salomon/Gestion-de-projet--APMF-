@@ -175,3 +175,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             participant.save()
         except Participant.DoesNotExist:
             pass
+
+    async def message_updated(self, event):
+        """Recevoir une mise à jour de message et l'envoyer au client"""
+        logger.debug('WS send message_updated | room=%s message_id=%s', self.room_id, event['message'].get('id'))
+        await self.send(text_data=json.dumps({
+            'type': 'message_updated',
+            'data': event['message']
+        }))
+
+    async def message_deleted(self, event):
+        """Recevoir une suppression de message et l'envoyer au client"""
+        logger.debug('WS send message_deleted | room=%s message_id=%s', self.room_id, event['message_id'])
+        await self.send(text_data=json.dumps({
+            'type': 'message_deleted',
+            'message_id': event['message_id']
+        }))

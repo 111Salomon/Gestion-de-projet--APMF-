@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { chatAPI } from '../api/chat';
+import { EditMessageModal } from '../components/chat/EditMessageModal'; // ✨ AJOUTÉ
 
 const ChatContext = createContext(null);
 
@@ -24,6 +25,10 @@ export const ChatProvider = ({ children }) => {
   const [typingUsers, setTypingUsers] = useState({});
   const wsRef = useRef(null);
   const typingTimeoutsRef = useRef({});
+
+  const [editingMessage, setEditingMessage] = useState(null); // ✨ AJOUTÉ
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // ✨ AJOUTÉ
+
 
   const cleanupTypingTimeouts = useCallback(() => {
     Object.values(typingTimeoutsRef.current).forEach(clearTimeout);
@@ -148,8 +153,16 @@ export const ChatProvider = ({ children }) => {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        
+        // ✨ AJOUT : Gérer les mises à jour et suppressions
         if (data.type === 'message' && data.data) {
           upsertMessage(data.data);
+        } else if (data.type === 'message_updated' && data.data) {
+          // Mettre à jour le message existant
+          upsertMessage(data.data);
+        } else if (data.type === 'message_deleted' && data.message_id) {
+          // Supprimer le message
+          setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
         } else if (data.type === 'typing' && data.data) {
           handleTypingEvent(data.data);
         }
@@ -258,6 +271,62 @@ export const ChatProvider = ({ children }) => {
     }
   }, [currentRoom, currentUser]);
 
+  // ✨ NOUVELLE FONCTION : Ouvrir le modal d'édition
+const startEditingMessage = useCallback((message) => {
+  setEditingMessage(message);
+  setIsEditModalOpen(true);
+}, []);
+
+// ✨ NOUVELLE FONCTION : Sauvegarder l'édition
+const editMessage = useCallback(async (messageId, newContent) => {
+  if (!currentRoom || !currentUser) {
+    toast.error('Vous devez être connecté pour éditer un message');
+    return;
+  }
+
+  try {
+    await chatAPI.updateMessage(messageId, { content: newContent });
+    
+    // Mettre à jour localement + marquer comme édité
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: newContent, is_edited: true } 
+          : msg
+      )
+    );
+    
+    // Fermer le modal
+    setIsEditModalOpen(false);
+    setEditingMessage(null);
+    
+    toast.success('Message édité avec succès');
+  } catch (error) {
+    console.error('❌ Erreur édition message:', error);
+    toast.error('Erreur lors de l\'édition du message');
+  }
+}, [currentRoom, currentUser]);
+
+// ✨ NOUVELLE FONCTION : Supprimer un message
+const deleteMessage = useCallback(async (messageId) => {
+  if (!currentRoom || !currentUser) {
+    toast.error('Vous devez être connecté pour supprimer un message');
+    return;
+  }
+
+  try {
+    await chatAPI.deleteMessage(messageId);
+    
+    // Supprimer localement
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    
+    toast.success('Message supprimé');
+  } catch (error) {
+    console.error('❌ Erreur suppression message:', error);
+    toast.error('Erreur lors de la suppression du message');
+  }
+}, [currentRoom, currentUser]);
+
   const notifyTyping = useCallback((isTyping) => {
     const socket = wsRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -297,6 +366,9 @@ export const ChatProvider = ({ children }) => {
     .filter(([userId]) => Number(userId) !== currentUser?.id)
     .map(([, name]) => name);
 
+
+  
+
   return (
     <ChatContext.Provider value={{
       rooms,
@@ -307,12 +379,27 @@ export const ChatProvider = ({ children }) => {
       typingUsers: typingUserNames,
       selectRoom,
       sendMessage,
+      startEditingMessage, // ✨ AJOUTÉ
+      editMessage, // ✨ AJOUTÉ
+      deleteMessage, // ✨ AJOUTÉ
       notifyTyping,
       createRoom,
       addParticipant,
       loadRooms,
     }}>
       {children}
+
+      {/* ✨ MODAL D'ÉDITION */}
+      <EditMessageModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingMessage(null);
+        }}
+        message={editingMessage}
+        onSave={editMessage}
+      />
+
     </ChatContext.Provider>
   );
 };

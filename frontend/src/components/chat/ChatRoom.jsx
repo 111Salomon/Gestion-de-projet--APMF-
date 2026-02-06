@@ -9,6 +9,8 @@ export const ChatRoom = ({
   messages,
   typingUsers = [],
   onSend,
+  onEdit, 
+  onDelete,
   onTyping,
   currentUser,
   onClose,
@@ -30,6 +32,8 @@ export const ChatRoom = ({
             key={message.id ?? `temp-${index}`}
             message={message}
             currentUser={currentUser}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         ))}
         <TypingIndicator users={typingUsers} />

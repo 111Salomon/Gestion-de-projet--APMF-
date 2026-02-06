@@ -16,25 +16,29 @@ export const ChatPage = () => {
     sendMessage,
     createRoom,
     loadRooms,
+    startEditingMessage,
+    editMessage,      // 
+    deleteMessage,    // 
   } = useChat();
+
   const [showChat, setShowChat] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleCreateRoom = async (roomData) => {
     try {
       const newRoom = await createRoom(roomData);
-      // Sélectionner automatiquement la nouvelle room
+      // Slectionner automatiquement la nouvelle room
       if (newRoom) {
         selectRoom(newRoom);
       }
     } catch (error) {
-      console.error('❌ Erreur création room:', error);
+      console.error(' Erreur cration room:', error);
     }
   };
 
   return (
-    <Layout>
-      <div className="flex h-[calc(100vh-80px)]">
+    <Layout disableMainScroll disableContainerPadding>
+      <div className="flex h-full min-h-0 min-w-0 overflow-hidden">
         {showChat && (
           <ChatSidebar
             rooms={rooms}
@@ -44,12 +48,14 @@ export const ChatPage = () => {
           />
         )}
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {currentRoom ? (
             <ChatRoom
               room={currentRoom}
               messages={messages}
               onSend={sendMessage}
+              onEdit={startEditingMessage}
+              onDelete={deleteMessage} // 
               currentUser={user}
               onClose={() => setShowChat(!showChat)}
             />

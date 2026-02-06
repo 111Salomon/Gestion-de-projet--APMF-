@@ -54,4 +54,14 @@ export const chatAPI = {
     });
     return response.data;
   },
+
+  updateMessage: async (messageId, data) => {
+    const response = await axiosInstance.patch(`/chat/messages/${messageId}/`, data);
+    return response.data;
+  },
+
+  deleteMessage: async (messageId) => {
+    const response = await axiosInstance.delete(`/chat/messages/${messageId}/`);
+    return response.data;
+  },
 };

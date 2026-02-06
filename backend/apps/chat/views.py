@@ -17,6 +17,7 @@ from .serializers import (
 )
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from .permissions import IsMessageOwner  # ✨ AJOUTÉ
 
 class RoomViewSet(viewsets.ModelViewSet):
     """ViewSet pour gérer les rooms de chat"""
@@ -167,7 +168,7 @@ class RoomViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     """ViewSet pour gérer les messages"""
     serializer_class = MessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsMessageOwner]  
     
     def get_queryset(self):
         """Retourne les messages des rooms où l'utilisateur est participant"""
@@ -193,7 +194,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
 
-        # ✨ NOUVEAU : Broadcast du message via WebSocket
+        # : Broadcast du message via WebSocket
         message = serializer.instance
 
         message_serializer = MessageSerializer(message, context={'request': request})
@@ -215,3 +216,46 @@ class MessageViewSet(viewsets.ModelViewSet):
         
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        """Mettre à jour un message et broadcaster via WebSocket"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()  # déclenche la permission IsMessageOwner
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        message = serializer.instance
+        message_serializer = MessageSerializer(message, context={'request': request})
+        message_data = message_serializer.data
+
+        channel_layer = get_channel_layer()
+        room_group_name = f'chat_{message.room.id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'chat_message',
+                'message': message_data,
+            }
+        )
+
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """Supprimer un message et broadcaster via WebSocket"""
+        instance = self.get_object()  # déclenche la permission IsMessageOwner
+        message_id = instance.id
+        room_id = instance.room_id
+        self.perform_destroy(instance)
+
+        channel_layer = get_channel_layer()
+        room_group_name = f'chat_{room_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': 'message_deleted',
+                'message_id': message_id,
+            }
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 
-export const Layout = ({ children }) => {
+export const Layout = ({
+  children,
+  disableMainScroll = false,
+  disableContainerPadding = false,
+}) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -22,8 +26,8 @@ export const Layout = ({ children }) => {
         `}
       >
         <Navbar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="container-pro py-8">
+        <main className={`flex-1 ${disableMainScroll ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+          <div className={disableContainerPadding ? 'h-full' : 'container-pro py-8'}>
             {children}
           </div>
         </main>
