@@ -221,8 +221,40 @@ export const ChatProvider = ({ children }) => {
 
       await chatAPI.createMessage(formData);
     } catch (error) {
-      console.error('❌ Erreur envoi message:', error);
-      toast.error('Erreur lors de l\'envoi du message');
+      const responseData = error?.response?.data;
+      console.error('❌ Erreur envoi message:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: responseData,
+      });
+
+      if (responseData) {
+        try {
+          console.error('❌ Backend error payload (stringified):', JSON.stringify(responseData));
+        } catch {
+          console.error('❌ Backend error payload (raw):', responseData);
+        }
+      }
+
+      const pickFirstError = (value) => {
+        if (!value) return null;
+        if (Array.isArray(value)) return value[0];
+        if (typeof value === 'string') return value;
+        return null;
+      };
+
+      const backendMessage =
+        typeof responseData === 'string'
+          ? responseData
+          : responseData?.detail || responseData?.error;
+
+      const drfMessage =
+        pickFirstError(responseData?.non_field_errors) ||
+        pickFirstError(responseData?.file) ||
+        pickFirstError(responseData?.content) ||
+        pickFirstError(responseData?.room);
+
+      toast.error(drfMessage || backendMessage || 'Erreur lors de l\'envoi du message');
     }
   }, [currentRoom, currentUser]);
 

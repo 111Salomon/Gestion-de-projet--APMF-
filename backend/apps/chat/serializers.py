@@ -2,6 +2,8 @@
 Serializers pour le module de chat
 """
 from rest_framework import serializers
+from django.conf import settings
+import os
 from .models import Room, Participant, Message
 from apps.users.serializers import UserMinimalSerializer
 
@@ -9,8 +11,13 @@ from apps.users.serializers import UserMinimalSerializer
 class MessageSerializer(serializers.ModelSerializer):
     """Serializer pour les messages"""
     sender = UserMinimalSerializer(read_only=True)
+    content = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
     file = serializers.FileField(write_only=True, required=False, allow_null=True)
     file_url = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+    file_size = serializers.SerializerMethodField()
+    file_type = serializers.SerializerMethodField()
+    file_is_image = serializers.SerializerMethodField()
     is_edited = serializers.ReadOnlyField()
     
     class Meta:
@@ -22,11 +29,25 @@ class MessageSerializer(serializers.ModelSerializer):
             'content',
             'file',
             'file_url',
+            'file_name',
+            'file_size',
+            'file_type',
+            'file_is_image',
             'created_at',
             'updated_at',
             'is_edited',
         ]
-        read_only_fields = ['sender', 'created_at', 'updated_at', 'file_url', 'is_edited']
+        read_only_fields = [
+            'sender',
+            'created_at',
+            'updated_at',
+            'file_url',
+            'file_name',
+            'file_size',
+            'file_type',
+            'file_is_image',
+            'is_edited'
+        ]
     
     def validate(self, attrs):
         """Valider qu'au moins un contenu (texte ou fichier) est présent"""
@@ -34,6 +55,26 @@ class MessageSerializer(serializers.ModelSerializer):
         file = attrs.get('file')
         if (content is None or not content.strip()) and not file:
             raise serializers.ValidationError('Un message doit contenir du texte ou un fichier.')
+
+        if file:
+            max_size = 10 * 1024 * 1024
+            if getattr(file, 'size', 0) > max_size:
+                raise serializers.ValidationError('Le fichier ne doit pas dépasser 10 MB.')
+
+            allowed_exts = {
+                'jpg', 'jpeg', 'png', 'gif', 'webp',
+                'pdf',
+                'doc', 'docx',
+                'xls', 'xlsx'
+            }
+            ext = os.path.splitext(getattr(file, 'name', '') or '')[1].lstrip('.').lower()
+            if ext and ext not in allowed_exts:
+                raise serializers.ValidationError(
+                    'Type de fichier non supporté. Formats acceptés: images, PDF, Word, Excel.'
+                )
+
+            if content is None:
+                attrs['content'] = ''
         return attrs
     
     def get_file_url(self, obj):
@@ -44,6 +85,34 @@ class MessageSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.file.url)
             return obj.file.url
         return None
+
+    def get_file_name(self, obj):
+        if obj.file:
+            return os.path.basename(obj.file.name)
+        return None
+
+    def get_file_size(self, obj):
+        if obj.file:
+            try:
+                return obj.file.size
+            except Exception:
+                return None
+        return None
+
+    def get_file_type(self, obj):
+        if not obj.file:
+            return None
+        name = getattr(obj.file, 'name', '') or ''
+        ext = os.path.splitext(name)[1].lstrip('.').lower()
+        return ext or None
+
+    def get_file_is_image(self, obj):
+        if not obj.file:
+            return False
+        name = getattr(obj.file, 'name', '') or ''
+        ext = os.path.splitext(name)[1].lstrip('.').lower()
+        allowed_images = getattr(settings, 'ALLOWED_IMAGE_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'webp'])
+        return ext in [e.lower() for e in allowed_images]
     
     def create(self, validated_data):
         """Créer un message avec l'expéditeur automatique"""

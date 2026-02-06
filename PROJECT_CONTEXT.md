@@ -7,6 +7,10 @@ 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
 
 # Projet : Application de Gestion de Projets et Tâches
 
+# Lancement du serveur backend avec daphne
+
+$env:DJANGO_SETTINGS_MODULE="config.settings"; daphne -p 8000 config.asgi:application
+
 
 
 _Dernière mise à jour : 04 fév. 2026_
