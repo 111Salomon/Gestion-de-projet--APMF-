@@ -48,30 +48,32 @@ class CanModifyTask(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         """
         Vérification au niveau de l'objet (la tâche).
-        
+
         Args:
             obj: Instance de Task
-        
+
         Logique :
             1. Vérifie si Admin/Chef global
             2. Vérifie si propriétaire du projet
             3. Vérifie si manager du projet
         """
+        from apps.projects.models import Project
+
         user = request.user
         project = obj.project
 
         # RG-29 : Si le projet est archivé, seul l'admin global peut modifier
-        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
             return False
-        
+
         # 1️⃣ Admin ou Chef de projet global → Accès total
         if user.role in ['admin', 'chef']:
             return True
-        
+
         # 2️⃣ Propriétaire du projet (champ owner)
         if project.owner == user:
             return True
-        
+
         # 3️⃣ Manager du projet (via ProjectMember)
         try:
             membership = ProjectMember.objects.get(project=project, user=user)
@@ -112,24 +114,26 @@ class CanDeleteTask(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         """
         Vérification au niveau de l'objet.
-        
+
         Logique identique à CanModifyTask (mêmes rôles autorisés).
         """
+        from apps.projects.models import Project
+
         user = request.user
         project = obj.project
 
         # RG-29 : Interdire suppression si le projet est archivé (sauf admin)
-        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
             return False
-        
+
         # 1️⃣ Admin ou Chef global
         if user.role in ['admin', 'chef']:
             return True
-        
+
         # 2️⃣ Propriétaire du projet
         if project.owner == user:
             return True
-        
+
         # 3️⃣ Manager du projet
         try:
             membership = ProjectMember.objects.get(project=project, user=user)
@@ -165,26 +169,28 @@ class CanChangeTaskStatus(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         """
         Vérification au niveau de l'objet.
-        
+
         Logique :
             1. Vérifie si Admin/Chef/Owner/Manager (peut tout changer)
             2. Sinon, vérifie si assigné à cette tâche précise
         """
+        from apps.projects.models import Project
+
         user = request.user
         project = obj.project
 
         # RG-29 : Empêche de changer le statut si le projet est archivé (sauf admin)
-        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
             return False
-        
+
         # 1️⃣ Admin ou Chef global
         if user.role in ['admin', 'chef']:
             return True
-        
+
         # 2️⃣ Propriétaire du projet
         if project.owner == user:
             return True
-        
+
         # 3️⃣ Manager du projet
         try:
             membership = ProjectMember.objects.get(project=project, user=user)
@@ -192,11 +198,11 @@ class CanChangeTaskStatus(permissions.BasePermission):
                 return True
         except ProjectMember.DoesNotExist:
             pass
-        
+
         # 4️⃣ Utilisateur assigné à CETTE tâche (membre simple)
         if obj.assigned_to == user:
             return True
-        
+
         # ❌ Sinon refusé
         return False
 
@@ -245,36 +251,34 @@ class CanCreateTask(permissions.BasePermission):
     def has_project_permission(self, request, project):
         """
         Méthode personnalisée pour vérifier les permissions sur un projet.
-        
+
         Cette méthode sera appelée manuellement dans perform_create.
-        
+
         Args:
             project: Instance de Project
-        
+
         Returns:
             bool: True si autorisé, False sinon
         """
+        from apps.projects.models import Project
+
         user = request.user
 
         # RG-29 : Empêcher la création si le projet est archivé (sauf admin)
-        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
             return False
 
         # 1️⃣ Admin/Chef global
         if user.role in ['admin', 'chef']:
             return True
-        
+
         # 2️⃣ Propriétaire du projet
         if project.owner == user:
             return True
-        
+
         # 3️⃣ Manager du projet
         try:
             membership = ProjectMember.objects.get(project=project, user=user)
             return membership.role in ['owner', 'manager']
         except ProjectMember.DoesNotExist:
-            return False
-
-        # RG-29 : Empêcher la création si le projet est archivé (sauf admin)
-        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
             return False

@@ -7,6 +7,9 @@ from django.db.models import Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 from .models import Project, ProjectMember
@@ -558,7 +561,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project.status = Project.StatusChoices.COMPLETED
         project.save(update_fields=['status', 'updated_at'])
 
-        print(f"🔄 Projet {project.id} restauré par {request.user.username}")
+        logger.info(f"Project {project.id} restored by {request.user.username}")
 
         serializer = ProjectSerializer(project, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -1092,7 +1095,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return response
             
         except Exception as e:
-            print(f"❌ Erreur export PDF: {e}")
+            logger.error(f"Error exporting PDF: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             return Response(
@@ -1371,7 +1374,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return response
             
         except Exception as e:
-            print(f"❌ Erreur export Excel: {e}")
+            logger.error(f"Error exporting Excel: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             return Response(
@@ -1541,7 +1544,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                                 with open(attachment.file.path, 'rb') as f:
                                     zip_file.writestr(f"attachments/{attachment.file_name}", f.read())
                         except Exception as file_error:
-                            print(f"⚠️ Impossible de copier {attachment.file_name}: {file_error}")
+                            logger.warning(f"Failed to copy attachment {attachment.file_name}: {file_error}")
                 
                 zip_file.writestr('attachments.json', json.dumps(attachments_data, indent=2, ensure_ascii=False))
                 
@@ -1609,11 +1612,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             
             return response
-            
+
         except Exception as e:
-            print(f"❌ Erreur export archive: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"Error exporting archive for project: {e}", exc_info=True)
             return Response(
                 {'error': f'Erreur lors de l\'export archive: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -1682,7 +1683,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             data = get_member_performance(user_id=user_id, days=days)
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"❌ Erreur analytics_performance: {e}")
+            logger.error(f"Error in analytics_performance: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             return Response(
@@ -1744,7 +1745,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             data = get_team_comparison(project_id=None, days=days)
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"❌ Erreur team_comparison: {e}")
+            logger.error(f"Error in team_comparison: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             return Response(
@@ -1806,7 +1807,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             data = get_productivity_trends(days=days, project_id=None)
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"❌ Erreur productivity_trends: {e}")
+            logger.error(f"Error in productivity_trends: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             return Response(
@@ -1857,7 +1858,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             except ProjectMember.DoesNotExist:
                 pass
             except Exception as e:
-                print(f'❌ Erreur vérification membership : {e}')
+                logger.error(f'Error verifying membership: {e}', exc_info=True)
         
         # Si aucun accès autorisé
         if not has_access:
@@ -1926,7 +1927,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            print(f"❌ Erreur project analytics: {e}")
+            logger.error(f"Error in project analytics: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             return Response(
