@@ -16,11 +16,11 @@ const formatFileSize = (bytes) => {
 
 const getFileIcon = (fileType) => {
   const type = (fileType || '').toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(type)) return '🖼️';
-  if (type === 'pdf') return '📕';
-  if (['doc', 'docx'].includes(type)) return '📘';
-  if (['xls', 'xlsx'].includes(type)) return '📗';
-  return '📎';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(type)) return '';
+  if (type === 'pdf') return '';
+  if (['doc', 'docx'].includes(type)) return '';
+  if (['xls', 'xlsx'].includes(type)) return '';
+  return '';
 };
 
 export const MessageItem = ({ 
@@ -193,7 +193,7 @@ export const MessageItem = ({
                     className={`text-xs px-2 py-1 rounded ${isOwnMessage ? 'bg-orange-200/20 text-white hover:bg-orange-200/30' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                     title="Télécharger"
                   >
-                    📥
+                    Télécharger
                   </a>
                 </div>
               )}
@@ -203,7 +203,7 @@ export const MessageItem = ({
           <div className={`text-xs mt-1 ${isOwnMessage ? 'text-orange-100' : 'text-gray-500'}`}>
             {time}
             {message.is_edited && (
-              <span className="ml-2">✏️</span>
+              <span className="ml-2"></span>
             )}
           </div>
         </div>

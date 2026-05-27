@@ -48,6 +48,12 @@ def team_list(request):
     """
     Retourne la liste de tous les membres de l'équipe avec leurs statistiques.
     """
+    if request.user.role not in ['admin', 'chef']:
+        return Response(
+            {'error': 'Seuls les administrateurs et les chefs de projet peuvent accéder à la liste des membres'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     search = request.GET.get('search', '')
     role = request.GET.get('role', '')
     is_active = request.GET.get('is_active', '')
@@ -81,6 +87,12 @@ def team_stats(request):
     """
     Retourne les statistiques globales de l'équipe.
     """
+    if request.user.role not in ['admin', 'chef']:
+        return Response(
+            {'error': 'Seuls les administrateurs et les chefs de projet peuvent accéder aux statistiques'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     total_members = User.objects.count()
     active_members = User.objects.filter(is_active=True).count()
     
@@ -111,6 +123,12 @@ def team_member_detail(request, user_id):
     """
     Retourne les détails d'un membre spécifique avec ses tâches récentes.
     """
+    if request.user.role not in ['admin', 'chef']:
+        return Response(
+            {'error': 'Seuls les administrateurs et les chefs de projet peuvent accéder aux détails des membres'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
@@ -873,6 +891,12 @@ def export_team_csv(request):
     """
     📄 Exporte la liste des membres de l'équipe en CSV.
     """
+    if request.user.role not in ['admin', 'chef']:
+        return Response(
+            {'error': 'Seuls les administrateurs et les chefs de projet peuvent exporter la liste'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     try:
         users = _get_filtered_members(request)
         
@@ -931,6 +955,12 @@ def export_team_excel(request):
     """
     📊 Exporte la liste des membres de l'équipe en Excel (.xlsx).
     """
+    if request.user.role not in ['admin', 'chef']:
+        return Response(
+            {'error': 'Seuls les administrateurs et les chefs de projet peuvent exporter la liste'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     try:
         users = _get_filtered_members(request)
         
@@ -1011,6 +1041,12 @@ def export_team_pdf(request):
     """
     📄 Exporte la liste des membres de l'équipe en PDF.
     """
+    if request.user.role not in ['admin', 'chef']:
+        return Response(
+            {'error': 'Seuls les administrateurs et les chefs de projet peuvent exporter la liste'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     try:
         users = _get_filtered_members(request)
         

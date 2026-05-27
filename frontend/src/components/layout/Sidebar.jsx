@@ -45,7 +45,7 @@ const unreadCount = (rooms || []).reduce((sum, room) => sum + (room?.unread_coun
 
 
   const canManageTeam = () => {
-    return user?.role === 'admin';
+    return user?.role === 'admin' || user?.role === 'chef';
   };
 
 
