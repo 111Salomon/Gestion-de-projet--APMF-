@@ -1,8 +1,8 @@
 """
-Signals pour la synchronisation Google Calendar
+Signals pour la synchronisation Google Calendar et l'archivage automatique des projets.
 """
 import requests
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from .models import Task
@@ -68,5 +68,50 @@ def delete_google_calendar_event(sender, instance, **kwargs):
         print(f"❌ Erreur réseau suppression Google: {e}")
     except Exception as e:
         print(f"❌ Erreur inattendue suppression Google: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+@receiver(post_save, sender=Task)
+def auto_archive_project_when_all_tasks_done(sender, instance, created, **kwargs):
+    """
+    RG-29 : Archive automatiquement un projet quand toutes ses tâches sont terminées.
+
+    Déclenché quand :
+    - Une tâche est créée ou mise à jour (post_save)
+
+    Logique :
+    1. Récupère le projet de la tâche
+    2. Vérifie si TOUTES les tâches sont au statut 'done'
+    3. Si oui ET projet n'est pas déjà archivé → le passer à 'archived'
+    4. Si non ET projet était archivé → remet en 'completed' (pour permettre modifications)
+    """
+    from apps.projects.models import Project
+
+    try:
+        project = instance.project
+
+        # Compter les tâches : totales et terminées
+        total_tasks = project.tasks.count()
+        done_tasks = project.tasks.filter(status=Task.StatusChoices.DONE).count()
+
+        # Cas 1 : Toutes les tâches sont terminées
+        if total_tasks > 0 and done_tasks == total_tasks:
+            if project.status != Project.StatusChoices.ARCHIVED:
+                print(f"🔄 Archivage auto du projet {project.id} - Toutes les tâches sont terminées")
+                project.status = Project.StatusChoices.ARCHIVED
+                project.save(update_fields=['status', 'updated_at'])
+                print(f"✅ Projet {project.id} archivé automatiquement")
+
+        # Cas 2 : Une tâche a été reprise (sortie du statut done) dans un projet archivé
+        elif project.status == Project.StatusChoices.ARCHIVED:
+            # Désarchiver pour permettre les modifications
+            print(f"🔄 Désarchivage auto du projet {project.id} - Une tâche n'est plus terminée")
+            project.status = Project.StatusChoices.COMPLETED
+            project.save(update_fields=['status', 'updated_at'])
+            print(f"✅ Projet {project.id} désarchivé automatiquement (retour à COMPLETED)")
+
+    except Exception as e:
+        print(f"❌ Erreur lors de l'archivage automatique du projet: {e}")
         import traceback
         traceback.print_exc()

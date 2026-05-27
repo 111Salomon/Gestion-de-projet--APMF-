@@ -271,6 +271,12 @@ const handlePageChange = (newPage) => {
         accent: 'bg-blue-500',
         icon: null
       },
+      archived: {
+        color: 'bg-neutral-50 text-neutral-700',
+        label: 'Archivé',
+        accent: 'bg-neutral-400',
+        icon: null
+      },
       // cancelled: {
       //   color: 'bg-red-50 text-red-700',
       //   label: 'Annulé',
@@ -281,7 +287,7 @@ const handlePageChange = (newPage) => {
     return configs[status] || configs.all;
   };
 
-  const statusOptions = ['all', 'active', 'on_hold', 'completed'];
+  const statusOptions = ['all', 'active', 'on_hold', 'completed', 'archived'];
 
 
   return (

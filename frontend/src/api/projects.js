@@ -314,6 +314,15 @@ getAll: async (params = {}) => {
     });
     return response.data;
   },
+
+  /**
+   * Restaure un projet archivé (admin only)
+   * @param {number} projectId
+   */
+  restore: async (projectId) => {
+    const response = await axiosInstance.post(`/projects/${projectId}/restore/`);
+    return response.data;
+  },
 };
 
 

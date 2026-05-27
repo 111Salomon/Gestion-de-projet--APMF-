@@ -59,6 +59,10 @@ class CanModifyTask(permissions.BasePermission):
         """
         user = request.user
         project = obj.project
+
+        # RG-29 : Si le projet est archivé, seul l'admin global peut modifier
+        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+            return False
         
         # 1️⃣ Admin ou Chef de projet global → Accès total
         if user.role in ['admin', 'chef']:
@@ -113,6 +117,10 @@ class CanDeleteTask(permissions.BasePermission):
         """
         user = request.user
         project = obj.project
+
+        # RG-29 : Interdire suppression si le projet est archivé (sauf admin)
+        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+            return False
         
         # 1️⃣ Admin ou Chef global
         if user.role in ['admin', 'chef']:
@@ -164,6 +172,10 @@ class CanChangeTaskStatus(permissions.BasePermission):
         """
         user = request.user
         project = obj.project
+
+        # RG-29 : Empêche de changer le statut si le projet est archivé (sauf admin)
+        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+            return False
         
         # 1️⃣ Admin ou Chef global
         if user.role in ['admin', 'chef']:
@@ -243,7 +255,11 @@ class CanCreateTask(permissions.BasePermission):
             bool: True si autorisé, False sinon
         """
         user = request.user
-        
+
+        # RG-29 : Empêcher la création si le projet est archivé (sauf admin)
+        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
+            return False
+
         # 1️⃣ Admin/Chef global
         if user.role in ['admin', 'chef']:
             return True
@@ -257,4 +273,8 @@ class CanCreateTask(permissions.BasePermission):
             membership = ProjectMember.objects.get(project=project, user=user)
             return membership.role in ['owner', 'manager']
         except ProjectMember.DoesNotExist:
+            return False
+
+        # RG-29 : Empêcher la création si le projet est archivé (sauf admin)
+        if getattr(project, 'status', None) == 'archived' and user.role != 'admin':
             return False

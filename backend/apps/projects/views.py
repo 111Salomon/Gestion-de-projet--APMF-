@@ -19,6 +19,7 @@ from .serializers import (
     UserSerializer  # 🆕 Ajouté pour lister les users
 )
 from apps.users.permissions import IsChefOrAdmin, IsProjectMemberOrReadOnly
+from .permissions import CanModifyArchivedProject, CanRestoreProject
 
 # Imports supplémentaires pour l'export (à ajouter en haut du fichier)
 import csv
@@ -141,8 +142,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Définit les permissions selon l'action."""
         if self.action == 'create':
             return [IsAuthenticated(), IsChefOrAdmin()]
+        elif self.action == 'restore':
+            return [IsAuthenticated(), CanRestoreProject()]
         elif self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), IsProjectMemberOrReadOnly()]
+            return [IsAuthenticated(), IsProjectMemberOrReadOnly(), CanModifyArchivedProject()]
         return [IsAuthenticated()]
     
     def perform_create(self, serializer):
@@ -510,11 +513,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def available_users(self, request):
         """
         👤 Liste les utilisateurs disponibles pour être ajoutés.
-        
+
         GET /api/projects/available_users/
-        
+
         📌 Utile pour le frontend (autocomplete, select, etc.)
-        
+
         Returns:
             Liste de tous les users actifs
         """
@@ -522,6 +525,43 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'], url_path='restore')
+    def restore(self, request, pk=None):
+        """
+        🔄 RG-29 : Restaure un projet archivé.
+
+        POST /api/projects/{id}/restore/
+
+        🔒 Permission : Admin uniquement
+
+        Fonctionnement :
+        1. Vérifie que le projet est archivé
+        2. Le remet en statut 'completed'
+        3. Permet les modifications du projet
+
+        Returns:
+            Projet restauré avec ses données
+        """
+        project = self.get_object()
+
+        # Vérification de permission (CanRestoreProject)
+        self.check_permissions(request)
+
+        # Vérification : le projet doit être archivé
+        if project.status != Project.StatusChoices.ARCHIVED:
+            return Response(
+                {'error': f'Le projet n\'est pas archivé (statut actuel: {project.get_status_display()})'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Restauration
+        project.status = Project.StatusChoices.COMPLETED
+        project.save(update_fields=['status', 'updated_at'])
+
+        print(f"🔄 Projet {project.id} restauré par {request.user.username}")
+
+        serializer = ProjectSerializer(project, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='dashboard/stats')
     def dashboard_stats(self, request):

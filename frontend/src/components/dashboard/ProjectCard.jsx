@@ -1,4 +1,4 @@
-import { MoreVertical, Users, Clock } from 'lucide-react';
+import { MoreVertical, Users, Clock, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -8,12 +8,14 @@ import { fr } from 'date-fns/locale';
  * @param {Object} project - Données du projet
  */
 export const ProjectCard = ({ project }) => {
+  const isArchived = project.status === 'archived';
   // Détermine la couleur de la barre de progression selon le status
   const getStatusColor = (status) => {
     const colors = {
       active: 'bg-green-500',
       on_hold: 'bg-amber-500',
       completed: 'bg-primary-600',
+      archived: 'bg-neutral-400',
       cancelled: 'bg-red-500',
     };
     return colors[status] || 'bg-neutral-300';
@@ -25,20 +27,33 @@ export const ProjectCard = ({ project }) => {
     : 'Pas de date';
 
   return (
-    <div className="card group hover:shadow-lg transition-all duration-200">
+    <div className="card group hover:shadow-lg transition-all duration-200 relative">
       {/* Header avec titre et menu */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-1 group-hover:text-primary-600 transition-colors">
-            {project.name}
-          </h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-lg font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors">
+              {project.name}
+            </h3>
+            {project.status === 'archived' && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-neutral-100 text-neutral-700 rounded-md text-xs font-medium">
+                <Lock className="w-3 h-3" />
+                Archivé
+              </span>
+            )}
+          </div>
           <p className="text-sm text-neutral-600 line-clamp-2">
             {project.description}
           </p>
         </div>
-        
+
         {/* Menu options */}
-        <button className="p-1 hover:bg-neutral-100 rounded-lg transition-colors">
+        <button
+          className={`p-1 rounded-lg transition-colors ${isArchived ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-100'}`}
+          title={isArchived ? 'Projet archivé — restauration requise pour modifier' : 'Options du projet'}
+          disabled={isArchived}
+          aria-disabled={isArchived}
+        >
           <MoreVertical className="w-5 h-5 text-neutral-400" />
         </button>
       </div>
@@ -92,6 +107,16 @@ export const ProjectCard = ({ project }) => {
           <span className="text-sm">{formattedDate}</span>
         </div>
       </div>
+
+      {/* Overlay si archivé pour empêcher les interactions */}
+      {isArchived && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md pointer-events-auto">
+          <div className="flex items-center gap-2 px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-md">
+            <Lock className="w-4 h-4 text-neutral-700" />
+            <span className="text-sm font-medium text-neutral-700">Projet archivé — restauration requise par un administrateur</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinLengthValidator, FileExtensionValidator
 from django.core.exceptions import ValidationError
+from django.db.models import Max
 
 
 class Task(models.Model):
@@ -187,6 +188,28 @@ class Task(models.Model):
     def is_completed(self):
         """Vérifie si la tâche est terminée."""
         return self.status == self.StatusChoices.DONE
+
+    def save(self, *args, **kwargs):
+        """
+        Assure un `order` unique par projet lors de la création si non précisé.
+
+        - Si `order` est None ou égal à 0, on calcule la valeur `max(order) + 1`
+          pour le projet afin d'éviter les violations de contrainte unique.
+        - Ne modifie pas `order` pour les mises à jour existantes.
+        """
+        # Si pas de projet encore lié, laisser Django lever l'erreur
+        if hasattr(self, 'project') and self.project_id:
+            try:
+                # On considère 0 comme valeur non renseignée
+                if not self.pk and (self.order is None or self.order == 0):
+                    last = Task.objects.filter(project=self.project).aggregate(Max('order'))
+                    max_order = last.get('order__max') or 0
+                    self.order = max_order + 1
+            except Exception:
+                # En cas d'erreur d'accès DB (ex: during migrations/tests), on laisse Django gérer
+                pass
+
+        super().save(*args, **kwargs)
 
 
 class Comment(models.Model):

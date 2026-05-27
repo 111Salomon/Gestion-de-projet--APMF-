@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Edit, 
-  Trash2, 
-  Calendar, 
-  Users, 
-  UserPlus, 
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  Calendar,
+  Users,
+  UserPlus,
   BarChart3,
-  Download, 
+  Download,
   ChevronDown,
   Clock,
   Target,
@@ -17,7 +17,9 @@ import {
   Folder,
   MoreVertical,
   Plus,
-  Check
+  Check,
+  Lock,
+  RotateCcw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -59,6 +61,8 @@ export const ProjectDetail = () => {
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Refs
@@ -281,6 +285,21 @@ export const ProjectDetail = () => {
     } catch (error) {
       console.error('❌ Erreur suppression:', error);
       toast.error('Impossible de supprimer le projet');
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      setIsRestoring(true);
+      await projectsAPI.restore(id);
+      toast.success('Projet restauré');
+      await loadProjectData();
+      setIsRestoreModalOpen(false);
+    } catch (error) {
+      console.error('❌ Erreur restauration:', error);
+      toast.error('Impossible de restaurer le projet');
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -612,13 +631,39 @@ export const ProjectDetail = () => {
                                hover:bg-neutral-50 transition-all duration-200
                                group"
                     >
-                      <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600 
+                      <Edit className="w-5 h-5 text-neutral-400 group-hover:text-orange-600
                                     transition-colors flex-shrink-0" strokeWidth={2} />
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-neutral-900 text-sm">Modifier</div>
                         <div className="text-xs text-neutral-500">Éditer les informations</div>
                       </div>
                     </button>
+
+                    {/* Restaurer (RG-29) - Visible seulement si archivé ET admin */}
+                    {project?.status === 'archived' && currentUser?.role === 'admin' && (
+                      <>
+                        <div className="h-px bg-neutral-200 my-2 mx-4" />
+                        <button
+                          onClick={() => {
+                            setIsRestoreModalOpen(true);
+                            setIsActionsMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3
+                                   hover:bg-blue-50/50 transition-all duration-200
+                                   group"
+                        >
+                          <RotateCcw className="w-5 h-5 text-neutral-400 group-hover:text-blue-600
+                                              transition-colors flex-shrink-0" strokeWidth={2} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-neutral-900 group-hover:text-blue-700
+                                         text-sm transition-colors">Restaurer</div>
+                            <div className="text-xs text-neutral-500 group-hover:text-blue-500
+                                         transition-colors">Déverrouiller les modifications</div>
+                          </div>
+                        </button>
+                        <div className="h-px bg-neutral-200 my-2 mx-4" />
+                      </>
+                    )}
 
                     {/* Supprimer */}
                     <button
@@ -968,6 +1013,16 @@ export const ProjectDetail = () => {
           message={`Êtes-vous sûr de vouloir supprimer "${project.name}" ? Cette action est irréversible et supprimera aussi toutes les tâches associées.`}
           confirmText="Supprimer"
           variant="danger"
+        />
+
+        <ConfirmModal
+          isOpen={isRestoreModalOpen}
+          onClose={() => setIsRestoreModalOpen(false)}
+          onConfirm={handleRestore}
+          title="Restaurer le projet"
+          message={`Êtes-vous sûr de vouloir restaurer "${project?.name}" ? Le projet pourra de nouveau être modifié.`}
+          confirmText="Restaurer"
+          isLoading={isRestoring}
         />
 
         <AddMemberModal
