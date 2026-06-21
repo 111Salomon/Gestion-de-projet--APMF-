@@ -117,6 +117,29 @@ class Project(models.Model):
                 raise ValidationError(
                     "La date de fin doit être postérieure à la date de début."
                 )
+
+        if self.pk and self.start_date and self.end_date:
+            from apps.tasks.models import Task
+            from django.db.models import Q
+
+            invalid_tasks = Task.objects.filter(project_id=self.pk, due_date__isnull=False).filter(
+                Q(due_date__lt=self.start_date) | Q(due_date__gt=self.end_date)
+            ).order_by('due_date', 'title')
+
+            if invalid_tasks.exists():
+                task_labels = [
+                    f"{task.title} ({task.due_date.strftime('%d/%m/%Y')})"
+                    for task in invalid_tasks
+                ]
+                raise ValidationError(
+                    "La modification du projet est impossible car les tâches suivantes sortent de la nouvelle période : "
+                    + ", ".join(task_labels)
+                    + "."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
     
     @property
     def progress(self):

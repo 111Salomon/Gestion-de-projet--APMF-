@@ -165,16 +165,20 @@ class Task(models.Model):
     
     def clean(self):
         """Validation métier."""
-        if self.due_date and self.project.end_date:
-            if self.due_date > self.project.end_date:
-                raise ValidationError(
-                    "La date d'échéance ne peut pas dépasser la date de fin du projet."
-                )
+        errors = {}
+
+        if self.project_id:
+            if self.due_date:
+                if self.project.start_date and self.due_date < self.project.start_date:
+                    errors['due_date'] = "La date d'échéance doit être comprise entre la date de début et la date de fin du projet."
+                elif self.project.end_date and self.due_date > self.project.end_date:
+                    errors['due_date'] = "La date d'échéance doit être comprise entre la date de début et la date de fin du projet."
         
         if self.completed_at and self.status != self.StatusChoices.DONE:
-            raise ValidationError(
-                "Une tâche ne peut avoir une date de complétion que si son statut est 'Terminée'."
-            )
+            errors['completed_at'] = "Une tâche ne peut avoir une date de complétion que si son statut est 'Terminée'."
+
+        if errors:
+            raise ValidationError(errors)
     
     @property
     def is_overdue(self):
@@ -209,6 +213,7 @@ class Task(models.Model):
                 # En cas d'erreur d'accès DB (ex: during migrations/tests), on laisse Django gérer
                 pass
 
+            self.full_clean(exclude=['created_by'])
         super().save(*args, **kwargs)
 
 

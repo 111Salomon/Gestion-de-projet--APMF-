@@ -4,6 +4,12 @@ from apps.users.models import User
 from apps.users.serializers import UserMinimalSerializer
 
 
+def _raise_validation_error(error):
+    if hasattr(error, 'message_dict') and error.message_dict:
+        raise serializers.ValidationError(error.message_dict)
+    raise serializers.ValidationError(error.messages)
+
+
 # ═══════════════════════════════════════════════════════════════════
 # 👤 USER SERIALIZER (pour la gestion des membres)
 # ═══════════════════════════════════════════════════════════════════
@@ -113,6 +119,24 @@ class ProjectSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'owner', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        """Valide les dates du projet et la compatibilité avec les tâches existantes."""
+        start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
+        end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
+
+        project = Project(
+            start_date=start_date,
+            end_date=end_date,
+        )
+        project.pk = getattr(self.instance, 'pk', None)
+
+        try:
+            project.clean()
+        except Exception as error:
+            _raise_validation_error(error)
+
+        return attrs
     
     def get_tasks_count(self, obj):
         """Retourne le nombre de tâches du projet."""
@@ -145,12 +169,17 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
     
     def validate(self, attrs):
-        """Valide que la date de fin est après la date de début."""
-        if attrs.get('start_date') and attrs.get('end_date'):
-            if attrs['end_date'] < attrs['start_date']:
-                raise serializers.ValidationError({
-                    "end_date": "La date de fin doit être postérieure à la date de début."
-                })
+        """Valide les dates du projet à la création."""
+        project = Project(
+            start_date=attrs.get('start_date'),
+            end_date=attrs.get('end_date'),
+        )
+
+        try:
+            project.clean()
+        except Exception as error:
+            _raise_validation_error(error)
+
         return attrs
 
 

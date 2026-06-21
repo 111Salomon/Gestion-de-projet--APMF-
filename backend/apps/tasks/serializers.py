@@ -6,6 +6,12 @@ from apps.projects.models import Project, ProjectMember
 from apps.users.models import User
 
 
+def _raise_validation_error(error):
+    if hasattr(error, 'message_dict') and error.message_dict:
+        raise serializers.ValidationError(error.message_dict)
+    raise serializers.ValidationError(error.messages)
+
+
 
 class CommentSerializer(serializers.ModelSerializer):
     """Serializer pour les commentaires."""
@@ -129,6 +135,37 @@ class TaskSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
+
+    def validate(self, attrs):
+        """Valide les règles métier lors des mises à jour de tâches."""
+        project = attrs.get('project', getattr(self.instance, 'project', None))
+        due_date = attrs.get('due_date', getattr(self.instance, 'due_date', None))
+        status = attrs.get('status', getattr(self.instance, 'status', Task.StatusChoices.TODO))
+        completed_at = attrs.get('completed_at', getattr(self.instance, 'completed_at', None))
+
+        if project is not None:
+            current_project = getattr(self.instance, 'project', None)
+            project_changed = current_project is not None and project.pk != current_project.pk
+            if not self.instance or project_changed:
+                if project.status in [Project.StatusChoices.COMPLETED, Project.StatusChoices.ARCHIVED]:
+                    raise serializers.ValidationError({
+                        'project': "Une tâche ne peut pas être créée dans un projet terminé ou archivé."
+                    })
+
+        task = Task(
+            project=project,
+            due_date=due_date,
+            status=status,
+            completed_at=completed_at,
+        )
+        task.pk = getattr(self.instance, 'pk', None)
+
+        try:
+            task.clean()
+        except Exception as error:
+            _raise_validation_error(error)
+
+        return attrs
     
     def get_user_role_in_project(self, obj):
         """Retourne le rôle de l'utilisateur dans le projet de cette tâche."""
@@ -282,12 +319,24 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
     
     def validate(self, attrs):
-        """Valide que la date d'échéance ne dépasse pas la fin du projet."""
-        if attrs.get('due_date') and attrs.get('project') and attrs['project'].end_date:
-            if attrs['due_date'] > attrs['project'].end_date:
-                raise serializers.ValidationError({
-                    "due_date": "La date d'échéance ne peut pas dépasser la date de fin du projet."
-                })
+        """Valide les règles métier à la création d'une tâche."""
+        project = attrs.get('project')
+        if project and project.status in [Project.StatusChoices.COMPLETED, Project.StatusChoices.ARCHIVED]:
+            raise serializers.ValidationError({
+                'project': "Une tâche ne peut pas être créée dans un projet terminé ou archivé."
+            })
+
+        task = Task(
+            project=project,
+            due_date=attrs.get('due_date'),
+            status=attrs.get('status', Task.StatusChoices.TODO),
+        )
+
+        try:
+            task.clean()
+        except Exception as error:
+            _raise_validation_error(error)
+
         return attrs
 
 

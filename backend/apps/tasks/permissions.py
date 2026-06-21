@@ -264,8 +264,8 @@ class CanCreateTask(permissions.BasePermission):
 
         user = request.user
 
-        # RG-29 : Empêcher la création si le projet est archivé (sauf admin)
-        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
+        # Empêcher la création si le projet est terminé ou archivé (sauf admin)
+        if project.status in [Project.StatusChoices.COMPLETED, Project.StatusChoices.ARCHIVED] and user.role != 'admin':
             return False
 
         # 1️⃣ Admin/Chef global
