@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'; // 🆕 Ajout de useEffect
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import CountUp from 'react-countup'; // 🆕 Animation des chiffres
 import logo from "../../assets/img/APMF Logo.png";
 import imgSide from "../../assets/img/rightSide.jpg";
@@ -15,6 +15,7 @@ export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   // 🆕 État pour les statistiques dynamiques
   const [stats, setStats] = useState({
@@ -124,7 +125,7 @@ export const Login = () => {
             <Input
               label="Mot de passe"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={values.password}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -133,6 +134,9 @@ export const Login = () => {
               required
               placeholder="Entrez votre mot de passe"
               icon={Lock}
+              rightIcon={showPassword ? EyeOff : Eye}
+              onRightIconClick={() => setShowPassword((prev) => !prev)}
+              rightIconLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             />
 
             <div className="flex items-center justify-between text-sm">

@@ -13,6 +13,9 @@ export const Input = ({
   placeholder,
   disabled = false,
   icon: Icon,
+  rightIcon: RightIcon,
+  onRightIconClick,
+  rightIconLabel,
 }) => {
   const hasError = touched && error;
 
@@ -33,6 +36,17 @@ export const Input = ({
             <Icon size={20} />
           </div>
         )}
+
+        {RightIcon && (
+          <button
+            type="button"
+            onClick={onRightIconClick}
+            aria-label={rightIconLabel}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 transition-colors"
+          >
+            <RightIcon size={18} />
+          </button>
+        )}
         
         <input
           id={name}
@@ -46,6 +60,7 @@ export const Input = ({
           className={`
             input-field
             ${Icon ? 'pl-11' : ''}
+            ${RightIcon ? 'pr-11' : ''}
             ${hasError ? 'input-error' : ''}
           `}
         />
