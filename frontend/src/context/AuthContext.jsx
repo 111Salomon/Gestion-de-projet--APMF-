@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../api/auth';
 import toast from 'react-hot-toast';
 import axiosInstance from '../api/axios'; // ✨ AJOUTÉ
+import { getApiErrorMessage } from '../utils/apiError';
 
 const AuthContext = createContext(null);
 
@@ -56,7 +57,7 @@ export const AuthProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      toast.error('Identifiants invalides');
+      toast.error(getApiErrorMessage(error, 'Identifiants invalides'));
       return false;
     }
   };
@@ -121,7 +122,7 @@ const connectGoogleCalendar = async () => {
     return true;
   } catch (error) {
     console.error('❌ Erreur connexion Google Calendar:', error);
-    toast.error('Erreur lors de la connexion à Google Calendar');
+    toast.error(getApiErrorMessage(error, 'Erreur lors de la connexion à Google Calendar'));
     return false;
   }
 };
@@ -135,7 +136,7 @@ const connectGoogleCalendar = async () => {
       return true;
     } catch (error) {
       console.error('❌ Erreur déconnexion Google Calendar:', error);
-      toast.error('Erreur lors de la déconnexion');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la déconnexion'));
       return false;
     }
   };

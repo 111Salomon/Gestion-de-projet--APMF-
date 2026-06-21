@@ -36,6 +36,7 @@ import { AddMemberModal } from '../../components/projects/AddMemberModal';
 import { projectsAPI } from '../../api/projects';
 import { Avatar } from '../../components/common/Avatar'; // ✅ AJOUTER
 import { useAuth } from '../../context/AuthContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 
 export const ProjectDetail = () => {
@@ -111,7 +112,7 @@ export const ProjectDetail = () => {
       setTasks(tasksList);
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
-      toast.error('Impossible de charger le projet');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger le projet'));
       navigate('/projects');
     } finally {
       setLoading(false);
@@ -125,7 +126,7 @@ export const ProjectDetail = () => {
       setMembers(data);
     } catch (error) {
       console.error('❌ Erreur chargement membres:', error);
-      toast.error('Impossible de charger les membres');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger les membres'));
     } finally {
       setLoadingMembers(false);
     }
@@ -149,7 +150,7 @@ export const ProjectDetail = () => {
       setIsAddMemberModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur ajout membre:', error);
-      toast.error(error.response?.data?.error || 'Impossible d\'ajouter le membre');
+      toast.error(getApiErrorMessage(error, 'Impossible d\'ajouter le membre'));
     } finally {
       setAddingMember(false);
     }
@@ -162,7 +163,7 @@ export const ProjectDetail = () => {
       await loadMembers();
     } catch (error) {
       console.error('❌ Erreur suppression membre:', error);
-      toast.error('Impossible de retirer le membre');
+      toast.error(getApiErrorMessage(error, 'Impossible de retirer le membre'));
     }
   };
 
@@ -173,7 +174,7 @@ export const ProjectDetail = () => {
       await loadMembers();
     } catch (error) {
       console.error('❌ Erreur changement rôle:', error);
-      toast.error('Impossible de modifier le rôle');
+      toast.error(getApiErrorMessage(error, 'Impossible de modifier le rôle'));
     }
   };
 
@@ -200,7 +201,7 @@ export const ProjectDetail = () => {
       
     } catch (error) {
       console.error('❌ Erreur changement statut:', error);
-      toast.error('Impossible de changer le statut');
+      toast.error(getApiErrorMessage(error, 'Impossible de changer le statut'));
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -251,11 +252,11 @@ export const ProjectDetail = () => {
     } catch (error) {
       console.error('❌ Erreur export:', error);
       if (error.response) {
-        toast.error(`Erreur serveur: ${error.response.status}`);
+        toast.error(getApiErrorMessage(error, `Erreur serveur: ${error.response.status}`));
       } else if (error.message === 'Fichier vide reçu') {
         toast.error('Le fichier exporté est vide');
       } else {
-        toast.error('Impossible d\'exporter le projet');
+        toast.error(getApiErrorMessage(error, 'Impossible d\'exporter le projet'));
       }
     } finally {
       setIsExporting(false);
@@ -271,7 +272,7 @@ export const ProjectDetail = () => {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur mise à jour:', error);
-      toast.error('Impossible de mettre à jour le projet');
+      toast.error(getApiErrorMessage(error, 'Impossible de mettre à jour le projet'));
     } finally {
       setUpdating(false);
     }
@@ -284,7 +285,7 @@ export const ProjectDetail = () => {
       navigate('/projects');
     } catch (error) {
       console.error('❌ Erreur suppression:', error);
-      toast.error('Impossible de supprimer le projet');
+      toast.error(getApiErrorMessage(error, 'Impossible de supprimer le projet'));
     }
   };
 
@@ -297,7 +298,7 @@ export const ProjectDetail = () => {
       setIsRestoreModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur restauration:', error);
-      toast.error('Impossible de restaurer le projet');
+      toast.error(getApiErrorMessage(error, 'Impossible de restaurer le projet'));
     } finally {
       setIsRestoring(false);
     }

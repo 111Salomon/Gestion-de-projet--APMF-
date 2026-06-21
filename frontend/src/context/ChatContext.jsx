@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { chatAPI } from '../api/chat';
 import { EditMessageModal } from '../components/chat/EditMessageModal'; // ✨ AJOUTÉ
+import { getApiErrorMessage } from '../utils/apiError';
 
 const ChatContext = createContext(null);
 
@@ -199,11 +200,7 @@ export const ChatProvider = ({ children }) => {
       await loadRooms();
     } catch (error) {
       console.error('❌ Erreur sélection room:', error);
-      toast.error(
-        error.response?.status === 403 || error.response?.status === 404
-          ? 'Vous n\'avez pas accès à cette conversation'
-          : 'Erreur lors du chargement de la conversation'
-      );
+      toast.error(getApiErrorMessage(error, 'Erreur lors du chargement de la conversation'));
       setCurrentRoom(null);
       setMessages([]);
       await loadRooms();
@@ -234,40 +231,12 @@ export const ChatProvider = ({ children }) => {
 
       await chatAPI.createMessage(formData);
     } catch (error) {
-      const responseData = error?.response?.data;
       console.error('❌ Erreur envoi message:', {
         message: error?.message,
         status: error?.response?.status,
-        data: responseData,
+        data: error?.response?.data,
       });
-
-      if (responseData) {
-        try {
-          console.error('❌ Backend error payload (stringified):', JSON.stringify(responseData));
-        } catch {
-          console.error('❌ Backend error payload (raw):', responseData);
-        }
-      }
-
-      const pickFirstError = (value) => {
-        if (!value) return null;
-        if (Array.isArray(value)) return value[0];
-        if (typeof value === 'string') return value;
-        return null;
-      };
-
-      const backendMessage =
-        typeof responseData === 'string'
-          ? responseData
-          : responseData?.detail || responseData?.error;
-
-      const drfMessage =
-        pickFirstError(responseData?.non_field_errors) ||
-        pickFirstError(responseData?.file) ||
-        pickFirstError(responseData?.content) ||
-        pickFirstError(responseData?.room);
-
-      toast.error(drfMessage || backendMessage || 'Erreur lors de l\'envoi du message');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de l\'envoi du message'));
     }
   }, [currentRoom, currentUser]);
 
@@ -303,7 +272,7 @@ const editMessage = useCallback(async (messageId, newContent) => {
     toast.success('Message édité avec succès');
   } catch (error) {
     console.error('❌ Erreur édition message:', error);
-    toast.error('Erreur lors de l\'édition du message');
+    toast.error(getApiErrorMessage(error, 'Erreur lors de l\'édition du message'));
   }
 }, [currentRoom, currentUser]);
 
@@ -323,7 +292,7 @@ const deleteMessage = useCallback(async (messageId) => {
     toast.success('Message supprimé');
   } catch (error) {
     console.error('❌ Erreur suppression message:', error);
-    toast.error('Erreur lors de la suppression du message');
+    toast.error(getApiErrorMessage(error, 'Erreur lors de la suppression du message'));
   }
 }, [currentRoom, currentUser]);
 
@@ -346,7 +315,7 @@ const deleteMessage = useCallback(async (messageId) => {
       return newRoom;
     } catch (error) {
       console.error('❌ Erreur création room:', error);
-      toast.error('Erreur lors de la création de la conversation');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la création de la conversation'));
       throw error;
     }
   };
@@ -358,7 +327,7 @@ const deleteMessage = useCallback(async (messageId) => {
       toast.success('Participant ajouté avec succès');
     } catch (error) {
       console.error('❌ Erreur ajout participant:', error);
-      toast.error('Erreur lors de l\'ajout du participant');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de l\'ajout du participant'));
     }
   };
 
@@ -380,7 +349,7 @@ const deleteMessage = useCallback(async (messageId) => {
       toast.success('Conversation supprimée');
     } catch (error) {
       console.error('❌ Erreur suppression conversation:', error);
-      toast.error('Erreur lors de la suppression de la conversation');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la suppression de la conversation'));
     }
   }, [currentRoom?.id, loadRooms, disconnectWebSocket]);
 

@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { googleCalendarAPI } from '../../api/googleCalendar';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 const APP_VERSION = 'v1.0.0';
 const DOC_URL = 'https://docs.taskflow.app  ';
@@ -101,10 +102,10 @@ const checkGoogleConnection = async () => {
     if (error.response?.data?.error === 'Not connected to Google Calendar') {
       setGoogleConnected(false);
     } else if (error.response?.data?.error === 'token_expired') {
-      toast.error('Token Google expiré. Veuillez vous reconnecter.');
+      toast.error(getApiErrorMessage(error, 'Token Google expiré. Veuillez vous reconnecter.'));
       setGoogleConnected(false);
     } else {
-      toast.error('Erreur de connexion Google Calendar');
+      toast.error(getApiErrorMessage(error, 'Erreur de connexion Google Calendar'));
       setGoogleConnected(false);
     }
   }
@@ -117,7 +118,7 @@ const checkGoogleConnection = async () => {
       // La redirection se fait dans connectGoogleCalendar
     } catch (error) {
       setLoading(false);
-      toast.error('Erreur lors de la connexion à Google Calendar');
+        toast.error(getApiErrorMessage(error, 'Erreur lors de la connexion à Google Calendar'));
     }
   };
 
@@ -134,7 +135,7 @@ const checkGoogleConnection = async () => {
       setSelectedCalendar('');
       toast.success('Google Calendar déconnecté avec succès');
     } catch (error) {
-      toast.error('Erreur lors de la déconnexion');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la déconnexion'));
     } finally {
       setLoading(false);
     }
@@ -152,10 +153,10 @@ const handleSelectCalendar = async (calendarId) => {
   } catch (error) {
     console.error('❌ Erreur sélection calendrier:', error);
     if (error.response?.data?.error === 'token_expired') {
-      toast.error('Token Google expiré. Veuillez vous reconnecter.');
+      toast.error(getApiErrorMessage(error, 'Token Google expiré. Veuillez vous reconnecter.'));
       setGoogleConnected(false);
     } else {
-      toast.error('Erreur lors de la sélection du calendrier');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la sélection du calendrier'));
     }
   }
 };
@@ -172,10 +173,10 @@ const handleSelectCalendar = async (calendarId) => {
       toast.success(result.message || 'Synchronisation réussie');
     } catch (error) {
       if (error.response?.data?.error === 'token_expired') {
-        toast.error('Token Google expiré. Veuillez vous reconnecter.');
+        toast.error(getApiErrorMessage(error, 'Token Google expiré. Veuillez vous reconnecter.'));
         setGoogleConnected(false);
       } else {
-        toast.error('Erreur lors de la synchronisation');
+        toast.error(getApiErrorMessage(error, 'Erreur lors de la synchronisation'));
       }
     } finally {
       setSyncing(false);

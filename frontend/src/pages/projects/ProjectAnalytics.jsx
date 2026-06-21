@@ -30,6 +30,7 @@ import { projectsAPI } from '../../api/projects';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Layout } from '../../components/layout/Layout';
 import { MEDIA_URL } from '../../api/axios';
+import { getApiErrorMessage } from '../../utils/apiError';
 import {
   LineChart,
   Line,
@@ -63,10 +64,10 @@ export const ProjectAnalytics = () => {
       console.error('❌ Erreur chargement analytics projet:', error);
       
       if (error.response?.status === 403) {
-        toast.error('Accès refusé. Vous devez être propriétaire ou gestionnaire de ce projet.');
+        toast.error(getApiErrorMessage(error, 'Accès refusé. Vous devez être propriétaire ou gestionnaire de ce projet.'));
         setTimeout(() => navigate('/projects'), 2000);
       } else {
-        toast.error('Erreur lors du chargement des statistiques');
+        toast.error(getApiErrorMessage(error, 'Erreur lors du chargement des statistiques'));
       }
     } finally {
       setLoading(false);

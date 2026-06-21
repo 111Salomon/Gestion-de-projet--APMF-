@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { inviteMember } from '../../api/team';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const InviteMemberModal = ({ isOpen, onClose, onMemberInvited }) => {
   const [formData, setFormData] = useState({
@@ -95,9 +96,7 @@ export const InviteMemberModal = ({ isOpen, onClose, onMemberInvited }) => {
       onMemberInvited(response.member);
       handleClose();
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.error || 'Erreur lors de l\'invitation';
-      toast.error(errorMessage);
+      toast.error(getApiErrorMessage(error, 'Erreur lors de l\'invitation'));
       console.error(error);
     } finally {
       setLoading(false);

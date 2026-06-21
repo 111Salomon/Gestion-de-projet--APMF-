@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { deleteMember } from '../../api/team';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const DeleteMemberModal = ({ member, isOpen, onClose, onMemberDeleted }) => {
   const [deleting, setDeleting] = useState(false);
@@ -44,8 +45,7 @@ export const DeleteMemberModal = ({ member, isOpen, onClose, onMemberDeleted }) 
       onMemberDeleted(member.id);
       handleClose();
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Erreur lors de la suppression';
-      toast.error(errorMsg);
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la suppression'));
     } finally {
       setDeleting(false);
     }

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, File, Image, Paperclip } from 'lucide-react';
 import { uploadAttachment } from '../../api/attachments';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 const AttachmentUploader = ({ taskId, onUploadSuccess }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -65,7 +66,7 @@ const AttachmentUploader = ({ taskId, onUploadSuccess }) => {
       
     } catch (err) {
       console.error('Erreur upload:', err);
-      toast.error(err.response?.data?.message || 'Impossible d\'ajouter les fichiers');
+      toast.error(getApiErrorMessage(err, 'Impossible d\'ajouter les fichiers'));
     } finally {
       setUploading(false);
     }

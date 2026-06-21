@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { uploadAvatar } from '../../api/team';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const AvatarUploader = ({ userId, currentAvatar, onAvatarUpdated }) => {
   const [uploading, setUploading] = useState(false);
@@ -58,8 +59,7 @@ export const AvatarUploader = ({ userId, currentAvatar, onAvatarUpdated }) => {
         onAvatarUpdated(response.avatar_url); // Sans timestamp pour la DB
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Erreur lors de l\'upload';
-      toast.error(errorMsg);
+      toast.error(getApiErrorMessage(error, 'Erreur lors de l\'upload'));
       
       // ✅ Revenir à l'ancien avatar en cas d'erreur
       setLocalAvatar(currentAvatar);

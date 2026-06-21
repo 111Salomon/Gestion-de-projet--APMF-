@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { addMember } from '../../api/team';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage, getApiFieldErrors } from '../../utils/apiError';
 
 export const AddMemberModal = ({ isOpen, onClose, onMemberAdded }) => {
   const [formData, setFormData] = useState({
@@ -149,13 +150,12 @@ export const AddMemberModal = ({ isOpen, onClose, onMemberAdded }) => {
       handleClose();
     } catch (error) {
       // Gestion des erreurs backend
-      if (error.response?.data?.errors) {
-        setErrors(error.response.data.errors);
-        toast.error('Veuillez corriger les erreurs du formulaire');
+      const fieldErrors = getApiFieldErrors(error);
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors(fieldErrors);
+        toast.error(getApiErrorMessage(error, 'Veuillez corriger les erreurs du formulaire'));
       } else {
-        const errorMessage =
-          error.response?.data?.error || 'Erreur lors de l\'ajout du membre';
-        toast.error(errorMessage);
+        toast.error(getApiErrorMessage(error, 'Erreur lors de l\'ajout du membre'));
       }
       console.error(error);
     } finally {

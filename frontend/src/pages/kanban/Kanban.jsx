@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 import { Layout } from '../../components/layout/Layout';
 import { KanbanColumn } from '../../components/kanban/KanbanColumn';
@@ -75,7 +76,7 @@ export const Kanban = () => {
       setProjects(projectsList);
       setTasks(tasksList);
     } catch (error) {
-      toast.error('Impossible de charger les données');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger les données'));
       setTasks([]);
       setProjects([]);
     } finally {
@@ -153,7 +154,7 @@ export const Kanban = () => {
       refreshStats();
     } catch (error) {
       setTasks(tasks); // Rollback
-      toast.error('Impossible de déplacer la tâche');
+      toast.error(getApiErrorMessage(error, 'Impossible de déplacer la tâche'));
     }
   };
 

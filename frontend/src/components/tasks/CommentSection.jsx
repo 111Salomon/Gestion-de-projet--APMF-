@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { tasksAPI } from '../../api/tasks';
 import toast from 'react-hot-toast';
 import { Avatar } from '../common/Avatar';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 
 export const CommentSection = ({ taskId }) => {
@@ -66,7 +67,7 @@ export const CommentSection = ({ taskId }) => {
       toast.success('Commentaire ajouté ! 💬');
     } catch (error) {
       console.error('❌ Erreur:', error.response?.data);
-      toast.error('Impossible d\'ajouter le commentaire');
+      toast.error(getApiErrorMessage(error, 'Impossible d\'ajouter le commentaire'));
     } finally {
       setIsSubmitting(false);
     }
@@ -92,7 +93,7 @@ export const CommentSection = ({ taskId }) => {
       toast.success('Commentaire modifié ✏️');
     } catch (error) {
       console.error('❌ Erreur:', error.response?.data);
-      toast.error('Erreur lors de la modification');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la modification'));
     }
   };
 
@@ -104,7 +105,7 @@ export const CommentSection = ({ taskId }) => {
       setComments(comments.filter(c => c.id !== commentId));
       toast.success('Commentaire supprimé 🗑️');
     } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la suppression'));
     }
   };
 

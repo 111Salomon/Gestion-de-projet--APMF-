@@ -36,6 +36,7 @@ import {
   Target
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const Team = () => {
   // ═══════════════════════════════════════════════════════════
@@ -276,7 +277,7 @@ export const Team = () => {
       
     } catch (error) {
       console.error('❌ Erreur export:', error);
-      toast.error('Impossible d\'exporter la liste');
+      toast.error(getApiErrorMessage(error, 'Impossible d\'exporter la liste'));
     } finally {
       setIsExporting(false);
     }

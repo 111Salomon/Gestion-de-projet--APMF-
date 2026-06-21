@@ -19,6 +19,7 @@ import {
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import logo from '../../assets/img/APMF Logo.png';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -77,8 +78,7 @@ export const ResetPassword = () => {
       toast.success('Mot de passe créé avec succès !');
       setTimeout(() => navigate('/login'), 1500);
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Lien invalide ou expiré';
-      toast.error(errorMsg);
+      toast.error(getApiErrorMessage(error, 'Lien invalide ou expiré'));
       console.error('Reset password error:', error);
     } finally {
       setLoading(false);

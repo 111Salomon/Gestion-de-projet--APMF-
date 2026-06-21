@@ -34,6 +34,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import { getApiErrorMessage } from '../../utils/apiError';
 import { MEDIA_URL } from '../../api/axios';
 
 export const Analytics = () => {
@@ -54,7 +55,7 @@ export const Analytics = () => {
       setProductivity(prodData);
     } catch (error) {
       console.error('❌ Erreur chargement analytics:', error);
-      toast.error('Erreur lors du chargement des statistiques');
+      toast.error(getApiErrorMessage(error, 'Erreur lors du chargement des statistiques'));
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -24,6 +24,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { canCreateTaskGlobal } from '../../utils/permissions';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 
 /**
@@ -88,8 +89,9 @@ export const Tasks = () => {
       }
     } catch (error) {
       console.error('❌ Erreur chargement projets:', error);
-      setProjectsError('Impossible de charger la liste des projets');
-      toast.error('Impossible de charger la liste des projets');
+      const message = getApiErrorMessage(error, 'Impossible de charger la liste des projets');
+      setProjectsError(message);
+      toast.error(message);
     }
     finally {
       setProjectsLoading(false);
@@ -221,7 +223,7 @@ export const Tasks = () => {
       
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
-      toast.error('Erreur lors du chargement des tâches');
+      toast.error(getApiErrorMessage(error, 'Erreur lors du chargement des tâches'));
       setTasks([]);
     } finally {
       setLoading(false);
@@ -249,7 +251,7 @@ export const Tasks = () => {
       setIsModalOpen(true);
     } catch (error) {
       console.error('❌ Erreur chargement tâche:', error);
-      toast.error('Impossible de charger les détails de la tâche');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger les détails de la tâche'));
     }
   };
 
@@ -274,7 +276,7 @@ export const Tasks = () => {
       
     } catch (error) {
       console.error('❌ Erreur soumission:', error);
-      toast.error('Erreur lors de la sauvegarde de la tâche');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la sauvegarde de la tâche'));
     } finally {
       setIsSubmitting(false);
     }
@@ -303,7 +305,7 @@ export const Tasks = () => {
       
     } catch (error) {
       console.error('❌ Erreur suppression:', error);
-      toast.error('Erreur lors de la suppression');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la suppression'));
     } finally {
       setIsDeleting(false);
     }

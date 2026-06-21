@@ -33,6 +33,7 @@ import { DeleteMemberModal } from './DeleteMemberModal';
 import { AvatarUploader } from './AvatarUploader';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated, onMemberDeleted }) => {
   const [member, setMember] = useState(null);
@@ -91,7 +92,7 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
       setMember(response.member);
       if (onMemberUpdated) onMemberUpdated(response.member);
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Erreur lors de la modification du rôle');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la modification du rôle'));
     } finally {
       setUpdatingRole(false);
     }
@@ -105,7 +106,7 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
       setMember(response.member);
       if (onMemberUpdated) onMemberUpdated(response.member);
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Erreur lors du changement de statut');
+      toast.error(getApiErrorMessage(error, 'Erreur lors du changement de statut'));
     } finally {
       setUpdatingStatus(false);
     }
@@ -183,7 +184,7 @@ export const MemberProfileModal = ({ memberId, isOpen, onClose, onMemberUpdated,
       setIsEditing(false);
       if (onMemberUpdated) onMemberUpdated(response.user);
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Erreur lors de la mise à jour');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la mise à jour'));
     } finally {
       setSaving(false);
     }

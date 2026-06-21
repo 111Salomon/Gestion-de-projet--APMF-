@@ -22,6 +22,7 @@ import { ProjectProgressBar } from '../../components/dashboard/ProjectProgressBa
 
 import { dashboardAPI } from '../../api/dashboard';
 import { useAuth } from '../../context/AuthContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -41,7 +42,7 @@ export const Dashboard = () => {
       setStats(data);
     } catch (error) {
       console.error('❌ Erreur chargement dashboard:', error);
-      toast.error('Impossible de charger les statistiques');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger les statistiques'));
     } finally {
       setLoading(false);
     }

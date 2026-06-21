@@ -23,6 +23,7 @@ import { DraggableTask } from './DraggableTask';
 import { DroppableDay } from './DroppableDay';
 import { calendarAPI } from '../../api/calendar';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, onTasksUpdate }) => {
   const [activeTask, setActiveTask] = useState(null);
@@ -98,7 +99,7 @@ export const CalendarView = ({ tasks, currentDate, onTaskClick, onMonthChange, o
       }
     } catch (error) {
       console.error('❌ Erreur changement date:', error);
-      toast.error(error.response?.data?.message || 'Impossible de déplacer la tâche');
+      toast.error(getApiErrorMessage(error, 'Impossible de déplacer la tâche'));
     }
   };
 

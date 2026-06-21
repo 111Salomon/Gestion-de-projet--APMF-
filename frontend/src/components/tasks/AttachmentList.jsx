@@ -20,6 +20,7 @@ import {
 import { getTaskAttachments, deleteAttachment } from '../../api/attachments';
 import { ConfirmModal } from '../common/ConfirmModal';
 import toast from 'react-hot-toast';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 const AttachmentList = ({ taskId, refresh }) => {
   const [attachments, setAttachments] = useState([]);
@@ -92,7 +93,7 @@ const AttachmentList = ({ taskId, refresh }) => {
       toast.success('Fichier supprimé avec succès');
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
-      toast.error('Impossible de supprimer le fichier');
+      toast.error(getApiErrorMessage(error, 'Impossible de supprimer le fichier'));
     }
   };
 

@@ -26,6 +26,7 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Pagination } from '../../components/common/Pagination';
 import { useAuth } from '../../context/AuthContext';
 import { canCreateProject } from '../../utils/permissions';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 
 /**
@@ -144,7 +145,7 @@ const loadProjects = async (page = 1) => {
     
   } catch (error) {
     console.error('❌ Erreur chargement:', error);
-    toast.error('Erreur lors du chargement des projets');
+    toast.error(getApiErrorMessage(error, 'Erreur lors du chargement des projets'));
     setProjects([]);
   } finally {
     setLoading(false);
@@ -167,7 +168,7 @@ const loadProjects = async (page = 1) => {
       setActiveDropdown(null);
     } catch (error) {
       console.error('❌ Erreur chargement projet:', error);
-      toast.error('Impossible de charger les détails du projet');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger les détails du projet'));
     }
   };
 
@@ -189,7 +190,7 @@ const loadProjects = async (page = 1) => {
       setIsModalOpen(false);
       
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde du projet');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la sauvegarde du projet'));
       console.error('Erreur:', error);
     } finally {
       setIsSubmitting(false);
@@ -220,7 +221,7 @@ const loadProjects = async (page = 1) => {
       setProjectToDelete(null);
       
     } catch (error) {
-      toast.error('Erreur lors de la suppression du projet');
+      toast.error(getApiErrorMessage(error, 'Erreur lors de la suppression du projet'));
       console.error('Erreur:', error);
     } finally {
       setIsDeleting(false);

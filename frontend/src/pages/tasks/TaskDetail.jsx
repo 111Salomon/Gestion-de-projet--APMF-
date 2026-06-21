@@ -25,6 +25,7 @@ import { tasksAPI } from '../../api/tasks';
 import { canModifyTask, canDeleteTask, canChangeTaskStatus } from '../../utils/permissions';
 import { Avatar } from '../../components/common/Avatar';
 import { useAuth } from '../../context/AuthContext';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 export const TaskDetail = () => {
   const { id } = useParams();
@@ -71,7 +72,7 @@ export const TaskDetail = () => {
       setTask(data);
     } catch (error) {
       console.error('❌ Erreur chargement:', error);
-      toast.error('Impossible de charger la tâche');
+      toast.error(getApiErrorMessage(error, 'Impossible de charger la tâche'));
       navigate('/tasks');
     } finally {
       setLoading(false);
@@ -87,11 +88,7 @@ export const TaskDetail = () => {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('❌ Erreur mise à jour:', error);
-      if (error.response?.status === 403) {
-        toast.error('Vous n\'avez pas les droits pour modifier cette tâche');
-      } else {
-        toast.error('Impossible de mettre à jour la tâche');
-      }
+      toast.error(getApiErrorMessage(error, 'Impossible de mettre à jour la tâche'));
     } finally {
       setUpdating(false);
     }
@@ -104,11 +101,7 @@ export const TaskDetail = () => {
       navigate('/tasks');
     } catch (error) {
       console.error('❌ Erreur suppression:', error);
-      if (error.response?.status === 403) {
-        toast.error('Vous n\'avez pas les droits pour supprimer cette tâche');
-      } else {
-        toast.error('Impossible de supprimer la tâche');
-      }
+      toast.error(getApiErrorMessage(error, 'Impossible de supprimer la tâche'));
     }
   };
 
@@ -121,11 +114,7 @@ export const TaskDetail = () => {
       setIsStatusDropdownOpen(false);
     } catch (error) {
       console.error('❌ Erreur changement statut:', error);
-      if (error.response?.status === 403) {
-        toast.error('Vous n\'avez pas les droits pour changer ce statut');
-      } else {
-        toast.error('Impossible de mettre à jour le statut');
-      }
+      toast.error(getApiErrorMessage(error, 'Impossible de mettre à jour le statut'));
     } finally {
       setUpdating(false);
     }
