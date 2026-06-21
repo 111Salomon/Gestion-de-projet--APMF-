@@ -227,9 +227,20 @@ class TaskSerializer(serializers.ModelSerializer):
             }
         
         # 3️⃣ Vérifier le rôle dans ProjectMember
+        # Si les membres du projet ont été préchargés (prefetch_related), on l'utilise
         try:
-            membership = ProjectMember.objects.get(project=project, user=user)
-            
+            members_qs = project.project_members.all()
+            # Si préchargé, this avoids DB hit inside .get()
+            membership = None
+            for m in members_qs:
+                if m.user_id == user.id:
+                    membership = m
+                    break
+
+            if membership is None:
+                # Fallback : requête directe si non préchargé
+                membership = ProjectMember.objects.get(project=project, user=user)
+
             # Propriétaire désigné → Tous les droits
             if membership.role == 'owner':
                 return {
@@ -237,7 +248,7 @@ class TaskSerializer(serializers.ModelSerializer):
                     'can_delete': True,
                     'can_change_status': True,
                 }
-            
+
             # Gestionnaire → Peut modifier et supprimer
             elif membership.role == 'manager':
                 return {
@@ -245,7 +256,7 @@ class TaskSerializer(serializers.ModelSerializer):
                     'can_delete': True,
                     'can_change_status': True,
                 }
-            
+
             # Membre → Lecture seule + changer statut si assigné
             elif membership.role == 'member':
                 is_assigned = (obj.assigned_to == user)
@@ -254,7 +265,7 @@ class TaskSerializer(serializers.ModelSerializer):
                     'can_delete': False,
                     'can_change_status': is_assigned,
                 }
-            
+
             # Viewer → Lecture seule
             else:
                 return {
@@ -262,7 +273,6 @@ class TaskSerializer(serializers.ModelSerializer):
                     'can_delete': False,
                     'can_change_status': False,
                 }
-        
         except ProjectMember.DoesNotExist:
             # 4️⃣ Pas membre → Vérifier si assigné à la tâche
             if obj.assigned_to == user:
@@ -271,7 +281,6 @@ class TaskSerializer(serializers.ModelSerializer):
                     'can_delete': False,
                     'can_change_status': True,
                 }
-            
             return {
                 'can_edit': False,
                 'can_delete': False,
@@ -396,9 +405,18 @@ class TaskListSerializer(serializers.ModelSerializer):
         if project.owner == user:
             return {'can_edit': True, 'can_delete': True, 'can_change_status': True}
         
-        # ProjectMember
+        # ProjectMember — use prefetched members when possible to avoid N+1
         try:
-            membership = ProjectMember.objects.get(project=project, user=user)
+            members_qs = project.project_members.all()
+            membership = None
+            for m in members_qs:
+                if m.user_id == user.id:
+                    membership = m
+                    break
+
+            if membership is None:
+                membership = ProjectMember.objects.get(project=project, user=user)
+
             if membership.role == 'owner':
                 return {'can_edit': True, 'can_delete': True, 'can_change_status': True}
             elif membership.role == 'manager':

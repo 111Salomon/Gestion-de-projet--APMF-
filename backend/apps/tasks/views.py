@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Q
+from apps.projects.models import ProjectMember
 from .models import Task, Comment, Attachment
 from .serializers import (
     TaskSerializer,
@@ -96,6 +97,11 @@ class TaskViewSet(viewsets.ModelViewSet):
         if project_id:
             queryset = queryset.filter(project_id=project_id)
         
+        # Optimisation ORM : charger relations fréquentes pour éviter N+1
+        queryset = queryset.select_related('project', 'assigned_to', 'created_by')
+        # Précharger les membres du projet (utilisé dans les serializers)
+        queryset = queryset.prefetch_related('project__project_members')
+
         # Tri par date de création (plus récent en premier)
         return queryset.order_by('-created_at')
     

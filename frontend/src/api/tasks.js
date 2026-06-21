@@ -13,35 +13,11 @@ export const tasksAPI = {
   
   // ✅ NOUVEAU : Charge TOUTES les pages (spécifique pour Kanban)
   getAllUnpaginated: async (params = {}) => {
-    let allTasks = [];
-    let nextUrl = '/tasks/';
-    
-    // 🔄 Boucle pour charger toutes les pages
-    while (nextUrl) {
-      const response = await axiosInstance.get(nextUrl, { params });
-      const data = response.data;
-      
-      console.log(`📄 Page chargée: ${allTasks.length + data.results.length} tâches au total`);
-      
-      // Ajouter les résultats de cette page
-      allTasks = [...allTasks, ...data.results];
-      
-      // Y a-t-il une page suivante ?
-      if (data.next) {
-        // Extraire juste le path (sans le domaine)
-        nextUrl = data.next.replace('http://127.0.0.1:8000/api', '');
-      } else {
-        nextUrl = null;
-      }
-    }
-    
-    console.log(`✅ TOTAL CHARGÉ: ${allTasks.length} tâches`);
-    
-    // Retourner au même format que l'API
-    return {
-      count: allTasks.length,
-      results: allTasks
-    };
+    // Request a single large page to avoid multiple round-trips.
+    // If the dataset is extremely large, the backend should expose a dedicated Kanban endpoint.
+    const safeParams = { ...params, page_size: params.page_size || 1000 };
+    const response = await axiosInstance.get('/tasks/', { params: safeParams });
+    return response.data;
   },
 
   // GET /api/tasks/:id/ - Détails d'une tâche

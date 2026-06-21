@@ -38,8 +38,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_auto_archive_when_all_tasks_done(self):
         """Test that project archives when all tasks are marked done."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Mark first task done - project should not archive yet
         t1.status = Task.StatusChoices.DONE
@@ -55,8 +55,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_auto_unarchive_when_task_not_done(self):
         """Test that project unarchives when a task is marked not done in archived project."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Archive project by marking all tasks done
         t1.status = Task.StatusChoices.DONE
@@ -82,7 +82,7 @@ class RG29ArchiveTests(TestCase):
         self.project.save()
 
         # Trigger signal by adding a task (this calls post_save)
-        t = Task.objects.create(title='T1', project=self.project)
+        t = Task.objects.create(title='T01', project=self.project)
 
         # Project should remain COMPLETED (not auto-archive with 0 tasks)
         self.project.refresh_from_db()
@@ -90,8 +90,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_admin_can_modify_archived_project_tasks(self):
         """Test that admin can modify tasks in archived project."""
-        t = Task.objects.create(title='T1', project=self.project, status=Task.StatusChoices.DONE)
-        t2 = Task.objects.create(title='T2', project=self.project, status=Task.StatusChoices.DONE)
+        t = Task.objects.create(title='T01', project=self.project, status=Task.StatusChoices.DONE)
+        t2 = Task.objects.create(title='T02', project=self.project, status=Task.StatusChoices.DONE)
         self.project.status = Project.StatusChoices.ARCHIVED
         self.project.save()
 
@@ -104,8 +104,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_non_admin_cannot_modify_task_in_archived_project(self):
         """Test that non-admin users cannot modify tasks in archived project."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Archive project
         t1.status = Task.StatusChoices.DONE
@@ -124,8 +124,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_non_admin_cannot_change_task_status_in_archived_project(self):
         """Test that non-admin cannot change task status in archived project."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Archive project
         t1.status = Task.StatusChoices.DONE
@@ -143,8 +143,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_non_admin_cannot_delete_task_in_archived_project(self):
         """Test that non-admin cannot delete tasks in archived project."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Archive project
         t1.status = Task.StatusChoices.DONE
@@ -162,8 +162,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_non_admin_cannot_create_task_in_archived_project(self):
         """Test that non-admin cannot create tasks in archived project."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Archive project
         t1.status = Task.StatusChoices.DONE
@@ -181,8 +181,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_manager_cannot_modify_archived_project_tasks(self):
         """Test that manager cannot modify tasks when project is archived."""
-        t = Task.objects.create(title='T1', project=self.project, status=Task.StatusChoices.DONE)
-        t2 = Task.objects.create(title='T2', project=self.project, status=Task.StatusChoices.DONE)
+        t = Task.objects.create(title='T01', project=self.project, status=Task.StatusChoices.DONE)
+        t2 = Task.objects.create(title='T02', project=self.project, status=Task.StatusChoices.DONE)
         self.project.status = Project.StatusChoices.ARCHIVED
         self.project.save()
 
@@ -194,8 +194,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_admin_can_create_task_in_archived_project(self):
         """Test that admin can create tasks even in archived project."""
-        t1 = Task.objects.create(title='T1', project=self.project, status=Task.StatusChoices.DONE)
-        t2 = Task.objects.create(title='T2', project=self.project, status=Task.StatusChoices.DONE)
+        t1 = Task.objects.create(title='T01', project=self.project, status=Task.StatusChoices.DONE)
+        t2 = Task.objects.create(title='T02', project=self.project, status=Task.StatusChoices.DONE)
         self.project.status = Project.StatusChoices.ARCHIVED
         self.project.save()
 
@@ -207,8 +207,8 @@ class RG29ArchiveTests(TestCase):
 
     def test_bulk_task_status_update_with_locking(self):
         """Test that bulk updates don't cause race conditions with locking."""
-        t1 = Task.objects.create(title='T1', project=self.project)
-        t2 = Task.objects.create(title='T2', project=self.project)
+        t1 = Task.objects.create(title='T01', project=self.project)
+        t2 = Task.objects.create(title='T02', project=self.project)
 
         # Simulate bulk update with transaction
         with transaction.atomic():

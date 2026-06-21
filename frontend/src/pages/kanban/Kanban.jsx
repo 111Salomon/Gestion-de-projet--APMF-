@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { Layers } from 'lucide-react';
@@ -162,9 +162,9 @@ export const Kanban = () => {
   // 🖱️ HANDLERS
   // ══════════════════════════════════════════════
 
-  const handleTaskClick = (task) => {
+  const handleTaskClick = useCallback((task) => {
     navigate(`/tasks/${task.id}`);
-  };
+  }, [navigate]);
 
   const handleProjectChange = (e) => {
     const value = e.target.value;

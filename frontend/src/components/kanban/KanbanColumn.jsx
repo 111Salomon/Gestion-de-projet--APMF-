@@ -1,9 +1,10 @@
+import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanCard } from './KanbanCard';
 import { CheckCircle2, Circle, Clock, Eye } from 'lucide-react';
 
-export const KanbanColumn = ({ 
+const KanbanColumnComponent = ({ 
   id,
   title,
   color,
@@ -109,3 +110,5 @@ export const KanbanColumn = ({
     </div>
   );
 };
+
+export const KanbanColumn = React.memo(KanbanColumnComponent);

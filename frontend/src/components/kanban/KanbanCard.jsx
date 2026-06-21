@@ -1,8 +1,9 @@
+import React from 'react';
 import { Calendar, User, Flag, Clock } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
-export const KanbanCard = ({ task, onClick }) => {
+const KanbanCardComponent = ({ task, onClick }) => {
   
   // ✅ CORRECTION : useDraggable au lieu de useSortable
   const {
@@ -141,3 +142,5 @@ export const KanbanCard = ({ task, onClick }) => {
     </div>
   );
 };
+
+export const KanbanCard = React.memo(KanbanCardComponent);

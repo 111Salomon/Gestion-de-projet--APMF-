@@ -26,7 +26,8 @@ class CalendarAPITestCase(TestCase):
         # Créer projet
         self.project = Project.objects.create(
             name='Test Project',
-            owner=self.admin
+            owner=self.admin,
+            description='test'
         )
         
         # Créer tâches
