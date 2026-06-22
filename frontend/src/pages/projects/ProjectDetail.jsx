@@ -31,12 +31,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { ProjectStats } from '../../components/projects/ProjectStats';
 import { TaskCard } from '../../components/tasks/TaskCard';
 import { ProjectForm } from '../../components/forms/ProjectForm';
+import { TaskForm } from '../../components/forms/TaskForm';
 import { MemberList } from '../../components/projects/MemberList';
 import { AddMemberModal } from '../../components/projects/AddMemberModal';
 import { projectsAPI } from '../../api/projects';
 import { Avatar } from '../../components/common/Avatar'; // ✅ AJOUTER
 import { useAuth } from '../../context/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiError';
+import { useStats } from '../../context/StatsContext';
+import { tasksAPI } from '../../api/tasks';
 
 
 export const ProjectDetail = () => {
@@ -65,6 +68,12 @@ export const ProjectDetail = () => {
   const [isRestoring, setIsRestoring] = useState(false);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isTaskSubmitting, setIsTaskSubmitting] = useState(false);
+  const [initialTaskFormData, setInitialTaskFormData] = useState(null);
+  const [isIncompleteConfirmOpen, setIsIncompleteConfirmOpen] = useState(false);
+  const [pendingStatusToSet, setPendingStatusToSet] = useState(null);
+  const [isConfirmingIncomplete, setIsConfirmingIncomplete] = useState(false);
 
   // Refs
   const exportDropdownRef = useRef(null);
@@ -184,6 +193,17 @@ export const ProjectDetail = () => {
       return;
     }
 
+    // Si on tente de marquer comme "completed" alors qu'il y a des tâches inachevées,
+    // afficher une confirmation à l'utilisateur.
+    if (newStatus === 'completed') {
+      const incompleteCount = Array.isArray(tasks) ? tasks.filter(t => t.status !== 'done').length : 0;
+      if (incompleteCount > 0) {
+        setPendingStatusToSet(newStatus);
+        setIsIncompleteConfirmOpen(true);
+        setIsStatusDropdownOpen(false);
+        return;
+      }
+    }
     try {
       setIsUpdatingStatus(true);
       
@@ -196,13 +216,44 @@ export const ProjectDetail = () => {
       
       const updatedProject = await projectsAPI.getById(project.id);
       setProject(updatedProject);
-      
+
+      // Met à jour les stats globales (dashboard, login, sidebar)
+      try { refreshStats(); } catch (e) { /* noop */ }
+
       setIsStatusDropdownOpen(false);
       
     } catch (error) {
       console.error('❌ Erreur changement statut:', error);
       toast.error(getApiErrorMessage(error, 'Impossible de changer le statut'));
     } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const confirmSetStatusDespiteIncompleteTasks = async () => {
+    if (!pendingStatusToSet) return;
+    try {
+      setIsConfirmingIncomplete(true);
+      setIsUpdatingStatus(true);
+
+      await projectsAPI.update(project.id, {
+        ...project,
+        status: pendingStatusToSet
+      });
+
+      toast.success('Statut mis à jour');
+
+      const updatedProject = await projectsAPI.getById(project.id);
+      setProject(updatedProject);
+      setIsIncompleteConfirmOpen(false);
+      setPendingStatusToSet(null);
+      // Met à jour les stats globaux
+      try { refreshStats(); } catch (e) { /* noop */ }
+    } catch (error) {
+      console.error('❌ Erreur changement statut (confirmation):', error);
+      toast.error(getApiErrorMessage(error, 'Impossible de changer le statut'));
+    } finally {
+      setIsConfirmingIncomplete(false);
       setIsUpdatingStatus(false);
     }
   };
@@ -277,6 +328,26 @@ export const ProjectDetail = () => {
       setUpdating(false);
     }
   };
+
+  const handleTaskSubmit = async (formData) => {
+    try {
+      setIsTaskSubmitting(true);
+      await tasksAPI.create(formData);
+      toast.success('Tâche créée avec succès !');
+      await loadProjectData();
+      // Met à jour les stats globales (dashboard / login etc.)
+      try { refreshStats(); } catch (e) { /* noop */ }
+      setIsTaskModalOpen(false);
+      setInitialTaskFormData(null);
+    } catch (error) {
+      console.error('❌ Erreur création tâche:', error);
+      toast.error(getApiErrorMessage(error, 'Impossible de créer la tâche'));
+    } finally {
+      setIsTaskSubmitting(false);
+    }
+  };
+
+  const { refreshStats } = useStats();
 
   const handleDelete = async () => {
     try {
@@ -1026,6 +1097,18 @@ export const ProjectDetail = () => {
           isLoading={isRestoring}
         />
 
+        <ConfirmModal
+          isOpen={isIncompleteConfirmOpen}
+          onClose={() => { setIsIncompleteConfirmOpen(false); setPendingStatusToSet(null); }}
+          onConfirm={confirmSetStatusDespiteIncompleteTasks}
+          title="Tâches non terminées"
+          message={`Ce projet contient encore ${Array.isArray(tasks) ? tasks.filter(t => t.status !== 'done').length : 0} tâche(s) non terminée(s). Voulez-vous vraiment le marquer comme terminé ?`}
+          confirmText="Accepter"
+          cancelText="Annuler"
+          isLoading={isConfirmingIncomplete}
+          variant="warning"
+        />
+
         <AddMemberModal
           isOpen={isAddMemberModalOpen}
           onClose={() => setIsAddMemberModalOpen(false)}
@@ -1035,9 +1118,25 @@ export const ProjectDetail = () => {
           loading={addingMember}
         />
 
+        <Modal
+          isOpen={isTaskModalOpen}
+          onClose={() => setIsTaskModalOpen(false)}
+          title="Créer une nouvelle tâche"
+        >
+          <TaskForm
+            onSubmit={handleTaskSubmit}
+            onCancel={() => setIsTaskModalOpen(false)}
+            initialData={initialTaskFormData}
+            isLoading={isTaskSubmitting}
+          />
+        </Modal>
+
         {/* FAB - FLOATING ACTION BUTTON */}
         <button
-          onClick={() => navigate(`/tasks?create=true&project=${id}`)}
+          onClick={() => {
+            setInitialTaskFormData({ project: id });
+            setIsTaskModalOpen(true);
+          }}
           className="fixed bottom-8 right-8 z-50
                    w-14 h-14 
                    bg-gradient-to-br from-orange-500 to-orange-600

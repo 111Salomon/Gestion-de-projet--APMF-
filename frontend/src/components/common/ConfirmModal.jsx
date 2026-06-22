@@ -52,11 +52,18 @@ export const ConfirmModal = ({
     e.stopPropagation();
   };
 
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    // Backdrop sombre
+    // Backdrop sombre (plein écran)
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 animate-in fade-in duration-200"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-in fade-in duration-200 h-screen overflow-auto"
+      style={{ marginTop: 0 }}
+      onClick={handleBackdropClick}
     >
       {/* Contenu du modal */}
       <div
@@ -99,33 +106,23 @@ export const ConfirmModal = ({
         <div className="p-6 bg-neutral-50 rounded-b-xl flex items-center gap-3">
           <Button
             variant="secondary"
-            fullWidth
             onClick={onClose}
             disabled={isLoading}
+            className="flex-1"
           >
             {cancelText}
           </Button>
 
-          <button
+          <Button
+            variant="primary"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`
-              w-full px-6 py-3 rounded-lg font-medium
-              transition-all duration-200
-              disabled:opacity-50 disabled:cursor-not-allowed
-              flex items-center justify-center
-              ${style.button}
-            `}
+            loading={isLoading}
+            loadingText={`Traitement...`}
+            className={`flex-1 ${style.button}`}
           >
-            {isLoading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                Suppression...
-              </>
-            ) : (
-              confirmText
-            )}
-          </button>
+            {confirmText}
+          </Button>
         </div>
       </div>
     </div>

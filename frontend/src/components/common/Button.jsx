@@ -8,6 +8,7 @@ export const Button = ({
   onClick,
   className = '',
   fullWidth = false,
+  loadingText = 'Chargement...',
 }) => {
   const baseClasses = 'font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2';
   
@@ -40,7 +41,7 @@ export const Button = ({
       {loading ? (
         <>
           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          <span>Chargement...</span>
+          <span>{loadingText}</span>
         </>
       ) : (
         children

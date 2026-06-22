@@ -61,6 +61,7 @@ export const TaskForm = ({
     status: [required],
     priority: [required],
     due_date: [required],
+    project: [required],
   });
 
   // Charger les projets au montage
@@ -313,11 +314,11 @@ export const TaskForm = ({
       {/* ✨ PROJET */}
       <div className="space-y-2">
         <label 
-          htmlFor="project" 
-          className="block text-sm font-semibold text-neutral-900"
-        >
-          Projet <span className="text-neutral-400 font-normal">(optionnel)</span>
-        </label>
+            htmlFor="project" 
+            className="block text-sm font-semibold text-neutral-900"
+          >
+            Projet <span className="text-red-500">*</span>
+          </label>
         <div className="relative">
           <select
             id="project"
