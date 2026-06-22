@@ -173,6 +173,7 @@ export const ProjectForm = ({
             <option value="active">Actif</option>
             <option value="on_hold">En attente</option>
             <option value="completed">Terminé</option>
+            <option value="archived">Archivé</option>
             {/* <option value="cancelled">Annulé</option> */}
           </select>
           {/* Icône chevron custom */}

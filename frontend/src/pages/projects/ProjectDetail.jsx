@@ -432,6 +432,13 @@ export const ProjectDetail = () => {
         badgeColor: 'bg-blue-50 text-blue-700',
         badgeAccent: 'bg-blue-500',
       },
+      archived: {
+        label: 'Archivé',
+        dotColor: 'bg-neutral-400',
+        textColor: 'text-neutral-700',
+        badgeColor: 'bg-neutral-50 text-neutral-700',
+        badgeAccent: 'bg-neutral-400',
+      },
       cancelled: {
         label: 'Annulé',
         dotColor: 'bg-red-500',
@@ -495,6 +502,7 @@ export const ProjectDetail = () => {
     { value: 'active', ...getStatusConfig('active') },
     { value: 'on_hold', ...getStatusConfig('on_hold') },
     { value: 'completed', ...getStatusConfig('completed') },
+    { value: 'archived', ...getStatusConfig('archived') },
   ];
 
   return (
