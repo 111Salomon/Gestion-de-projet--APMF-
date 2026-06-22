@@ -298,7 +298,7 @@ export const ProjectDetail = () => {
       }, 100);
 
       const formatLabels = { pdf: 'PDF', excel: 'Excel', zip: 'Archive ZIP' };
-      toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
+      toast.success(`Export ${formatLabels[format]} réussi !`);
       
     } catch (error) {
       console.error('❌ Erreur export:', error);

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { Check, X, Info, Loader } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { StatsProvider } from './context/StatsContext';
 import { NotificationProvider } from './context/NotificationContext';  // ✅ AJOUTÉ
@@ -255,18 +256,34 @@ function App() {
                   padding: '16px',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
                 },
+                // Use Lucide icons for toast types
                 success: {
-                  iconTheme: {
-                    primary: '#059669',
-                    secondary: '#fff',
-                  },
+                  icon: (
+                    <div className="bg-green-600 rounded-full p-1">
+                      <Check size={20} className="text-white" />
+                    </div>
+                  ),
                 },
                 error: {
-                  iconTheme: {
-                    primary: '#dc2626',
-                    secondary: '#fff',
-                  },
+                  icon: (
+                    <div className="bg-red-600 rounded-full p-1">
+                      <X size={20} className="text-white" />
+                    </div>
+                  ),
                 },
+                loading: {
+                  icon: (
+                    <div className="bg-gray-600 rounded-full p-1">
+                      <Loader size={20} className="text-white animate-spin" />
+                    </div>
+                  ),
+                },
+                // default icon for generic toasts
+                icon: (
+                  <div className="bg-blue-600 rounded-full p-1">
+                    <Info size={20} className="text-white" />
+                  </div>
+                ),
               }}
             />
             </ChatProvider>

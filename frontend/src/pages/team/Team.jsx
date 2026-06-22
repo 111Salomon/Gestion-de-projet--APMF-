@@ -273,7 +273,7 @@ export const Team = () => {
         pdf: 'PDF',
       };
 
-      toast.success(`Export ${formatLabels[format]} réussi ! 📥`);
+      toast.success(`Export ${formatLabels[format]} réussi !`);
       
     } catch (error) {
       console.error('❌ Erreur export:', error);
