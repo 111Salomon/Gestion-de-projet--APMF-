@@ -30,6 +30,7 @@ import { projectsAPI } from '../../api/projects';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Layout } from '../../components/layout/Layout';
 import { MEDIA_URL } from '../../api/axios';
+import { Avatar } from '../../components/common/Avatar';
 import { getApiErrorMessage } from '../../utils/apiError';
 import {
   LineChart,
@@ -166,19 +167,13 @@ export const ProjectAnalytics = () => {
         <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-xl border border-orange-200 p-6">
           <div className="flex items-center gap-6">
             {/* Avatar Propriétaire */}
-            {analytics.project.owner.avatar ? (
-              <img
-                src={`${MEDIA_URL}${analytics.project.owner.avatar}`}
-                alt={analytics.project.owner.full_name}
-                className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-md"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center border-2 border-white shadow-md">
-                <span className="text-white font-bold text-xl">
-                  {analytics.project.owner.full_name.charAt(0)}
-                </span>
-              </div>
-            )}
+            <Avatar
+              avatarUrl={analytics.project.owner.avatar_url}
+              name={analytics.project.owner.full_name || analytics.project.owner.username}
+              size="lg"
+              showBorder={true}
+              className="w-16 h-16 rounded-xl"
+            />
             
             {/* Infos Projet */}
             <div className="flex-1">
@@ -417,19 +412,13 @@ export const ProjectAnalytics = () => {
 
                     {/* Avatar + Infos */}
                     <div className="flex items-center gap-3">
-                      {member.user.avatar ? (
-                        <img
-                          src={`${MEDIA_URL}${member.user.avatar}`}
-                          alt={member.user.full_name}
-                          className="w-11 h-11 rounded-lg object-cover border-2 border-white shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center border-2 border-white shadow-sm">
-                          <span className="text-white font-semibold text-sm">
-                            {member.user.full_name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                      <Avatar
+                        avatarUrl={member.user.avatar_url}
+                        name={member.user.full_name || member.user.username}
+                        size="md"
+                        showBorder={true}
+                        className="w-11 h-11 rounded-lg"
+                      />
 
                       <div>
                         <p className="font-semibold text-neutral-900 text-sm">

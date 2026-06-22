@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { MEDIA_URL } from '../../api/axios';
+import { Avatar } from '../../components/common/Avatar';
 
 export const Analytics = () => {
   const [loading, setLoading] = useState(true);
@@ -309,26 +310,13 @@ export const Analytics = () => {
 
                     {/* Avatar + Infos */}
                     <div className="flex items-center gap-3">
-                      {member.user.avatar ? (
-                        <img
-                          src={`${MEDIA_URL}${member.user.avatar}`}
-                          alt={member.user.full_name}
-                          className="w-11 h-11 rounded-lg object-cover border-2 border-white shadow-sm"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-
-                      <div 
-                        className="w-11 h-11 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center border-2 border-white shadow-sm"
-                        style={{ display: member.user.avatar ? 'none' : 'flex' }}
-                      >
-                        <span className="text-white font-semibold text-sm">
-                          {member.user.full_name.charAt(0)}
-                        </span>
-                      </div>
+                      <Avatar
+                        avatarUrl={member.user.avatar_url}
+                        name={member.user.full_name || member.user.username}
+                        size="md"
+                        showBorder={true}
+                        className="w-11 h-11 rounded-lg"
+                      />
 
                       <div>
                         <p className="font-semibold text-neutral-900 text-sm">

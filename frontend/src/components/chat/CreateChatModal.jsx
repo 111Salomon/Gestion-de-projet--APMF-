@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Users, User, Search } from 'lucide-react';
 import axiosInstance from '../../api/axios';
+import { Avatar } from '../common/Avatar';
 
 export const CreateChatModal = ({ isOpen, onClose, onCreate }) => {
   const [step, setStep] = useState(1); // 1 = type, 2 = participants, 3 = créer
@@ -207,11 +208,7 @@ export const CreateChatModal = ({ isOpen, onClose, onCreate }) => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
-                          <span className="text-white font-semibold text-xs">
-                            {(user.full_name || user.email)?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
-                        </div>
+                        <Avatar avatarUrl={user.avatar_url || user.avatar} name={user.full_name || user.email} size="sm" showBorder={false} />
                         <div className="text-left">
                           <div className="font-medium text-gray-900">
                             {user.full_name || user.email}
@@ -253,11 +250,7 @@ export const CreateChatModal = ({ isOpen, onClose, onCreate }) => {
                   <div className="space-y-2">
                     {selectedUsers.map((user) => (
                       <div key={user.id} className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center">
-                          <span className="text-white font-semibold text-xs">
-                            {(user.full_name || user.email)?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
-                        </div>
+                        <Avatar avatarUrl={user.avatar_url || user.avatar} name={user.full_name || user.email} size="sm" showBorder={false} />
                         <div>
                           <div className="font-medium text-gray-900">
                             {user.full_name || user.email}

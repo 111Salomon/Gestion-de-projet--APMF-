@@ -459,7 +459,45 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                     'file': f'Type de fichier non autorisé. Extensions autorisées : {", ".join(allowed_extensions)}'
                 })
         
-        serializer.save(uploaded_by=self.request.user)
+        # Vérification des droits : l'utilisateur doit être membre du projet
+        # ou être l'utilisateur assigné de la tâche, ou un admin/chef/owner.
+        task = serializer.validated_data.get('task')
+        from rest_framework.exceptions import PermissionDenied
+        user = self.request.user
+
+        if task is None:
+            from rest_framework import serializers
+            raise serializers.ValidationError({'task': 'Le champ task est requis.'})
+
+        from apps.projects.models import Project
+
+        project = task.project
+
+        # Si le projet est archivé, seul l'admin global peut uploader
+        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
+            raise PermissionDenied('Le projet est archivé.')
+
+        # Admin / Chef global ou propriétaire du projet
+        if user.role in ['admin', 'chef'] or project.owner == user:
+            serializer.save(uploaded_by=user)
+            return
+
+        # Membre du projet (owner/manager/member) autorisé à uploader
+        try:
+            membership = ProjectMember.objects.get(project=project, user=user)
+            if membership.role in ['owner', 'manager', 'member']:
+                serializer.save(uploaded_by=user)
+                return
+        except ProjectMember.DoesNotExist:
+            pass
+
+        # Utilisateur assigné à la tâche (même s'il n'est pas membre du projet)
+        if task.assigned_to == user:
+            serializer.save(uploaded_by=user)
+            return
+
+        # Sinon refus
+        raise PermissionDenied('Vous n\'avez pas le droit d\'ajouter une pièce jointe à cette tâche.')
     
     def destroy(self, request, *args, **kwargs):
         """Supprime l'attachment ET le fichier physique."""
@@ -583,7 +621,45 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                     'file': f'Type de fichier non autorisé. Extensions autorisées : {", ".join(allowed_extensions)}'
                 })
         
-        serializer.save(uploaded_by=self.request.user)
+        # Vérification des droits : l'utilisateur doit être membre du projet
+        # ou être l'utilisateur assigné de la tâche, ou un admin/chef/owner.
+        task = serializer.validated_data.get('task')
+        from rest_framework.exceptions import PermissionDenied
+        user = self.request.user
+
+        if task is None:
+            from rest_framework import serializers
+            raise serializers.ValidationError({'task': 'Le champ task est requis.'})
+
+        from apps.projects.models import Project
+
+        project = task.project
+
+        # Si le projet est archivé, seul l'admin global peut uploader
+        if project.status == Project.StatusChoices.ARCHIVED and user.role != 'admin':
+            raise PermissionDenied('Le projet est archivé.')
+
+        # Admin / Chef global ou propriétaire du projet
+        if user.role in ['admin', 'chef'] or project.owner == user:
+            serializer.save(uploaded_by=user)
+            return
+
+        # Membre du projet (owner/manager/member) autorisé à uploader
+        try:
+            membership = ProjectMember.objects.get(project=project, user=user)
+            if membership.role in ['owner', 'manager', 'member']:
+                serializer.save(uploaded_by=user)
+                return
+        except ProjectMember.DoesNotExist:
+            pass
+
+        # Utilisateur assigné à la tâche (même s'il n'est pas membre du projet)
+        if task.assigned_to == user:
+            serializer.save(uploaded_by=user)
+            return
+
+        # Sinon refus
+        raise PermissionDenied('Vous n\'avez pas le droit d\'ajouter une pièce jointe à cette tâche.')
     
     def destroy(self, request, *args, **kwargs):
         """Supprime l'attachment ET le fichier physique."""

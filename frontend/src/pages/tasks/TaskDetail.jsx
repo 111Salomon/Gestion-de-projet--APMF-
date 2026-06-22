@@ -17,6 +17,7 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { TaskForm } from '../../components/forms/TaskForm';
 import { CommentSection } from '../../components/tasks/CommentSection';
 import AttachmentList from '../../components/tasks/AttachmentList';
+import AttachmentUploader from '../../components/tasks/AttachmentUploader';
 
 // Import API
 import { tasksAPI } from '../../api/tasks';
@@ -35,6 +36,7 @@ export const TaskDetail = () => {
   // États
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [attachmentsRefresh, setAttachmentsRefresh] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -581,8 +583,22 @@ export const TaskDetail = () => {
             </div>
             <h2 className="text-2xl font-bold text-neutral-900">Pièces jointes</h2>
           </div>
-          
-          <AttachmentList taskId={id} />
+          {/* Affiche l'uploader si l'utilisateur peut modifier la tâche ou est assigné */}
+          {(canModifyTask(user, task) || task.assigned_to?.id === user?.id) && (
+            <div className="mb-4">
+              <AttachmentUploader
+                taskId={id}
+                onUploadSuccess={async () => {
+                  toast.success('Fichier(s) ajoutés');
+                  await loadTask();
+                  // Trigger AttachmentList reload by updating key via state
+                  setAttachmentsRefresh(prev => prev + 1);
+                }}
+              />
+            </div>
+          )}
+
+          <AttachmentList taskId={id} refresh={attachmentsRefresh} />
         </div>
 
         {/* 💬 COMMENTAIRES */}

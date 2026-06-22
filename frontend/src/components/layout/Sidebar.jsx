@@ -17,6 +17,7 @@ import {
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useStats } from '../../context/StatsContext';
+import { Avatar } from '../common/Avatar';
 import { useChat } from '../../context/ChatContext';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -233,19 +234,7 @@ const unreadCount = (rooms || []).reduce((sum, room) => sum + (room?.unread_coun
           <div className="px-4 py-4 border-b border-white/5 flex-shrink-0">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
               <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white/10 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-                  {user?.avatar_url ? (
-                    <img 
-                      src={user.avatar_url}
-                      alt={user?.username || 'Avatar utilisateur'}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-sm">
-                      {user?.full_name?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
-                    </span>
-                  )}
-                </div>
+                <Avatar avatarUrl={user?.avatar_url} name={user?.full_name || user?.username} size="md" showBorder={true} />
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-neutral-900" />
               </div>
               

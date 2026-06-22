@@ -170,6 +170,7 @@
 // };
 
 import { CheckCircle, FolderPlus, UserPlus, TrendingUp, Clock, ExternalLink } from 'lucide-react';
+import { Avatar } from '../common/Avatar';
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -282,11 +283,7 @@ export const RecentActivity = ({ activities }) => {
             {/* Avatar ou Icône */}
             <div className="flex-shrink-0">
               {activity.user_avatar ? (
-                <img 
-                  src={activity.user_avatar} 
-                  alt={activity.user}
-                  className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
-                />
+                <Avatar avatarUrl={activity.user_avatar} name={activity.user} size="sm" showBorder={true} />
               ) : activity.user ? (
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-sm">
                   {activity.user.charAt(0).toUpperCase()}

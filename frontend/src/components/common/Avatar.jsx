@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MEDIA_URL } from '../../api/axios';
 
 /**
  * ═══════════════════════════════════════════════════════════════
@@ -57,15 +58,30 @@ export const Avatar = ({
 
   const initials = getInitials(name);
   
-  // Cache busting : ajouter timestamp à l'URL
-  const getAvatarUrlWithCache = (url) => {
+  // Cache busting : construire l'URL finale en gérant
+  // - avatarUrl (full URL)
+  // - avatar (chemin relatif retourné par certaines API)
+  // - préfixer MEDIA_URL si nécessaire
+  const buildAvatarUrl = () => {
+    let url = null;
+    if (avatarUrl) url = avatarUrl;
+    else if (typeof avatar === 'string' && avatar.length > 0) url = avatar;
+    else if (typeof avatarPath === 'string' && avatarPath.length > 0) url = avatarPath;
+
     if (!url) return null;
+
+    // Si URL relative (commence par / or does not contain http), préfixer MEDIA_URL
+    if (!/^https?:\/\//i.test(url)) {
+      const cleaned = url.startsWith('/') ? url.slice(1) : url;
+      url = `${MEDIA_URL.replace(/\/$/, '')}/${cleaned}`;
+    }
+
     const timestamp = Date.now();
     const separator = url.includes('?') ? '&' : '?';
     return `${url}${separator}t=${timestamp}`;
   };
 
-  const displayAvatar = avatarUrl && !imageError;
+  const finalAvatarUrl = !imageError ? buildAvatarUrl() : null;
 
   return (
     <div 
@@ -77,9 +93,9 @@ export const Avatar = ({
       title={name}
     >
       {/* Image ou Fallback */}
-      {displayAvatar ? (
+      {finalAvatarUrl ? (
         <img
-          src={getAvatarUrlWithCache(avatarUrl)}
+          src={finalAvatarUrl}
           alt={name}
           className="w-full h-full object-cover"
           onError={() => setImageError(true)}

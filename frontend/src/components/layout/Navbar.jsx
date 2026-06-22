@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { NotificationDropdown } from '../notifications/NotificationDropdown';
+import { Avatar } from '../common/Avatar';
 
 /**
  * 🎨 Barre de navigation détachée avec coins arrondis
@@ -152,20 +153,7 @@ export const Navbar = () => {
               >
                 {/* Avatar */}
                 <div className="relative">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden ring-2 ring-white shadow-sm">
-                    {user.avatar_url ? (
-                      <img 
-                        src={user.avatar_url} 
-                        alt={user.username}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-bold text-sm">
-                        {user.username?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
-                    )}
-                  </div>
-                  {/* Indicateur en ligne */}
+                  <Avatar avatarUrl={user.avatar_url} name={user.username} size="md" showBorder={true} />
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
                 </div>
 
@@ -193,19 +181,7 @@ export const Navbar = () => {
                   <div className="p-4 bg-gradient-to-br from-primary-50 to-white border-b border-neutral-100">
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center overflow-hidden ring-2 ring-primary-100 shadow-lg">
-                        {user.avatar_url ? (
-                          <img 
-                            src={user.avatar_url} 
-                            alt={user.username}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-white font-bold text-lg">
-                            {user.username?.charAt(0)?.toUpperCase() || 'U'}
-                          </span>
-                        )}
-                      </div>
+                      <Avatar avatarUrl={user.avatar_url} name={user.username} size="lg" showBorder={true} />
 
                       {/* Infos */}
                       <div className="flex-1 min-w-0">

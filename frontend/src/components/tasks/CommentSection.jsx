@@ -9,7 +9,7 @@ import { getApiErrorMessage } from '../../utils/apiError';
 
 
 export const CommentSection = ({ taskId }) => {
-  const { user } = useAuth();
+  const { user, subscribe } = useAuth();
   const [comments, setComments] = useState([]);
   const [displayedComments, setDisplayedComments] = useState([]);
   const [newComment, setNewComment] = useState('');
@@ -26,6 +26,34 @@ export const CommentSection = ({ taskId }) => {
   useEffect(() => {
     loadComments();
   }, [taskId]);
+
+  // Abonnement aux changements d'utilisateur/membre pour synchroniser les avatars
+  useEffect(() => {
+    if (!subscribe) return;
+
+    const handler = (event, data) => {
+      if (!data || !data.id) return;
+
+      if (event === 'user_updated' || event === 'member_updated') {
+        // Met à jour les avatars des commentaires correspondants
+        setComments(prev => prev.map(c => {
+          if (c.author && Number(c.author.id) === Number(data.id)) {
+            return {
+              ...c,
+              author: {
+                ...c.author,
+                avatar_url: data.avatar_url || data.avatar
+              }
+            };
+          }
+          return c;
+        }));
+      }
+    };
+
+    const unsubscribe = subscribe(handler);
+    return () => unsubscribe && unsubscribe();
+  }, [subscribe]);
 
   useEffect(() => {
     if (comments.length > 0) {
