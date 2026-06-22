@@ -531,6 +531,7 @@ export const TaskDetail = () => {
                   
                   if (diffDays < 0 && task.status !== 'done') return 'text-red-700';
                   if (diffDays <= 3 && task.status !== 'done') return 'text-amber-700';
+                  if (task.status === 'done') return 'text-green-700';
                   return 'text-red-600';
                 })()}`} strokeWidth={2.5} />
               </div>

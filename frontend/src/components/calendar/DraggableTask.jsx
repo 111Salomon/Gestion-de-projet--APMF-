@@ -134,7 +134,7 @@ export const DraggableTask = ({ task, onTaskClick }) => {
           </span>
 
           {/* Indicateur retard - discret */}
-          {task.is_overdue && (
+          {task.is_overdue && task.status !== 'done' && (
             <span className="ml-auto flex-shrink-0 w-1.5 h-1.5 bg-red-500 rounded-full 
                            animate-pulse" 
                   title="En retard"
@@ -152,7 +152,7 @@ export const DraggableTask = ({ task, onTaskClick }) => {
           <div className="font-semibold mb-0.5">{task.title}</div>
           <div className="text-neutral-300 flex items-center gap-2">
             <span>Priorité: {priority.label}</span>
-            {task.is_overdue && (
+            {task.is_overdue && task.status !== 'done' && (
               <span className="text-red-300">• En retard</span>
             )}
           </div>

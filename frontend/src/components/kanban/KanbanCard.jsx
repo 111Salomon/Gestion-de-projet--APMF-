@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, User, Flag, Clock } from 'lucide-react';
+import { Avatar } from '../common/Avatar';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -55,6 +56,11 @@ const KanbanCardComponent = ({ task, onClick }) => {
     const today = new Date();
     const diffTime = date - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Ne pas marquer en retard si la tâche est terminée
+    if (task.status === 'done') {
+      return { text: 'Terminé', color: 'text-green-600' };
+    }
 
     if (diffDays < 0) return { text: 'En retard', color: 'text-red-600' };
     if (diffDays === 0) return { text: "Aujourd'hui", color: 'text-amber-600' };
@@ -112,16 +118,13 @@ const KanbanCardComponent = ({ task, onClick }) => {
           {/* Assigné */}
           <div className="flex items-center gap-1.5 text-neutral-600">
             {task.assigned_to ? (
-              <>
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-600
-                             flex items-center justify-center text-white text-xs font-bold">
-                  {(task.assigned_to.full_name || task.assigned_to.username).charAt(0).toUpperCase()}
-                </div>
-                <span className="font-medium truncate max-w-[80px]">
-                  {task.assigned_to.full_name || task.assigned_to.username}
-                </span>
-              </>
-            ) : (
+                <>
+                  <Avatar avatarUrl={task.assigned_to.avatar_url || task.assigned_to.avatar} name={task.assigned_to.full_name || task.assigned_to.username} size="sm" showBorder={false} />
+                  <span className="font-medium truncate max-w-[80px]">
+                    {task.assigned_to.full_name || task.assigned_to.username}
+                  </span>
+                </>
+              ) : (
               <>
                 <User className="w-4 h-4 text-neutral-400" strokeWidth={2} />
                 <span className="text-neutral-400 italic">Non assigné</span>

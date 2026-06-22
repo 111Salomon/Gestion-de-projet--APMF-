@@ -497,6 +497,11 @@ export const ProjectDetail = () => {
 
   const statusConfig = getStatusConfig(project.status);
 
+  // Détecte si le projet est considéré comme terminé
+  const isCompleted = project && (
+    project.status === 'done' || project.status === 'completed' || (project.progress && project.progress >= 100)
+  );
+
   // Liste des statuts pour le dropdown
   const allStatuses = [
     { value: 'active', ...getStatusConfig('active') },
@@ -838,6 +843,7 @@ export const ProjectDetail = () => {
             <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 group
                            ${(() => {
                              if (!project.end_date) return 'bg-white border-neutral-200 hover:border-red-200';
+                             if (isCompleted) return 'bg-white border-neutral-200 hover:border-red-200';
                              const endDate = new Date(project.end_date);
                              const now = new Date();
                              const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
@@ -850,16 +856,18 @@ export const ProjectDetail = () => {
                              group-hover:scale-110 transition-transform duration-300
                              ${(() => {
                                if (!project.end_date) return 'bg-red-50';
+                               if (isCompleted) return 'bg-green-50';
                                const endDate = new Date(project.end_date);
                                const now = new Date();
                                const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-                               
+                                
                                if (diffDays < 0) return 'bg-red-100';
                                if (diffDays <= 7) return 'bg-amber-100';
                                return 'bg-red-50';
                              })()}`}>
                 <Target className={`w-5 h-5 ${(() => {
                   if (!project.end_date) return 'text-red-600';
+                  if (isCompleted) return 'text-green-700';
                   const endDate = new Date(project.end_date);
                   const now = new Date();
                   const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
@@ -878,6 +886,7 @@ export const ProjectDetail = () => {
                     const now = new Date();
                     const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
                     
+                    if (isCompleted) return 'text-green-600';
                     if (diffDays < 0) return 'text-red-600';
                     if (diffDays <= 7) return 'text-amber-600';
                     return 'text-neutral-400';
@@ -887,6 +896,7 @@ export const ProjectDetail = () => {
                       const now = new Date();
                       const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
                       
+                      if (isCompleted) return `✓ Terminé`;
                       if (diffDays < 0) return `⚠️ En retard de ${Math.abs(diffDays)} jour${Math.abs(diffDays) > 1 ? 's' : ''}`;
                       if (diffDays === 0) return "⏰ Aujourd'hui !";
                       if (diffDays <= 7) return `⚡ Dans ${diffDays} jour${diffDays > 1 ? 's' : ''}`;

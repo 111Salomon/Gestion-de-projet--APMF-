@@ -80,7 +80,7 @@ export const TaskPreviewModal = ({ task, isOpen, onClose }) => {
       <div className="px-6 pb-6 space-y-5">
 
         {/* Alerte retard */}
-        {task.is_overdue && (
+           {task.is_overdue && task.status !== 'done' && (
           <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
             <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <AlertCircle className="w-4 h-4 text-red-600" strokeWidth={2} />
@@ -154,9 +154,9 @@ export const TaskPreviewModal = ({ task, isOpen, onClose }) => {
 
           {/* Échéance */}
           <div className={`rounded-xl p-4 border transition-colors
-                        ${task.is_overdue
-                          ? 'bg-red-50 border-red-100 hover:border-red-200'
-                          : 'bg-neutral-50 border-neutral-100 hover:border-neutral-200'}`}>
+                            ${task.is_overdue && task.status !== 'done'
+                              ? 'bg-red-50 border-red-100 hover:border-red-200'
+                              : 'bg-neutral-50 border-neutral-100 hover:border-neutral-200'}`}>
             <div className="flex items-center gap-2 mb-2.5">
               <div className={`w-7 h-7 rounded-lg shadow-sm flex items-center justify-center
                             ${task.is_overdue ? 'bg-red-100' : 'bg-white'}`}>
